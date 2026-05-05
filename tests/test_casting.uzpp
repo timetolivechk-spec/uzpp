@@ -1,0 +1,37 @@
+// uz++ — Tur o'tkazish (casting) testi
+
+ulash "uzpp_runtime.hpp"
+
+sinf Hayvon {
+    mavhum matn ovoz() sabit;
+    bosh gapir() sabit {
+        yozish << ovoz() << qator_oxiri;
+    }
+}
+
+sinf Mushuk meros Hayvon {
+    matn ovoz() sabit ustidan_yozish { qaytarish "Miyov"; }
+    bosh sakra() { yozish << "Mushuk sakradi!" << qator_oxiri; }
+}
+
+butun asosiy() {
+    // statik_otkazish: haqiqiydan butun
+    haqiqiy pi = 3.14159;
+    butun n = statik_otkazish<butun>(pi);
+    yozish << "statik_otkazish<butun>(3.14159) = " << n << qator_oxiri;  // 3
+
+    // statik_otkazish: butundan haqiqiy
+    butun x = 7;
+    haqiqiy f = statik_otkazish<haqiqiy>(x) / 2.0;
+    yozish << "7 / 2.0 = " << f << qator_oxiri;  // 3.5
+
+    // dinamik_otkazish: pastga yo'naltirilgan (downcast)
+    aqlli_korsatkich<Hayvon> h = yangi_umumiy<Mushuk>();
+    Mushuk* m = dinamik_otkazish<Mushuk*>(h.get());
+    agar (m != nullptr) {
+        m->sakra();
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

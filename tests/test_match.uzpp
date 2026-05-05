@@ -1,0 +1,44 @@
+// uz++ — moslash (pattern matching) ko'p ifodali holat testi
+
+ulash "uzpp_runtime.hpp"
+
+matn darajaVazifasi(butun ball) {
+    moslash (ball) {
+        holat 0:
+            yozish << "Hech narsa yo'q" << qator_oxiri;
+            qaytarish "F";
+        holat 1:
+            yozish << "Juda past" << qator_oxiri;
+            qaytarish "D";
+        holat 2:
+            yozish << "Past" << qator_oxiri;
+            qaytarish "C";
+        holat 3:
+            yozish << "Yaxshi" << qator_oxiri;
+            qaytarish "B";
+        boshqa:
+            yozish << "A'lo" << qator_oxiri;
+            qaytarish "A";
+    }
+}
+
+butun asosiy() {
+    yozish << darajaVazifasi(0) << qator_oxiri;  // F
+    yozish << darajaVazifasi(2) << qator_oxiri;  // C
+    yozish << darajaVazifasi(3) << qator_oxiri;  // B
+    yozish << darajaVazifasi(5) << qator_oxiri;  // A
+
+    // Matn bilan moslash
+    matn ism = "Ali";
+    moslash (ism) {
+        holat "Ali":
+            yozish << "Assalomu alaykum, Ali!" << qator_oxiri;
+        holat "Vali":
+            yozish << "Assalomu alaykum, Vali!" << qator_oxiri;
+        boshqa:
+            yozish << "Assalomu alaykum, mehmon!" << qator_oxiri;
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

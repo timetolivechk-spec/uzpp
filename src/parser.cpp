@@ -209,7 +209,11 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "sanab_olish", "tushuncha", "shart", "makro", "ulash_kutubxona",
         "o'n", "asosiy", "yayin", "kutilish", "hammasi", "yoxud",
         "nomlari", "vazifi", "ustidan_yozish", "sikldan", "satr", "son",
-        "xotira", "fayl", "yagona", "umumiy", "null"
+        "xotira", "fayl", "yagona", "umumiy", "null",
+        // Casting
+        "statik_otkazish", "dinamik_otkazish", "sabit_otkazish", "qayta_otkazish",
+        // Const method modifier
+        "sabit"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -1058,7 +1062,20 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
             throw ParseError("Kutilgan 'holat' yoki 'boshqa' " + formatLocation(peek()));
         }
         
-        matchCase->body = parseStatement();
+        // Collect statements until next holat/boshqa/} — wrap in implicit Block
+        {
+            Token blkTok = peek();
+            std::vector<std::unique_ptr<Statement>> stmts;
+            while (!isAtEnd() && peek().value != "}" &&
+                   !checkKeyword("holat") && !checkKeyword("boshqa")) {
+                stmts.push_back(parseStatement());
+            }
+            if (stmts.size() == 1 && stmts[0]->getType() == ASTNodeType::Block) {
+                matchCase->body.reset(static_cast<Block*>(stmts[0].release()));
+            } else {
+                matchCase->body = std::make_unique<Block>(std::move(stmts), blkTok);
+            }
+        }
         cases.push_back(std::move(matchCase));
     }
     
@@ -1529,6 +1546,12 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
     if (looksLikeDeclHelper(tokens_, current_)) {
         std::string typeName = parseTypeString();
         std::string name = advance().value;
+        
+        if (name == "operator" && !isAtEnd() && peek().type == TokenType::Symbol) {
+            name += advance().value;
+            if (name == "operator(" && !isAtEnd() && peek().value == ")") name += advance().value;
+            else if (name == "operator[" && !isAtEnd() && peek().value == "]") name += advance().value;
+        }
 
         if (peek().type == TokenType::Symbol && peek().value == "(") {
                 // Could be:
@@ -1856,8 +1879,11 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
         }
         
         bool isStatic = false;
-        if (peek().value == "statik") {
-            isStatic = true;
+        bool isMavhum = false; // pure virtual (base class abstract method)
+        // Pre-method modifiers: statik, mavhum
+        while (!isAtEnd() && (peek().value == "statik" || peek().value == "mavhum")) {
+            if (peek().value == "statik") isStatic = true;
+            if (peek().value == "mavhum") isMavhum = true;
             advance();
         }
 
@@ -1918,9 +1944,16 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
             std::string typeName = parseTypeString();
             std::string name = advance().value;
             
+            if (name == "operator" && !isAtEnd() && peek().type == TokenType::Symbol) {
+                name += advance().value;
+                if (name == "operator(" && !isAtEnd() && peek().value == ")") name += advance().value;
+                else if (name == "operator[" && !isAtEnd() && peek().value == "]") name += advance().value;
+            }
+            
             if (isStatic) {
-                if (!isAtEnd() && peek().value == "(") typeName = "static " + typeName;
-                else typeName = "inline static " + typeName;
+                // Mark with "static " prefix in typeName only for fields
+                // For methods, isStatic is set on the method struct itself
+                if (isAtEnd() || peek().value != "(") typeName = "inline static " + typeName;
             }
 
             if (!isAtEnd() && peek().value == "(") {
@@ -1931,16 +1964,22 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 method->token = previous();
                 
                 method->params = parseFunctionParameters();
-                
-                while (!isAtEnd() && (peek().value == "ustidan_yozish" || peek().value == "mavhum")) {
+                method->isStatic = isStatic;
+
+                // Post-params modifiers: sabit (const method), ustidan_yozish (override), mavhum (pure virtual)
+                while (!isAtEnd() && (peek().value == "ustidan_yozish" || peek().value == "mavhum" || peek().value == "sabit")) {
+                    if (peek().value == "ustidan_yozish") method->isVirtual = true;
+                    if (peek().value == "mavhum") method->isPureVirtual = true;
+                    if (peek().value == "sabit") method->isConstMethod = true;
                     advance();
                 }
-                
+                if (isMavhum) method->isPureVirtual = true;
+
                 if (!isAtEnd() && peek().value == "{") {
                     method->body = parseBlock();
                 } else if (!isAtEnd() && peek().value == "=") {
                     advance(); // '='
-                    if (!isAtEnd() && peek().value == "0") advance();
+                    if (!isAtEnd() && peek().value == "0") advance(); // consume '0'
                     if (!isAtEnd() && peek().value == ";") advance();
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();

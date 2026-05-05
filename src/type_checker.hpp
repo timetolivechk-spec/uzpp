@@ -21,6 +21,8 @@ private:
         std::unordered_map<std::string, std::string> fields;
         std::unordered_map<std::string, std::string> methodReturns;
         std::unordered_map<std::string, std::vector<std::string>> methodParams;
+        std::string baseClass;
+        std::vector<std::string> interfaces;
     };
 
     struct VarInfo {
@@ -37,6 +39,7 @@ private:
     // Standart qiymatli parametrlarni inobatga olib, minimal argument soni
     std::unordered_map<std::string, std::size_t> functionMinArgs_;
     std::unordered_map<std::string, ClassInfo> classes_;
+    std::unordered_map<std::string, std::string> typeAliases_; // tur X = Y
     std::unordered_set<std::string> templateFunctions_;
     std::string currentReturnType_ = "";
     bool reachable_ = true;
@@ -113,9 +116,8 @@ private:
                 auto mac = static_cast<const MemberAccess*>(expr);
                 std::string objType = inferType(mac->getObject());
                 if (classes_.contains(objType)) {
-                    if (classes_[objType].fields.contains(mac->getMemberName())) {
-                        return classes_[objType].fields[mac->getMemberName()];
-                    }
+                    std::string ret = classMethodReturn(objType, mac->getMemberName());
+                    if (ret != "noma'lum") return ret;
                 }
                 break;
             }
@@ -146,9 +148,8 @@ private:
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
                     std::string objType = inferType(mac->getObject());
                     if (classes_.contains(objType)) {
-                        if (classes_[objType].methodReturns.contains(mac->getMemberName())) {
-                            return classes_[objType].methodReturns[mac->getMemberName()];
-                        }
+                        std::string ret = classMethodReturn(objType, mac->getMemberName());
+                        if (ret != "noma'lum") return ret;
                     }
                 }
                 break;
@@ -171,6 +172,67 @@ private:
             }
             scopes_.pop_back();
         }
+    }
+
+    // Resolve type aliases recursively (up to depth 8)
+    std::string resolveType(const std::string& t, int depth = 0) const {
+        if (depth >= 8) return t;
+        auto it = typeAliases_.find(t);
+        if (it != typeAliases_.end()) return resolveType(it->second, depth + 1);
+        return t;
+    }
+
+    // Returns true if `derived` is a subtype of `base` (same class or inherits from it)
+    bool classIsSubtype(const std::string& derived, const std::string& base) const {
+        if (derived == base) return true;
+        std::string cur = derived;
+        int depth = 0;
+        while (!cur.empty() && classes_.contains(cur) && depth < 16) {
+            cur = classes_.at(cur).baseClass;
+            if (cur == base) return true;
+            ++depth;
+        }
+        return false;
+    }
+
+    // Walk up inheritance chain looking for a field or method named `member`
+    bool classHasMember(const std::string& className, const std::string& member) const {
+        std::string cur = className;
+        int depth = 0;
+        while (!cur.empty() && classes_.contains(cur) && depth < 16) {
+            const auto& info = classes_.at(cur);
+            if (info.fields.contains(member) || info.methodReturns.contains(member)) return true;
+            // Check interfaces too
+            for (const auto& iface : info.interfaces) {
+                if (classes_.contains(iface)) {
+                    const auto& ifInfo = classes_.at(iface);
+                    if (ifInfo.fields.contains(member) || ifInfo.methodReturns.contains(member)) return true;
+                }
+            }
+            cur = info.baseClass;
+            ++depth;
+        }
+        return false;
+    }
+
+    // Return the method's return type, walking up the inheritance chain
+    std::string classMethodReturn(const std::string& className, const std::string& member) const {
+        std::string cur = className;
+        int depth = 0;
+        while (!cur.empty() && classes_.contains(cur) && depth < 16) {
+            const auto& info = classes_.at(cur);
+            if (info.methodReturns.contains(member)) return info.methodReturns.at(member);
+            if (info.fields.contains(member)) return info.fields.at(member);
+            for (const auto& iface : info.interfaces) {
+                if (classes_.contains(iface)) {
+                    const auto& ifInfo = classes_.at(iface);
+                    if (ifInfo.methodReturns.contains(member)) return ifInfo.methodReturns.at(member);
+                }
+            }
+            cur = info.baseClass;
+            ++depth;
+        }
+        return "noma'lum";
     }
 
     void markUsed(const std::string& name) {
@@ -354,6 +416,8 @@ private:
             case ASTNodeType::ClassDeclaration: {
                 auto cls = static_cast<const ClassDeclaration*>(node);
                 ClassInfo info;
+                info.baseClass = cls->getBaseClass();
+                info.interfaces = cls->getInterfaces();
                 for (const auto& member : cls->getMembers()) {
                     info.fields[member.name] = member.type;
                 }
@@ -362,7 +426,7 @@ private:
                     for (const auto& p : method->params) pTypes.push_back(p.type);
                     info.methodParams[method->name] = pTypes;
                     info.methodReturns[method->name] = method->returnType.empty() ? cls->getName() : method->returnType;
-                    
+
                     if (method->name == cls->getName()) {
                         functionParams_[cls->getName()] = pTypes;
                         functionReturns_[cls->getName()] = cls->getName();
@@ -386,21 +450,28 @@ private:
                     // 'joriy' — implicit this pointer; pre-mark as used to suppress unused warning
                     declareVar("joriy", cls->getName() + "*", method->token);
                     scopes_.back()["joriy"].used = true;
-                    // Expose own class fields in method scope (direct access: `ism` instead of `joriy->ism`)
+                    // Expose own class fields+methods in scope (direct access without `joriy->`)
                     for (const auto& [fieldName, fieldType] : classes_[cls->getName()].fields) {
                         scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true};
                     }
-                    // Also expose inherited fields from base class chain
+                    for (const auto& [mName, mRet] : classes_[cls->getName()].methodReturns) {
+                        scopes_.back()[mName] = VarInfo{mRet, method->token, true};
+                    }
+                    // Walk full inheritance chain: expose all ancestor fields+methods
                     {
                         std::string base = cls->getBaseClass();
-                        while (!base.empty() && classes_.contains(base)) {
+                        int depth = 0;
+                        while (!base.empty() && classes_.contains(base) && depth < 16) {
                             for (const auto& [fieldName, fieldType] : classes_[base].fields) {
                                 if (!scopes_.back().contains(fieldName))
                                     scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true};
                             }
-                            // Walk up the hierarchy (base's base)
-                            // We don't store parent chains in ClassInfo, so stop after one level
-                            break;
+                            for (const auto& [mName, mRet] : classes_[base].methodReturns) {
+                                if (!scopes_.back().contains(mName))
+                                    scopes_.back()[mName] = VarInfo{mRet, method->token, true};
+                            }
+                            base = classes_[base].baseClass;
+                            ++depth;
                         }
                     }
                     bool isConstructor = (method->name == cls->getName());
@@ -487,9 +558,13 @@ private:
                 }
                 
                 if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan") {
-                    if (currentReturnType_ != retType && retType != "noma'lum") {
-                        if (!((currentReturnType_ == "haqiqiy" || currentReturnType_ == "ikkilangan") && retType == "butun")) {
-                            reportWarning("Funksiya '" + currentReturnType_ + "' qaytarishi kerak, lekin '" + retType + "' qaytarilmoqda.", ret->getReturnToken());
+                    std::string expResolved = resolveType(currentReturnType_);
+                    std::string gotResolved = resolveType(retType);
+                    if (expResolved != gotResolved && retType != "noma'lum") {
+                        if (!((expResolved == "haqiqiy" || expResolved == "ikkilangan") && gotResolved == "butun")) {
+                            if (!classIsSubtype(gotResolved, expResolved)) {
+                                reportWarning("Funksiya '" + currentReturnType_ + "' qaytarishi kerak, lekin '" + retType + "' qaytarilmoqda.", ret->getReturnToken());
+                            }
                         }
                     }
                 }
@@ -510,6 +585,22 @@ private:
                 checkExpr(static_cast<const ExpressionStatement*>(node)->getExpression());
                 break;
             }
+            case ASTNodeType::MatchStatement: {
+                auto ms = static_cast<const MatchStatement*>(node);
+                checkExpr(ms->getCondition());
+                bool savedReachable = reachable_;
+                bool savedReported = reportedUnreachable_;
+                for (const auto& mc : ms->getCases()) {
+                    if (mc->pattern) checkExpr(mc->pattern.get());
+                    // Each case arm is an independent branch — reset reachability
+                    reachable_ = true;
+                    reportedUnreachable_ = false;
+                    if (mc->body) checkNode(mc->body.get());
+                }
+                reachable_ = savedReachable;
+                reportedUnreachable_ = savedReported;
+                break;
+            }
             case ASTNodeType::Group: {
                 // shablon funksiyalari va sinflarini GroupNode ichida o'rab keladi
                 auto grp = static_cast<const GroupNode*>(node);
@@ -520,6 +611,11 @@ private:
                     }
                     checkNode(child.get());
                 }
+                break;
+            }
+            case ASTNodeType::TypeAlias: {
+                auto ta = static_cast<const TypeAlias*>(node);
+                typeAliases_[ta->getAlias()] = ta->getTarget();
                 break;
             }
             case ASTNodeType::EnumDeclaration: {
@@ -684,7 +780,10 @@ private:
                                 std::string expBase = stripRef(expectedParams[i]);
                                 if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" && argType != expectedParams[i] && argType != expBase) {
                                     if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && argType == "butun")) {
-                                        reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + argType + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
+                                        // Suppress if argType is a subclass of expBase
+                                        if (!classIsSubtype(argType, expBase)) {
+                                            reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + argType + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
+                                        }
                                     }
                                 }
                             }
@@ -730,15 +829,14 @@ private:
             case ASTNodeType::MemberAccess: {
                 auto mac = static_cast<const MemberAccess*>(expr);
                 checkExpr(mac->getObject());
-                
+
                 std::string objType = inferType(mac->getObject());
                 if (objType != "noma'lum" && classes_.contains(objType)) {
-                    if (!classes_[objType].fields.contains(mac->getMemberName()) &&
-                        !classes_[objType].methodReturns.contains(mac->getMemberName())) {
+                    if (!classHasMember(objType, mac->getMemberName())) {
                         reportError("Sinf '" + objType + "' da '" + mac->getMemberName() + "' nomli maydon yoki metod topilmadi.", mac->getAccessToken());
                     }
                 }
-                
+
                 break;
             }
             default: break;

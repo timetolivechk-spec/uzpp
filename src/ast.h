@@ -594,7 +594,10 @@ public:
         std::vector<FunctionDeclaration::Parameter> params;
         std::unique_ptr<Block> body;
         std::string accessSpecifier;
-        bool isVirtual = false;
+        bool isVirtual = false;       // override in derived class
+        bool isPureVirtual = false;   // mavhum: virtual ... = 0
+        bool isConstMethod = false;   // sabit: void foo() const
+        bool isStatic = false;
         Token token;
         std::string initializerList; // ": field1(val1), field2(val2)" for constructors
     };

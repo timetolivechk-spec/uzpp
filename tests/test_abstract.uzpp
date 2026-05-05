@@ -1,0 +1,71 @@
+// uz++ — Mavhum sinf (abstract class) va polimorfizm testi
+
+ulash "uzpp_runtime.hpp"
+
+// Mavhum asosiy sinf
+sinf Shakl {
+    mavhum haqiqiy yuza() sabit;
+    mavhum haqiqiy perimetr() sabit;
+
+    bosh chiqar() sabit {
+        yozish << "Yuza: " << yuza() << ", Perimetr: " << perimetr() << qator_oxiri;
+    }
+}
+
+// Doira: Shakl ni meros oladi
+sinf Doira meros Shakl {
+    haqiqiy radius;
+
+    Doira(haqiqiy r) : radius(r) {}
+
+    haqiqiy yuza() sabit ustidan_yozish {
+        qaytarish 3.14159 * radius * radius;
+    }
+
+    haqiqiy perimetr() sabit ustidan_yozish {
+        qaytarish 2.0 * 3.14159 * radius;
+    }
+}
+
+// To'rtburchak: Shakl ni meros oladi
+sinf Turtburchak meros Shakl {
+    haqiqiy eni;
+    haqiqiy boyi;
+
+    Turtburchak(haqiqiy e, haqiqiy b) : eni(e), boyi(b) {}
+
+    haqiqiy yuza() sabit ustidan_yozish {
+        qaytarish eni * boyi;
+    }
+
+    haqiqiy perimetr() sabit ustidan_yozish {
+        qaytarish 2.0 * (eni + boyi);
+    }
+}
+
+// Funksiya polimorf parametr bilan
+bosh shaklChiqar(Shakl& s) {
+    s.chiqar();
+}
+
+butun asosiy() {
+    Doira d(5.0);
+    d.chiqar();
+
+    Turtburchak t(4.0, 6.0);
+    t.chiqar();
+
+    // Polimorfizm: asosiy sinf manzil orqali
+    shaklChiqar(d);
+    shaklChiqar(t);
+
+    // Aqlli ko'rsatkich orqali polimorfizm
+    aqlli_korsatkich<Shakl> s1 = yangi_umumiy<Doira>(3.0);
+    aqlli_korsatkich<Shakl> s2 = yangi_umumiy<Turtburchak>(2.0, 5.0);
+
+    s1->chiqar();
+    s2->chiqar();
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

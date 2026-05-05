@@ -378,7 +378,12 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"tartibla", "std::sort"},
         {"qidirish", "std::find"},
         {"saralash", "std::sort"},
-        {"teskari", "std::reverse"}
+        {"teskari", "std::reverse"},
+        // Casting operators
+        {"statik_otkazish",   "static_cast"},
+        {"dinamik_otkazish",  "dynamic_cast"},
+        {"sabit_otkazish",    "const_cast"},
+        {"qayta_otkazish",    "reinterpret_cast"},
     };
 
     if (token.type == TokenType::Identifier) {
@@ -885,6 +890,44 @@ void CodeGen::visitFunctionCall(const FunctionCall* expr) {
             emitRawToken("throw");
             visitExpression(expr->getArguments()[0].get());
             return;
+        }
+
+        // Cast operators: callee name is like "statik_otkazish<butun>"
+        // The template arg is embedded in the identifier name
+        {
+            static const std::unordered_map<std::string, std::string> castMap = {
+                {"statik_otkazish",  "static_cast"},
+                {"dinamik_otkazish", "dynamic_cast"},
+                {"sabit_otkazish",   "const_cast"},
+                {"qayta_otkazish",   "reinterpret_cast"},
+            };
+            const std::string& fullName = idExpr->getName();
+            for (const auto& [uzName, cppName] : castMap) {
+                if (fullName == uzName || fullName.substr(0, uzName.size() + 1) == uzName + "<") {
+                    // Rebuild: cppName<type>(args)
+                    std::string typeArg;
+                    if (fullName.size() > uzName.size() + 1) {
+                        // Extract type between < and >
+                        typeArg = fullName.substr(uzName.size() + 1);
+                        if (!typeArg.empty() && typeArg.back() == '>') typeArg.pop_back();
+                        typeArg = getCppType(typeArg);
+                    }
+                    emitRawToken(cppName);
+                    if (!typeArg.empty()) {
+                        emitRawToken("<");
+                        emitRawToken(typeArg);
+                        emitRawToken(">");
+                    }
+                    emitRawToken("(");
+                    const auto& args = expr->getArguments();
+                    for (std::size_t i = 0; i < args.size(); ++i) {
+                        if (i > 0) emitRawToken(",");
+                        visitExpression(args[i].get());
+                    }
+                    emitRawToken(")");
+                    return;
+                }
+            }
         }
     }
 
@@ -1445,12 +1488,21 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
         // Emit methods
         for (const auto& method : decl->getMethods()) {
             writeIndentIfNeeded();
+
+            // Prefix modifiers
+            if (method->isStatic) emitRawToken("static");
+            if (method->isPureVirtual) emitRawToken("virtual");
+
             if (!method->returnType.empty()) {
-                emitRawToken(getCppType(method->returnType));
+                // Strip manual "static " prefix from returnType if we handle it via flag
+                std::string rt = method->returnType;
+                if (rt.substr(0, 7) == "static ") rt = rt.substr(7);
+                if (rt.substr(0, 14) == "inline static ") rt = rt.substr(14);
+                emitRawToken(getCppType(rt));
             }
             emitRawToken(safeIdent(method->name));
             emitRawToken("(");
-            
+
             for (std::size_t i = 0; i < method->params.size(); ++i) {
                 if (i > 0) emitRawToken(",");
                 if (method->params[i].isConst) emitRawToken("const");
@@ -1464,17 +1516,23 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
             emitRawToken(")");
 
+            // Post-params modifiers
+            if (method->isConstMethod) emitRawToken("const");
+            if (method->isVirtual && !method->isPureVirtual) emitRawToken("override");
+
             // Emit constructor initializer list before body
             if (!method->initializerList.empty()) {
                 output_ << safeIdent(method->initializerList);
             }
 
-            // 'override' is only emitted when the method explicitly has isVirtual set
-            if (method->isVirtual) {
-                emitRawToken("override");
+            if (method->isPureVirtual && !method->body) {
+                // Pure virtual: no body, just = 0;
+                emitRawToken("= 0;");
+                emitNewline();
+            } else {
+                emitNewline();
+                visitBlock(method->body.get());
             }
-            emitNewline();
-            visitBlock(method->body.get());
         }
         
         indentLess();
