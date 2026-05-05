@@ -407,6 +407,21 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
         auto expr = parseUnaryExpression();
         return std::make_unique<AwaitExpression>(std::move(expr), opToken);
     }
+
+    // yangi Tur(args)  →  new Type(args)
+    if (!isAtEnd() && peek().type == TokenType::Identifier && peek().value == "yangi") {
+        const Token opToken = advance(); // consume 'yangi'
+        auto expr = parseUnaryExpression();
+        return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(expr), opToken, true);
+    }
+
+    // o'chirish ptr  →  delete ptr
+    if (!isAtEnd() && peek().type == TokenType::Identifier &&
+        (peek().value == "o'chirish" || peek().value == "ochirish")) {
+        const Token opToken = advance(); // consume 'o'chirish'
+        auto expr = parseUnaryExpression();
+        return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::Delete, std::move(expr), opToken, true);
+    }
     
     if (!isAtEnd() && peek().type == TokenType::Symbol && isUnaryOperator(peek().value)) {
         const Token opToken = advance();
@@ -1261,7 +1276,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 
     // Ifoda sifatida boshlana oladigan kalit so'zlarni tur deb qabul qilmaslik
     static const std::unordered_set<std::string> exprOnlyKeywords = {
-        "kutish", "irgitish", "yangi"
+        "kutish", "irgitish", "yangi", "o'chirish", "ochirish"
     };
     if (peek().type == TokenType::Identifier && exprOnlyKeywords.contains(peek().value)) {
         auto expr = parseExpression();

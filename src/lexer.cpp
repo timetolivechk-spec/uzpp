@@ -47,7 +47,12 @@ std::vector<Token> Lexer::tokenize() {
         }
 
         if (current == '"') {
-            tokens.push_back(scanString());
+            // Triple-quoted multiline string: """..."""
+            if (peek(1) == '"' && peek(2) == '"') {
+                tokens.push_back(scanTripleString());
+            } else {
+                tokens.push_back(scanString());
+            }
             continue;
         }
 
@@ -243,6 +248,27 @@ Token Lexer::scanString() {
     }
 
     throw std::runtime_error("Yopilmagan satr literal qator: " + std::to_string(startLine) +
+                             " ustun: " + std::to_string(startColumn));
+}
+
+Token Lexer::scanTripleString() {
+    const std::size_t start = position_;
+    const int startLine = line_;
+    const int startColumn = column_;
+
+    // Consume opening """
+    advance(); advance(); advance();
+
+    while (!isAtEnd()) {
+        if (peek() == '"' && peek(1) == '"' && peek(2) == '"') {
+            advance(); advance(); advance(); // consume closing """
+            // Token value includes the triple-quote delimiters so codegen can recognize it
+            return makeToken(TokenType::StringLiteral, start, startLine, startColumn);
+        }
+        advance();
+    }
+
+    throw std::runtime_error("Yopilmagan uch qo'shtirnoqli satr qator: " + std::to_string(startLine) +
                              " ustun: " + std::to_string(startColumn));
 }
 

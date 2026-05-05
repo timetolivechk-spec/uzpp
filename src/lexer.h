@@ -49,6 +49,7 @@ private:
     Token scanIdentifier();
     Token scanNumber();
     Token scanString();
+    Token scanTripleString();
     Token scanFormatString();
     Token scanCharacter();
     Token scanSymbol();

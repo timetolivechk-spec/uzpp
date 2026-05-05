@@ -194,8 +194,9 @@ private:
 
 class UnaryExpression final : public Expression {
 public:
-    enum class UnaryOp { Plus, Minus, LogicalNot, BitwiseNot, PreIncrement, PreDecrement, 
-                         PostIncrement, PostDecrement, AddressOf, Dereference };
+    enum class UnaryOp { Plus, Minus, LogicalNot, BitwiseNot, PreIncrement, PreDecrement,
+                         PostIncrement, PostDecrement, AddressOf, Dereference,
+                         New, Delete };
     
     UnaryExpression(UnaryOp op, std::unique_ptr<Expression> expr, Token opToken, bool isPrefix = true)
         : op_(op), expr_(std::move(expr)), opToken_(std::move(opToken)), isPrefix_(isPrefix) {}

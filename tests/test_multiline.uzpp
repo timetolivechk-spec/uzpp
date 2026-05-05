@@ -1,0 +1,25 @@
+// uz++ — Ko'p qatorli matn va yangi/o'chirish testi
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // Ko'p qatorli matn
+    matn shiyor = """
+Salom, Dunyo!
+Bu ko'p qatorli
+matndir.
+""";
+    yozish << shiyor;
+
+    // Bitta qatorda ko'p qatorli
+    matn so_rov = """SELECT * FROM jadval WHERE id = 1;""";
+    yozish << so_rov << qator_oxiri;
+
+    // yangi va o'chirish (raw pointer)
+    butun* son = yangi butun(42);
+    yozish << "yangi bilan: " << *son << qator_oxiri;
+    o'chirish son;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

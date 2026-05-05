@@ -384,6 +384,10 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"dinamik_otkazish",  "dynamic_cast"},
         {"sabit_otkazish",    "const_cast"},
         {"qayta_otkazish",    "reinterpret_cast"},
+        // Memory management
+        {"yangi",             "new"},
+        {"o'chirish",         "delete"},
+        {"ochirish",          "delete"},
     };
 
     if (token.type == TokenType::Identifier) {
@@ -756,13 +760,19 @@ void CodeGen::visitUnaryExpression(const UnaryExpression* expr) {
             case UnaryExpression::UnaryOp::Dereference:
                 emitRawToken("*");
                 break;
+            case UnaryExpression::UnaryOp::New:
+                emitRawToken("new");
+                break;
+            case UnaryExpression::UnaryOp::Delete:
+                emitRawToken("delete");
+                break;
             default:
                 break;
         }
     }
-    
+
     visitExpression(expr->getExpression());
-    
+
     if (!expr->isPrefix()) {
         switch (expr->getOperator()) {
             case UnaryExpression::UnaryOp::PostIncrement:
@@ -818,6 +828,28 @@ void CodeGen::visitLiteralExpression(const LiteralExpression* expr) {
         return;
     }
     
+    // Triple-quoted multiline string: """...""" → regular C++ string with \n
+    if (expr->getLiteralType() == LiteralExpression::LiteralType::String) {
+        const std::string& v = expr->getValue();
+        if (v.size() >= 6 && v.substr(0, 3) == "\"\"\"") {
+            // Strip leading/trailing """ and convert real newlines to \n
+            std::string inner = v.substr(3, v.size() - 6);
+            // Strip optional leading newline
+            if (!inner.empty() && inner[0] == '\n') inner = inner.substr(1);
+            std::string result = "\"";
+            for (char c : inner) {
+                if (c == '\n') result += "\\n";
+                else if (c == '\r') { /* skip */ }
+                else if (c == '"') result += "\\\"";
+                else if (c == '\\') result += "\\\\";
+                else result += c;
+            }
+            result += "\"";
+            emitRawToken(result);
+            return;
+        }
+    }
+
     // Mantiqiy qiymatlarni (rost/yolg'on) C++ ga tarjima qilish
     if (expr->getLiteralType() == LiteralExpression::LiteralType::Boolean) {
         const std::string& v = expr->getValue();
