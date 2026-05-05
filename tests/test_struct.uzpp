@@ -1,0 +1,50 @@
+// uz++ — tuzilma (struct) va for-each testi
+
+ulash "uzpp_runtime.hpp"
+
+tuzilma Nuqta {
+    haqiqiy x;
+    haqiqiy y;
+
+    Nuqta(haqiqiy x_, haqiqiy y_) : x(x_), y(y_) {}
+
+    haqiqiy masofa() sabit {
+        qaytarish x * x + y * y;
+    }
+
+    bosh chiqar() sabit {
+        yozish << "(" << x << ", " << y << ")";
+    }
+}
+
+butun asosiy() {
+    // Tuzilma yaratish
+    Nuqta p1(3.0, 4.0);
+    Nuqta p2(0.0, 0.0);
+
+    p1.chiqar(); yozish << " masofasi^2: " << p1.masofa() << qator_oxiri;
+    p2.chiqar(); yozish << " masofasi^2: " << p2.masofa() << qator_oxiri;
+
+    // For-each bilan vector
+    vektor<Nuqta> nuqtalar;
+    nuqtalar.push_back(Nuqta(1.0, 2.0));
+    nuqtalar.push_back(Nuqta(3.0, 4.0));
+    nuqtalar.push_back(Nuqta(5.0, 6.0));
+
+    yozish << "Barcha nuqtalar:" << qator_oxiri;
+    uchun (Nuqta& n : nuqtalar) {
+        n.chiqar();
+        yozish << qator_oxiri;
+    }
+
+    // For-each butun sonlar
+    vektor<butun> sonlar = {1, 2, 3, 4, 5};
+    butun jami = 0;
+    uchun (butun s : sonlar) {
+        jami = jami + s;
+    }
+    yozish << "Jami: " << jami << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

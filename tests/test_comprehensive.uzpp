@@ -1,0 +1,74 @@
+// uz++ — Keng qamrovli til xususiyatlari testi
+
+ulash "uzpp_runtime.hpp"
+
+// === 1. Lambda va yopiq o'zgaruvchilar ===
+butun lambdaTesti() {
+    butun boshlangich = 10;
+    ozgaruvchan qoshuvchi = [boshlangich](butun x) -> butun {
+        qaytarish x + boshlangich;
+    };
+    qaytarish qoshuvchi(5);  // 15
+}
+
+// === 2. Rekursiv lambda ===
+butun fibonacciTesti(butun n) {
+    agar (n <= 1) qaytarish n;
+    qaytarish fibonacciTesti(n - 1) + fibonacciTesti(n - 2);
+}
+
+// === 3. Xatolik boshqaruvi ===
+butun bolinish(butun a, butun b) {
+    agar (b == 0) {
+        irgitish std::runtime_error("Nolga bo'lib bo'lmaydi!");
+    }
+    qaytarish a / b;
+}
+
+// === 4. Mantiqiy ifodalar ===
+mantiqiy tekshir(butun n) {
+    qaytarish n > 0 va n < 100 va n % 2 == 0;
+}
+
+// === 5. Matn bilan ishlash ===
+butun asosiy() {
+    // Lambda
+    yozish << "Lambda: " << lambdaTesti() << qator_oxiri;
+
+    // Fibonacci
+    yozish << "Fib(8) = " << fibonacciTesti(8) << qator_oxiri;
+
+    // Xatolik boshqaruvi
+    urinish {
+        yozish << "10 / 2 = " << bolinish(10, 2) << qator_oxiri;
+        bolinish(5, 0);
+    } ushlash (std::exception& e) {
+        yozish << "Xatolik: " << e.what() << qator_oxiri;
+    }
+
+    // Mantiqiy
+    uchun (butun i = 1; i <= 20; i++) {
+        agar (tekshir(i)) {
+            yozish << i << " ";
+        }
+    }
+    yozish << qator_oxiri;
+
+    // Matn
+    matn s = "Salom";
+    s += ", Dunyo";
+    yozish << s << " (uzunlik: " << s.size() << ")" << qator_oxiri;
+
+    // Ternary
+    butun x = 42;
+    matn tavsif = x > 0 ? "musbat" : "manfiy";
+    yozish << x << " — " << tavsif << qator_oxiri;
+
+    // va/yoki
+    mantiqiy a = rost, b = yolg'on;
+    yozish << "(rost va yolg'on) = " << (a va b) << qator_oxiri;
+    yozish << "(rost yoki yolg'on) = " << (a yoki b) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
