@@ -1,0 +1,58 @@
+// uz++ — Operator qayta belgilash (operator overloading) testi
+
+ulash "uzpp_runtime.hpp"
+
+sinf Vektor2D {
+    haqiqiy x;
+    haqiqiy y;
+
+    Vektor2D(haqiqiy x_, haqiqiy y_) : x(x_), y(y_) {}
+
+    // Qo'shish operatori
+    Vektor2D operator+(Vektor2D boshqa) sabit {
+        qaytarish Vektor2D(x + boshqa.x, y + boshqa.y);
+    }
+
+    // Ayirish operatori
+    Vektor2D operator-(Vektor2D boshqa) sabit {
+        qaytarish Vektor2D(x - boshqa.x, y - boshqa.y);
+    }
+
+    // Skalyar ko'paytirish
+    Vektor2D operator*(haqiqiy k) sabit {
+        qaytarish Vektor2D(x * k, y * k);
+    }
+
+    // Tenglik tekshiruvi
+    mantiqiy operator==(Vektor2D boshqa) sabit {
+        qaytarish x == boshqa.x && y == boshqa.y;
+    }
+
+    bosh chiqar() sabit {
+        yozish << "(" << x << ", " << y << ")" << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    Vektor2D a(1.0, 2.0);
+    Vektor2D b(3.0, 4.0);
+
+    Vektor2D c = a + b;
+    yozish << "a + b = ";
+    c.chiqar();
+
+    Vektor2D d = b - a;
+    yozish << "b - a = ";
+    d.chiqar();
+
+    Vektor2D e = a * 3.0;
+    yozish << "a * 3 = ";
+    e.chiqar();
+
+    agar (a == Vektor2D(1.0, 2.0)) {
+        yozish << "a == (1, 2): rost" << qator_oxiri;
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,0 +1,52 @@
+// uz++ — Kirish darajalari (access specifiers) testi
+
+ulash "uzpp_runtime.hpp"
+
+sinf BankHisobi {
+yopiq:
+    haqiqiy balans;
+    matn egasi;
+
+ochiq:
+    BankHisobi(matn ism, haqiqiy boshlangich) : egasi(ism), balans(boshlangich) {}
+
+    bosh depozit(haqiqiy summa) {
+        agar (summa > 0.0) {
+            balans = balans + summa;
+        }
+    }
+
+    mantiqiy yechish(haqiqiy summa) {
+        agar (summa > 0.0 && summa <= balans) {
+            balans = balans - summa;
+            qaytarish rost;
+        }
+        qaytarish yolg'on;
+    }
+
+    haqiqiy balansOlish() sabit {
+        qaytarish balans;
+    }
+
+    matn egasiniOlish() sabit {
+        qaytarish egasi;
+    }
+}
+
+butun asosiy() {
+    BankHisobi hisob("Alisher", 1000.0);
+
+    hisob.depozit(500.0);
+    yozish << hisob.egasiniOlish() << ": " << hisob.balansOlish() << " so'm" << qator_oxiri;
+
+    agar (hisob.yechish(200.0)) {
+        yozish << "Yechildi. Qolgan: " << hisob.balansOlish() << qator_oxiri;
+    }
+
+    agar (!hisob.yechish(5000.0)) {
+        yozish << "Yetarli mablag' yo'q!" << qator_oxiri;
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

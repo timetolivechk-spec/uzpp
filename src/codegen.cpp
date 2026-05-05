@@ -1504,21 +1504,36 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
     emitNewline();
     
     if (!decl->getMethods().empty() || !decl->getMembers().empty()) {
-        emitRawToken("public:");
-        emitNewline();
         indentMore();
-        
+
+        // Emit members and methods in declaration order, tracking access specifier changes
+        // Items: fields first (as stored in AST), then methods — emit access label on change
+        std::string lastAccess;
+        auto emitAccessIfChanged = [&](const std::string& spec) {
+            std::string access = spec.empty() ? "public" : spec;
+            if (access != lastAccess) {
+                indentLess();
+                writeIndentIfNeeded();
+                emitRawToken(access + ":");
+                emitNewline();
+                indentMore();
+                lastAccess = access;
+            }
+        };
+
         // Emit class members (fields)
         for (const auto& member : decl->getMembers()) {
+            emitAccessIfChanged(member.accessSpecifier);
             writeIndentIfNeeded();
             emitRawToken(getCppType(member.type));
             emitRawToken(safeIdent(member.name));
             emitRawToken(";");
             emitNewline();
         }
-        
+
         // Emit methods
         for (const auto& method : decl->getMethods()) {
+            emitAccessIfChanged(method->accessSpecifier);
             writeIndentIfNeeded();
 
             // Prefix modifiers

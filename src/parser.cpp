@@ -1879,20 +1879,25 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
     
     std::vector<ClassDeclaration::Member> members;
     std::vector<std::unique_ptr<ClassDeclaration::Method>> methods;
-    
+    std::string currentAccess = "public"; // default
+
     while (!isAtEnd() && !(peek().type == TokenType::Symbol && peek().value == "}")) {
+        // Access specifier section: ochiq:, yopiq:, himoyalangan:
         if (peek().type == TokenType::Identifier) {
             const std::string& val = peek().value;
-            if (val == "ochiq" || val == "maxfiy" || val == "himoyalangan" || val == "shaxsiy" ||
+            if (val == "ochiq" || val == "yopiq" || val == "maxfiy" || val == "himoyalangan" || val == "shaxsiy" ||
                 val == "public" || val == "private" || val == "protected") {
-                advance(); // consume modifier
-                if (!isAtEnd() && peek().value == ":") {
-                    advance(); // consume ':'
-                }
+                std::string spec = val;
+                advance(); // consume specifier
+                if (!isAtEnd() && peek().value == ":") advance(); // consume ':'
+                // Map to canonical C++ name
+                if (spec == "ochiq" || spec == "public") currentAccess = "public";
+                else if (spec == "yopiq" || spec == "maxfiy" || spec == "shaxsiy" || spec == "private") currentAccess = "private";
+                else if (spec == "himoyalangan" || spec == "protected") currentAccess = "protected";
                 continue;
             }
         }
-        
+
         bool isStatic = false;
         bool isMavhum = false; // pure virtual (base class abstract method)
         // Pre-method modifiers: statik, mavhum
@@ -1929,6 +1934,7 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();
                 }
+                method->accessSpecifier = currentAccess;
                 methods.push_back(std::move(method));
                 continue;
             }
@@ -1942,13 +1948,14 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 advance(); // consume '~'
                 method->name = "~" + advance().value; // consume ClassName
                 method->token = previous();
-                
+
                 method->params = parseFunctionParameters();
                 if (!isAtEnd() && peek().value == "{") {
                     method->body = parseBlock();
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();
                 }
+                method->accessSpecifier = currentAccess;
                 methods.push_back(std::move(method));
                 continue;
             }
@@ -1999,12 +2006,14 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();
                 }
+                method->accessSpecifier = currentAccess;
                 methods.push_back(std::move(method));
             } else {
                 // Parse Field
                 auto member = ClassDeclaration::Member();
                 member.type = typeName;
                 member.name = name;
+                member.accessSpecifier = currentAccess;
                 members.push_back(member);
                 
                 if (!isAtEnd() && peek().value == "=") {
