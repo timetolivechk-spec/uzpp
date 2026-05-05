@@ -1055,6 +1055,10 @@ void CodeGen::visitStatement(const Statement* stmt) {
         case ASTNodeType::Block:
             visitBlock(static_cast<const Block*>(stmt));
             break;
+        case ASTNodeType::StatementList:
+            for (const auto& s : static_cast<const StatementList*>(stmt)->getStatements())
+                visitStatement(s.get());
+            break;
         case ASTNodeType::MatchStatement:
             visitMatchStatement(static_cast<const MatchStatement*>(stmt));
             break;

@@ -332,7 +332,7 @@ std::unique_ptr<Expression> Parser::parseNullCoalescingExpression() {
 std::unique_ptr<Expression> Parser::parseLogicalOrExpression() {
     auto left = parseLogicalAndExpression();
     
-    while (!isAtEnd() && peek().type == TokenType::Symbol && isLogicalOrOperator(peek().value)) {
+    while (!isAtEnd() && isLogicalOrOperator(peek().value)) {
         const Token opToken = advance();
         auto right = parseLogicalAndExpression();
         left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
@@ -344,7 +344,7 @@ std::unique_ptr<Expression> Parser::parseLogicalOrExpression() {
 std::unique_ptr<Expression> Parser::parseLogicalAndExpression() {
     auto left = parseEqualityExpression();
     
-    while (!isAtEnd() && peek().type == TokenType::Symbol && isLogicalAndOperator(peek().value)) {
+    while (!isAtEnd() && isLogicalAndOperator(peek().value)) {
         const Token opToken = advance();
         auto right = parseEqualityExpression();
         left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
@@ -652,12 +652,21 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 if (!isAtEnd()) advance(); // consume ')'
             }
 
-            // Body: block or expression
+            // Optional: -> ReturnType (consume and keep for later use)
+            std::string lambdaReturnType;
+            if (!isAtEnd() && peek().value == "->") {
+                advance(); // consume '->'
+                if (!isAtEnd() && peek().value != "{" && peek().value != "=>") {
+                    lambdaReturnType = parseTypeString(); // consume return type annotation
+                }
+            }
+
+            // Body: block or single expression (=> expr)
             std::unique_ptr<Statement> body;
             if (!isAtEnd() && peek().value == "{") {
                 body = parseBlock();
-            } else if (!isAtEnd() && (peek().value == "=>" || peek().value == "->")) {
-                advance(); // consume '=>' or '->'
+            } else if (!isAtEnd() && peek().value == "=>") {
+                advance(); // consume '=>'
                 auto retExpr = parseExpression();
                 Token retTok = lambdaToken;
                 body = std::make_unique<ReturnStatement>(std::move(retExpr), retTok);
@@ -1295,6 +1304,20 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         if (isConst) typeName = "o'zgarmas " + typeName;
         std::string name = advance().value;
         auto varDecl = parseVariableDeclaration(typeName, name);
+
+        // Comma-separated declarations: butun a = 1, b = 2;
+        if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
+            std::vector<std::unique_ptr<Statement>> stmts;
+            stmts.push_back(std::move(varDecl));
+            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
+                advance(); // consume ','
+                std::string nextName = advance().value;
+                stmts.push_back(parseVariableDeclaration(typeName, nextName));
+            }
+            if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
+            return std::make_unique<StatementList>(std::move(stmts));
+        }
+
         return varDecl;
     }
 

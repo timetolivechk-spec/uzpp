@@ -492,6 +492,11 @@ private:
                 }
                 break;
             }
+            case ASTNodeType::StatementList: {
+                for (const auto& s : static_cast<const StatementList*>(node)->getStatements())
+                    checkNode(s.get());
+                break;
+            }
             case ASTNodeType::Block: {
                 auto block = static_cast<const Block*>(node);
                 enterScope();
@@ -502,17 +507,40 @@ private:
             case ASTNodeType::IfStatement: {
                 auto ifs = static_cast<const IfStatement*>(node);
                 checkExpr(ifs->getCondition());
-                
+
+                // Detect __uzpp_catch and declare catch variable in then-branch scope
+                bool isCatchBlock = false;
+                std::string catchVarName;
+                if (auto idExpr = dynamic_cast<const IdentifierExpression*>(ifs->getCondition())) {
+                    const std::string& cond = idExpr->getName();
+                    if (cond.starts_with("__uzpp_catch ")) {
+                        isCatchBlock = true;
+                        // Extract variable name: last whitespace-delimited token
+                        std::string decl = cond.substr(13); // strip "__uzpp_catch "
+                        auto pos = decl.rfind(' ');
+                        catchVarName = (pos != std::string::npos) ? decl.substr(pos + 1) : decl;
+                    }
+                }
+
                 bool initialReachable = reachable_;
-                checkNode(ifs->getThenBranch());
+                if (isCatchBlock && !catchVarName.empty()) {
+                    enterScope();
+                    Token tok = getTokenForNode(ifs->getCondition());
+                    declareVar(catchVarName, "std::exception", tok);
+                    scopes_.back()[catchVarName].used = true;
+                    checkNode(ifs->getThenBranch());
+                    exitScope();
+                } else {
+                    checkNode(ifs->getThenBranch());
+                }
                 bool thenReachable = reachable_;
-                
+
                 reachable_ = initialReachable;
                 reportedUnreachable_ = false;
                 if (ifs->getElseBranch()) {
                     checkNode(ifs->getElseBranch());
                 }
-                
+
                 if (!ifs->getElseBranch()) {
                     reachable_ = initialReachable;
                 } else {

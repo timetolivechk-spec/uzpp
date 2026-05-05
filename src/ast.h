@@ -53,7 +53,8 @@ enum class ASTNodeType {
     PipelineExpression,
     TypeAlias,
     LambdaExpression,
-    TernaryExpression
+    TernaryExpression,
+    StatementList
 };
 
 class ASTNode {
@@ -340,6 +341,19 @@ public:
 private:
     std::vector<std::unique_ptr<Statement>> statements_;
     Token openBrace_;
+};
+
+// Flat statement sequence — emitted without surrounding braces (used for comma-declarations)
+class StatementList final : public Statement {
+public:
+    explicit StatementList(std::vector<std::unique_ptr<Statement>> statements)
+        : statements_(std::move(statements)) {}
+
+    ASTNodeType getType() const override { return ASTNodeType::StatementList; }
+    const std::vector<std::unique_ptr<Statement>>& getStatements() const { return statements_; }
+
+private:
+    std::vector<std::unique_ptr<Statement>> statements_;
 };
 
 class ExpressionStatement final : public Statement {
