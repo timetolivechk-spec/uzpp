@@ -1,0 +1,14 @@
+ulash "uzpp_runtime.hpp"
+
+shablon <tur T>
+bosh royhat_chiqar(matn sarlavha, vektor<T>& v) {
+    yozish << sarlavha << ": ";
+    uchun (o'zgaruvchan& x : v) yozish << x << " ";
+    yozish << qator_oxiri;
+}
+
+butun asosiy() {
+    vektor<matn> ismlar = ["Zafar", "Malika", "Bobur", "Aziz"];
+    royhat_chiqar("Ismlar", ismlar);
+    qaytarish 0;
+}

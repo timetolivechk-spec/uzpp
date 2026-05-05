@@ -1,0 +1,41 @@
+// uz++ — JSON: yaratish, o'qish, tahlil qilish
+
+ulash "uzpp_runtime.hpp"
+ulash "json.hpp"
+
+bosh talaba_yaratish(matn ism, butun yosh, haqiqiy bahosi) {
+    o'zgaruvchan talaba = uzpp::Json::yaratObyekt();
+    talaba->set("ism",    uzpp::Json::yaratMatn(ism));
+    talaba->set("yosh",   uzpp::Json::yaratSon(yosh));
+    talaba->set("bahosi", uzpp::Json::yaratSon(bahosi));
+    talaba->set("faol",   uzpp::Json::yaratMantiq(bahosi >= 55.0));
+
+    matn json_matni = uzpp::Json::chiqarish(*talaba, 2);
+    yozish << json_matni << qator_oxiri;
+}
+
+bosh json_tahlil() {
+    matn api_javob = "{\"status\": \"ok\", \"data\": {\"ism\": \"Dilnoza\", \"ball\": 95}}";
+
+    o'zgaruvchan j = uzpp::Json::tahlil(api_javob);
+
+    agar (j->bor("status")) {
+        yozish << "Status: " << (*j)["status"]->matn() << qator_oxiri;
+    }
+    agar (j->bor("data")) {
+        o'zgaruvchan malumot = (*j)["data"];
+        yozish << "Talaba: " << (*malumot)["ism"]->matn() << qator_oxiri;
+        yozish << "Ball: " << (*malumot)["ball"]->butun() << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    yozish << "=== Talabalar ===" << qator_oxiri;
+    talaba_yaratish("Akbar", 20, 87.5);
+    talaba_yaratish("Barno", 19, 43.0);
+
+    yozish << "\n=== API javobini tahlil qilish ===" << qator_oxiri;
+    json_tahlil();
+
+    qaytarish 0;
+}

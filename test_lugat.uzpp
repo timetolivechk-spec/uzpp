@@ -1,0 +1,9 @@
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    lug'at<matn, butun> yoshlar;
+    yoshlar["Ali"] = 30;
+    yoshlar["Malika"] = 25;
+    yozish << "Ali: " << yoshlar["Ali"] << qator_oxiri;
+    qaytarish 0;
+}

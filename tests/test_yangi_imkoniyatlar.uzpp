@@ -1,0 +1,112 @@
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+ulash "matn.hpp"
+ulash "json.hpp"
+
+// ===== Lambda ifodalar testi =====
+
+butun lambda_testi() {
+    vektor<butun> sonlar = [1, 2, 3, 4, 5];
+
+    butun yigindi = 0;
+    uchun (butun n : sonlar) {
+        yigindi = yigindi + n;
+    }
+    yozish << "Yigindi: " << yigindi << qator_oxiri;
+
+    qaytarish 0;
+}
+
+// ===== Natija (Result) turi testi =====
+
+uzpp::Natija<butun> bolish(butun a, butun b) {
+    agar (b == 0) {
+        qaytarish uzpp::Natija<butun>::xato("Nolga bolib bolmaydi!");
+    }
+    qaytarish uzpp::Natija<butun>::muvaffaqiyat(a / b);
+}
+
+bosh natija_testi() {
+    o'zgaruvchan natija1 = bolish(10, 2);
+    agar (natija1.yaroqliMi()) {
+        yozish << "10 / 2 = " << natija1.qiymat() << qator_oxiri;
+    }
+
+    o'zgaruvchan natija2 = bolish(10, 0);
+    agar (natija2.xatoliMi()) {
+        yozish << "Xato: " << natija2.xatoMazmun() << qator_oxiri;
+    }
+}
+
+// ===== Matn moduli testi =====
+
+bosh matn_testi() {
+    matn s = "  Salom, Dunyo!  ";
+    yozish << "Asl: '" << s << "'" << qator_oxiri;
+    yozish << "Qirqilgan: '" << uzpp::Matn::qirqish(s) << "'" << qator_oxiri;
+    yozish << "Kichik: " << uzpp::Matn::kichik_harfga("SALOM") << qator_oxiri;
+    yozish << "Katta: " << uzpp::Matn::katta_harfga("dunyo") << qator_oxiri;
+
+    vektor<matn> bolaklar = uzpp::Matn::ajratish("a,b,c,d", ",");
+    yozish << "Ajratildi: " << bolaklar.size() << " qism" << qator_oxiri;
+
+    matn birlashgan = uzpp::Matn::birlashtirish(bolaklar, " - ");
+    yozish << "Birlashtirildi: " << birlashgan << qator_oxiri;
+}
+
+// ===== Matematika moduli testi =====
+
+bosh matematika_testi() {
+    yozish << "PI = " << uzpp::Matematika::PI << qator_oxiri;
+    yozish << "sqrt(2) = " << uzpp::Matematika::ildiz(2.0) << qator_oxiri;
+    yozish << "sin(PI/2) = " << uzpp::Matematika::sin(uzpp::Matematika::PI / 2.0) << qator_oxiri;
+    yozish << "2^10 = " << uzpp::Matematika::daraja(2, 10) << qator_oxiri;
+    yozish << "Tasodifiy [1,100]: " << uzpp::Matematika::tasodifiy_son(1, 100) << qator_oxiri;
+
+    vektor<butun> sonlar = [3, 1, 4, 1, 5, 9, 2, 6];
+    yozish << "Ortacha: " << uzpp::Matematika::ortacha(sonlar) << qator_oxiri;
+    yozish << "Eng katta: " << uzpp::Matematika::eng_katta_el(sonlar) << qator_oxiri;
+    yozish << "Eng kichik: " << uzpp::Matematika::eng_kichik_el(sonlar) << qator_oxiri;
+}
+
+// ===== JSON moduli testi =====
+
+bosh json_testi() {
+    o'zgaruvchan jObj = uzpp::Json::yaratObyekt();
+    jObj->set("ism", uzpp::Json::yaratMatn("Alisher"));
+    jObj->set("yosh", uzpp::Json::yaratSon(25));
+    jObj->set("faol", uzpp::Json::yaratMantiq(true));
+
+    matn jsonMatn = uzpp::Json::chiqarish(*jObj, 2);
+    yozish << "JSON:\n" << jsonMatn << qator_oxiri;
+
+    matn kiritilgan = "{\"shahar\": \"Toshkent\", \"aholi\": 2500000}";
+    o'zgaruvchan tahlilNatija = uzpp::Json::tahlil(kiritilgan);
+
+    agar (tahlilNatija->bor("shahar")) {
+        yozish << "Shahar: " << (*tahlilNatija)["shahar"]->matn() << qator_oxiri;
+    }
+}
+
+// ===== Asosiy dastur =====
+
+butun asosiy() {
+    yozish << "=== uz++ Yangi Imkoniyatlar Testi ===" << qator_oxiri;
+
+    lambda_testi();
+
+    yozish << "\n--- Natija turi ---" << qator_oxiri;
+    natija_testi();
+
+    yozish << "\n--- Matn moduli ---" << qator_oxiri;
+    matn_testi();
+
+    yozish << "\n--- Matematika moduli ---" << qator_oxiri;
+    matematika_testi();
+
+    yozish << "\n--- JSON moduli ---" << qator_oxiri;
+    json_testi();
+
+    yozish << "\n=== Barcha testlar muvaffaqiyatli ===" << qator_oxiri;
+    qaytarish 0;
+}

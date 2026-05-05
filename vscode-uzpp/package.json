@@ -1,0 +1,59 @@
+{
+    "name": "uzpp",
+    "displayName": "uz++",
+    "description": "Full IDE support for uz++: syntax highlighting, real-time diagnostics, autocomplete and hover docs.",
+    "version": "2.0.0",
+    "publisher": "uzpp",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters"
+    ],
+    "activationEvents": [
+        "onLanguage:uzpp"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "uzpp",
+                "aliases": [
+                    "uz++",
+                    "uzpp"
+                ],
+                "extensions": [
+                    ".uzpp"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "uzpp",
+                "scopeName": "source.uzpp",
+                "path": "./syntaxes/uzpp.tmLanguage.json"
+            }
+        ],
+        "configuration": {
+            "title": "uz++",
+            "properties": {
+                "uzpp.serverPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "uzpm.exe fayliga to'liq yo'l. Bo'sh bo'lsa, PATH'dan qidiradi."
+                }
+            }
+        }
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.1"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+}

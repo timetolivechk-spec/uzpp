@@ -1,0 +1,40 @@
+nomlar_fazosi uzpp::Xavfsizlik;
+
+bosh asosiy() {
+    // 1. Formatlangan matn
+    matn ism = "Antigravity";
+    butun yosh = 1;
+    yozish << f"Salom, mening ismim {ism} va yoshim {yosh} da!" << qator_oxiri;
+
+    // 2. Pattern Matching (Moslash)
+    moslash (yosh) {
+        holat 0:
+            yozish << "Yangi tug'ilgan" << qator_oxiri;
+        holat 1:
+            yozish << "Bir yoshda" << qator_oxiri;
+        boshqa:
+            yozish << "Katta" << qator_oxiri;
+    }
+
+    moslash (ism) {
+        holat "Antigravity":
+            yozish << "U sun'iy intellekt!" << qator_oxiri;
+        boshqa:
+            yozish << "Oddiy odam" << qator_oxiri;
+    }
+
+    // 3. Null-Coalescing
+    Tanlov<butun> qiymatyoq; // empty std::optional
+    Tanlov<butun> qiymatbor = 100;
+    
+    butun natija1 = qiymatyoq ?? 50; 
+    butun natija2 = qiymatbor ?? 50; 
+    
+    yozish << f"Natijalar: {natija1} va {natija2}" << qator_oxiri;
+
+    // 4. Smart Pointers (Xavfsiz xotira)
+    yagona<butun> ptr = yangi_yagona<butun>(42);
+    // umumiy<butun> s_ptr = yangi_umumiy<butun>(42);
+    
+    qaytarish 0;
+}

@@ -1,0 +1,37 @@
+// uz++ — Kolleksiyalar: vektor, lugat, lambda
+
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+
+butun asosiy() {
+    // Vektor va range-for
+    vektor<butun> sonlar = [5, 3, 8, 1, 9, 2, 7, 4, 6];
+    yozish << "Asl: ";
+    uchun (butun n : sonlar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    // Lambda bilan tartiblash
+    o'zgaruvchan taqqosla = [&](butun a, butun b) { qaytarish a < b; };
+    std::sort(sonlar.begin(), sonlar.end(), taqqosla);
+
+    yozish << "Tartiblangan: ";
+    uchun (butun n : sonlar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    // Statistika
+    yozish << "Ortacha: " << uzpp::Matematika::ortacha(sonlar) << qator_oxiri;
+    yozish << "Eng katta: " << uzpp::Matematika::eng_katta_el(sonlar) << qator_oxiri;
+
+    // Lug'at (unordered_map)
+    lug'at<matn, butun> yoshlar;
+    yoshlar["Ali"] = 25;
+    yoshlar["Vali"] = 30;
+    yoshlar["Guli"] = 22;
+
+    yozish << "\nYoshlar:" << qator_oxiri;
+    uchun (o'zgaruvchan juft : yoshlar) {
+        yozish << "  " << juft.first << ": " << juft.second << qator_oxiri;
+    }
+
+    qaytarish 0;
+}

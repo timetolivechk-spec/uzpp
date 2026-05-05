@@ -1,0 +1,17 @@
+ulash "uzpp_runtime.hpp"
+nomlar_fazosi uzpp::Asinxron;
+
+asinxron butun ogirHisob() {
+    qaytarish 42;
+}
+
+asinxron bosh asosiyAsinxron() {
+    yozish << "Hisoblash boshlandi..." << qator_oxiri;
+    butun natija = kutish ogirHisob();
+    yozish << "Natija: " << natija << qator_oxiri;
+}
+
+butun asosiy() {
+    asosiyAsinxron();
+    qaytarish 0;
+}

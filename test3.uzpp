@@ -1,0 +1,16 @@
+ulash "uzpp_runtime.hpp"
+
+sinf Shahs {
+    ochiq:
+        matn nomi;
+        Shahs(matn n) : nomi(n) {}
+        bosh chiqar() {
+            yozish << nomi << qator_oxiri;
+        }
+};
+
+butun asosiy() {
+    Shahs s("Akbar");
+    s.chiqar();
+    qaytarish 0;
+}

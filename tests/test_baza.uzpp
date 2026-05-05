@@ -1,0 +1,30 @@
+ulash "uzpp_runtime.hpp"
+ulash "malumotlar_bazasi.hpp"
+
+nomlar_fazosi uzpp::Baza;
+
+asinxron bosh bazaniSinash() {
+    auto dbNatija = kutish Ulanish::ochish("sinov.db");
+    agar (!dbNatija.has_value()) {
+        yozish << "Baza ochilmadi: " << dbNatija.error() << qator_oxiri;
+        qaytarish;
+    }
+    
+    Ulanish db = std::move(dbNatija.value());
+    kutish db.bajarish("CREATE TABLE IF NOT EXISTS Odamlar (id INTEGER PRIMARY KEY, ism TEXT);");
+    kutish db.bajarish("INSERT INTO Odamlar (ism) VALUES (?);", std::string("Alisher"));
+    kutish db.bajarish("INSERT INTO Odamlar (ism) VALUES (?);", std::string("Bobur"));
+    
+    auto qatorlarNat = kutish db.bajarish("SELECT * FROM Odamlar;");
+    agar (qatorlarNat.has_value()) {
+        auto qatorlar = qatorlarNat.value();
+        uchun (o'zgaruvchan qator : qatorlar) {
+            yozish << "ID: " << qator["id"] << ", Ism: " << qator["ism"] << qator_oxiri;
+        }
+    }
+}
+
+butun asosiy() {
+    bazaniSinash();
+    qaytarish 0;
+}

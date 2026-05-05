@@ -1,0 +1,17 @@
+ulash "uzpp_runtime.hpp"
+
+shablon <tur T>
+bosh royhat_chiqar(matn sarlavha, vektor<T>& v) {
+    yozish << sarlavha << ": ";
+    uchun (o'zgaruvchan& x : v) yozish << x << " ";
+    yozish << qator_oxiri;
+}
+
+butun asosiy() {
+    vektor<matn> ismlar = ["Zafar", "Malika", "Bobur", "Aziz"];
+    royhat_chiqar("Tartiblanmagan", ismlar);
+    o'zgaruvchan taqqosla = [](matn& a, matn& b) { qaytarish a < b; };
+    std::sort(ismlar.begin(), ismlar.end(), taqqosla);
+    royhat_chiqar("Tartiblangan", ismlar);
+    qaytarish 0;
+}

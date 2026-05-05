@@ -1,0 +1,127 @@
+name: uz++ CI
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # Windows build (MSYS2 / UCRT64 / GCC, same as dev machine)
+  # ──────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows (MSYS2 / GCC)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Configure
+        run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run C++ unit tests
+        run: ./build/uzpp_frontend_tests.exe
+
+      - name: Run example programs (integration tests)
+        run: |
+          PASS=0; FAIL=0
+          for f in misollar/01_salom_dunyo.uzpp \
+                   misollar/02_fizzbuzz.uzpp \
+                   misollar/03_rekursiya.uzpp \
+                   misollar/05_kolleksiyalar.uzpp \
+                   misollar/07_matn_ishlash.uzpp \
+                   misollar/08_json_ishlash.uzpp \
+                   misollar/10_ilgor_dasturlash.uzpp; do
+            echo "--- Testing: $f ---"
+            if ./build/uzpp.exe ishga-tushirish "$f"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              echo "FAILED: $f"
+            fi
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          [ $FAIL -eq 0 ]
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-windows-x64
+          path: build/uzpp.exe
+
+  # ──────────────────────────────────────────────────────────
+  # Linux build (Ubuntu 24.04 / GCC-14 / C++23)
+  # ──────────────────────────────────────────────────────────
+  build-linux:
+    name: Linux (Ubuntu 24.04 / GCC-14)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
+      - name: Configure
+        run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+        env:
+          CC: gcc-14
+          CXX: g++-14
+
+      - name: Build
+        run: cmake --build build --config Release
+        env:
+          CC: gcc-14
+          CXX: g++-14
+
+      - name: Run C++ unit tests
+        run: ./build/uzpp_frontend_tests
+
+      - name: Run example programs (integration tests)
+        run: |
+          PASS=0; FAIL=0
+          for f in misollar/01_salom_dunyo.uzpp \
+                   misollar/02_fizzbuzz.uzpp \
+                   misollar/03_rekursiya.uzpp \
+                   misollar/05_kolleksiyalar.uzpp \
+                   misollar/07_matn_ishlash.uzpp \
+                   misollar/08_json_ishlash.uzpp \
+                   misollar/10_ilgor_dasturlash.uzpp; do
+            echo "--- Testing: $f ---"
+            if ./build/uzpp ishga-tushirish "$f"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              echo "FAILED: $f"
+            fi
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          [ $FAIL -eq 0 ]
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-linux-x64
+          path: build/uzpp

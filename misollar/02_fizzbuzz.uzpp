@@ -1,0 +1,16 @@
+// uz++ — FizzBuzz: klassik dasturlash muammosi
+
+butun asosiy() {
+    uchun (butun i = 1; i <= 100; i++) {
+        agar (i % 15 == 0) {
+            yozish << "FizzBuzz" << qator_oxiri;
+        } aks_holda agar (i % 3 == 0) {
+            yozish << "Fizz" << qator_oxiri;
+        } aks_holda agar (i % 5 == 0) {
+            yozish << "Buzz" << qator_oxiri;
+        } aks_holda {
+            yozish << i << qator_oxiri;
+        }
+    }
+    qaytarish 0;
+}

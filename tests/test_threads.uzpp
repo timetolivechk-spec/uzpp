@@ -1,0 +1,9 @@
+bosh hisobla(butun qiymat) {
+    yozish << "oqim: " << qiymat << qator_oxiri;
+}
+
+butun asosiy() {
+    oqim birinchi(hisobla, 7);
+    birinchi.kutish();
+    qaytarish 0;
+}

@@ -1,0 +1,26 @@
+ulash "uzpp_runtime.hpp"
+
+// Reaktiv holat simulyatsiyasi - observer naqsh
+
+butun hisoblagich_qiymati = 0;
+
+bosh hisoblagichniOshirish() {
+    hisoblagich_qiymati = hisoblagich_qiymati + 1;
+}
+
+matn hisoblagichMatni() {
+    qaytarish "Siz tugmani " + std::to_string(hisoblagich_qiymati) + " marta bosdingiz!";
+}
+
+butun asosiy() {
+    matn xabar = "Reaktiv ilova ishga tushdi.";
+    yozish << xabar << qator_oxiri;
+
+    uchun (butun i = 0; i < 3; i++) {
+        hisoblagichniOshirish();
+        yozish << hisoblagichMatni() << qator_oxiri;
+    }
+
+    yozish << "Reaktiv test yakunlandi." << qator_oxiri;
+    qaytarish 0;
+}

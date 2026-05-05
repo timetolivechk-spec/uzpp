@@ -1,0 +1,175 @@
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+ulash "matn.hpp"
+
+// ==================================================
+// uz++ demo: OOP, templates, lambdas, Natija<T>,
+//            lugat, rekursiya, parallel, OqimPool
+// ==================================================
+
+// ---------- 1. Sinflar va meros ----------
+
+sinf Shahs {
+    ochiq:
+        matn ism;
+        butun yosh;
+        Shahs(matn i, butun y) : ism(i), yosh(y) {}
+        bosh tanishtir() {
+            yozish << "Shahs: " << ism << ", " << yosh << " yosh" << qator_oxiri;
+        }
+};
+
+sinf Talaba : Shahs {
+    ochiq:
+        matn mutaxassislik;
+        Talaba(matn i, butun y, matn m) : Shahs(i, y), mutaxassislik(m) {}
+        bosh tanishtir() {
+            yozish << "Talaba: " << ism << " (" << mutaxassislik << "), " << yosh << " yosh" << qator_oxiri;
+        }
+};
+
+// ---------- 2. Shablon funksiyalar ----------
+
+shablon <tur T>
+bosh royhat_chiqar(matn sarlavha, vektor<T>& v) {
+    yozish << sarlavha << ": [ ";
+    uchun (o'zgaruvchan& x : v) yozish << x << " ";
+    yozish << "]" << qator_oxiri;
+}
+
+shablon <tur T>
+T yigindi(vektor<T>& v) {
+    T jami = 0;
+    uchun (o'zgaruvchan& x : v) jami = jami + x;
+    qaytarish jami;
+}
+
+// ---------- 3. Natija<T> xatolik boshqaruvi ----------
+
+uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+    agar (b == 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
+}
+
+// ---------- 4. Rekursiya ----------
+
+butun fibonacci(butun n) {
+    agar (n <= 1) qaytarish n;
+    qaytarish fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// ---------- 5. Asosiy funksiya ----------
+
+butun asosiy() {
+    yozish << "=====================================" << qator_oxiri;
+    yozish << "   uz++ DEMO DASTURI" << qator_oxiri;
+    yozish << "=====================================" << qator_oxiri;
+    yozish << qator_oxiri;
+
+    // --- OOP ---
+    yozish << "--- 1. OOP va Meros ---" << qator_oxiri;
+    Shahs ali("Ali", 30);
+    ali.tanishtir();
+    Talaba vali("Vali", 22, "Informatika");
+    vali.tanishtir();
+    yozish << qator_oxiri;
+
+    // --- Shablon funksiyalar ---
+    yozish << "--- 2. Shablon funksiyalar ---" << qator_oxiri;
+    vektor<butun> sonlar = [5, 3, 8, 1, 9, 2, 7, 4, 6];
+    royhat_chiqar("Tartiblanmagan", sonlar);
+    std::sort(sonlar.begin(), sonlar.end());
+    royhat_chiqar("Tartiblangan   ", sonlar);
+    yozish << "Yigindi: " << yigindi(sonlar) << qator_oxiri;
+    yozish << qator_oxiri;
+
+    // --- Lambda ---
+    yozish << "--- 3. Lambda va sort ---" << qator_oxiri;
+    vektor<matn> ismlar = ["Zafar", "Malika", "Bobur", "Aziz"];
+    royhat_chiqar("Tartiblanmagan", ismlar);
+    o'zgaruvchan taqqosla = [](matn& a, matn& b) { qaytarish a < b; };
+    std::sort(ismlar.begin(), ismlar.end(), taqqosla);
+    royhat_chiqar("Tartiblangan  ", ismlar);
+    yozish << qator_oxiri;
+
+    // --- Natija<T> ---
+    yozish << "--- 4. Xatolik boshqaruvi (Natija<T>) ---" << qator_oxiri;
+    o'zgaruvchan r1 = xavfsiz_bolish(10.0, 3.0);
+    agar (r1.yaroqliMi()) {
+        yozish << "10 / 3 = " << r1.qiymat() << qator_oxiri;
+    }
+    o'zgaruvchan r2 = xavfsiz_bolish(5.0, 0.0);
+    agar (!r2.yaroqliMi()) {
+        yozish << "Xato: " << r2.xatoMazmun() << qator_oxiri;
+    }
+    yozish << qator_oxiri;
+
+    // --- Lugat ---
+    yozish << "--- 5. Lugat (unordered_map) ---" << qator_oxiri;
+    lug'at<matn, butun> yoshlar;
+    yoshlar["Ali"] = 30;
+    yoshlar["Vali"] = 22;
+    yoshlar["Malika"] = 25;
+    yozish << "Ali yoshi: " << yoshlar["Ali"] << qator_oxiri;
+    yozish << "Malika yoshi: " << yoshlar["Malika"] << qator_oxiri;
+    yozish << qator_oxiri;
+
+    // --- Matematika ---
+    yozish << "--- 6. Matematika kutubxonasi ---" << qator_oxiri;
+    vektor<haqiqiy> kasr_sonlar = [4.0, 9.0, 16.0, 25.0];
+    uchun (o'zgaruvchan& x : kasr_sonlar) {
+        yozish << "sqrt(" << x << ") = " << uzpp::Matematika::ildiz(x) << qator_oxiri;
+    }
+    yozish << qator_oxiri;
+
+    // --- Rekursiya ---
+    yozish << "--- 7. Fibonacci rekursiyasi ---" << qator_oxiri;
+    uchun (butun i = 0; i < 10; i++) {
+        yozish << "fib(" << i << ") = " << fibonacci(i) << qator_oxiri;
+    }
+    yozish << qator_oxiri;
+
+    // --- Matn ishlash ---
+    yozish << "--- 8. Matn ishlash ---" << qator_oxiri;
+    matn jumla = "  salom dunyo uz++  ";
+    yozish << "Asl: [" << jumla << "]" << qator_oxiri;
+    yozish << "Tozalangan: [" << uzpp::Matn::qirqish(jumla) << "]" << qator_oxiri;
+    yozish << "Bosh harf: [" << uzpp::Matn::katta_harfga(jumla) << "]" << qator_oxiri;
+    vektor<matn> qismlar = uzpp::Matn::ajratish(uzpp::Matn::qirqish(jumla), " ");
+    royhat_chiqar("Sozlar", qismlar);
+    yozish << qator_oxiri;
+
+    // --- Parallel hisoblash ---
+    yozish << "--- 9. Parallel hisoblash (std::async) ---" << qator_oxiri;
+    o'zgaruvchan k1 = std::async(std::launch::async, []() {
+        butun s = 0;
+        uchun (butun i = 1; i <= 100; i++) s = s + i;
+        qaytarish s;
+    });
+    o'zgaruvchan k2 = std::async(std::launch::async, []() {
+        butun jami = 0;
+        uchun (butun i = 1; i <= 50; i++) jami = jami + i * i;
+        qaytarish jami;
+    });
+    yozish << "1..100 yigindisi: " << k1.get() << qator_oxiri;
+    yozish << "1..50 kvadratlari yigindisi: " << k2.get() << qator_oxiri;
+    yozish << qator_oxiri;
+
+    // --- OqimPool ---
+    yozish << "--- 10. OqimPool (Thread Pool) ---" << qator_oxiri;
+    uzpp::OqimPool havza(3);
+    uchun (butun i = 1; i <= 5; i++) {
+        havza.vazifaQosh([i]() {
+            yozish << "  Vazifa #" << i << " bajarildi" << qator_oxiri;
+        });
+    }
+    havza.toxtatish();
+    yozish << qator_oxiri;
+
+    yozish << "=====================================" << qator_oxiri;
+    yozish << "   DEMO MUVAFFAQIYATLI YAKUNLANDI!" << qator_oxiri;
+    yozish << "=====================================" << qator_oxiri;
+    qaytarish 0;
+}

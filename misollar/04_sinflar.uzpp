@@ -1,0 +1,48 @@
+// uz++ — Sinflar va merosxo'rlik
+
+sinf Shakl {
+    ochiq:
+        haqiqiy yuza() {
+            qaytarish 0.0;
+        }
+        matn nomi() {
+            qaytarish "Shakl";
+        }
+};
+
+sinf Doira : Shakl {
+    shaxsiy:
+        haqiqiy radius_;
+    ochiq:
+        Doira(haqiqiy r) : radius_(r) {}
+        haqiqiy yuza() {
+            qaytarish 3.14159 * radius_ * radius_;
+        }
+        matn nomi() {
+            qaytarish "Doira";
+        }
+};
+
+sinf Toʻrtburchak : Shakl {
+    shaxsiy:
+        haqiqiy kenglik_;
+        haqiqiy balandlik_;
+    ochiq:
+        Toʻrtburchak(haqiqiy k, haqiqiy b) : kenglik_(k), balandlik_(b) {}
+        haqiqiy yuza() {
+            qaytarish kenglik_ * balandlik_;
+        }
+        matn nomi() {
+            qaytarish "Toʻrtburchak";
+        }
+};
+
+butun asosiy() {
+    Doira d(5.0);
+    Toʻrtburchak t(4.0, 6.0);
+
+    yozish << d.nomi() << " yuzi: " << d.yuza() << qator_oxiri;
+    yozish << t.nomi() << " yuzi: " << t.yuza() << qator_oxiri;
+
+    qaytarish 0;
+}

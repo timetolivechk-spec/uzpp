@@ -1,0 +1,24 @@
+// uz++ — Rekursiya: Fibonachchi va faktorial
+
+butun faktorial(butun n) {
+    agar (n <= 1) qaytarish 1;
+    qaytarish n * faktorial(n - 1);
+}
+
+butun fibonachchi(butun n) {
+    agar (n <= 1) qaytarish n;
+    qaytarish fibonachchi(n - 1) + fibonachchi(n - 2);
+}
+
+butun asosiy() {
+    yozish << "10! = " << faktorial(10) << qator_oxiri;
+
+    yozish << "Fibonachchi (0-10): ";
+    uchun (butun i = 0; i <= 10; i++) {
+        yozish << fibonachchi(i);
+        agar (i < 10) yozish << ", ";
+    }
+    yozish << qator_oxiri;
+
+    qaytarish 0;
+}

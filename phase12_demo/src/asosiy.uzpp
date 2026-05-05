@@ -1,0 +1,4 @@
+butun asosiy() {
+    yozish << "Salom dunyo" << qator_oxiri;
+    qaytarish 0;
+}

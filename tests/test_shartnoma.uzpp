@@ -1,0 +1,27 @@
+#include <iostream>
+
+// Interface (shartnoma)
+shartnoma Shakl {
+    butun yuzasi();
+    bosh malumot(matn prefix);
+}
+
+// Sinf (class) interfeyisdan meros olmoqda
+sinf Kvadrat : Shakl {
+    butun tomon;
+
+    // Interface methodlari realizatsiyasi
+    butun yuzasi() {
+        qaytish 5 * 5; // Hoziroq tomon qiymatlarini hardcode qilamiz test uchun
+    }
+
+    bosh malumot(matn prefix) {
+        std::cout << prefix << ": Kvadrat";
+    }
+}
+
+butun asosiy() {
+    Kvadrat k;
+    std::cout << "Yuzasi: " << k.yuzasi();
+    qaytish 0;
+}

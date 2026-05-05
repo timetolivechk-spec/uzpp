@@ -1,0 +1,4 @@
+butun math_lib_init() {
+    yozish << "math_lib moduli muvaffaqiyatli o'rnatildi" << qator_oxiri;
+    qaytarish 0;
+}

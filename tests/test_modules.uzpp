@@ -1,0 +1,14 @@
+nomlar_fazosi Demo {
+    sinf Kalkulyator {
+    ochiq
+        butun qosh(butun a, butun b) {
+            qaytarish a + b;
+        }
+    };
+}
+
+butun asosiy() {
+    Demo::Kalkulyator calc;
+    yozish << calc.qosh(20, 22) << qator_oxiri;
+    qaytarish 0;
+}

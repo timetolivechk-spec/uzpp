@@ -1,0 +1,10 @@
+butun asosiy() {
+    fayl_yozish chiqish("build/integration_output.txt");
+    agar (chiqish.is_open()) {
+        chiqish << "uzpp integration" << qator_oxiri;
+        chiqish.close();
+    }
+
+    yozish << "tayyor" << qator_oxiri;
+    qaytarish 0;
+}

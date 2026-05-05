@@ -1,0 +1,24 @@
+ulash "uzpp_runtime.hpp"
+ulash "tarmoq.hpp"
+ulash "fayl_tizimi.hpp"
+
+nomlar_fazosi uzpp::Tarmoq;
+
+asinxron bosh asosiyAsinxron() {
+    Server api(8080);
+
+    api.yonalish("GET", "/api/salom", [](Sorov s, Javob j) {
+        uzpp::FaylTizimi::JsonObyekt data;
+        data.maydonlar["xabar"] = "Uz++ orqali yaratilgan REST API!";
+        data.maydonlar["muvaffaqiyat"] = "rost";
+        j.jsonQaytarish(200, data);
+    });
+
+    yozish << "API Server 8080-portda kutilmoqda. Brauzerdan http://localhost:8080/api/salom ni oching." << qator_oxiri;
+    kutish api.ishlash();
+}
+
+butun asosiy() {
+    asosiyAsinxron();
+    qaytarish 0;
+}

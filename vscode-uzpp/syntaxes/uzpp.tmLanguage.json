@@ -1,0 +1,210 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "uz++",
+    "scopeName": "source.uzpp",
+    "patterns": [
+        { "include": "#comments" },
+        { "include": "#preprocessor" },
+        { "include": "#strings" },
+        { "include": "#class-definition" },
+        { "include": "#function-definition" },
+        { "include": "#keywords-control" },
+        { "include": "#keywords-declaration" },
+        { "include": "#keywords-modifier" },
+        { "include": "#types" },
+        { "include": "#constants" },
+        { "include": "#numbers" },
+        { "include": "#function-call" },
+        { "include": "#operators" },
+        { "include": "#namespace-access" },
+        { "include": "#template-args" }
+    ],
+    "repository": {
+
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.uzpp",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.block.uzpp",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+
+        "preprocessor": {
+            "patterns": [
+                {
+                    "name": "meta.preprocessor.include.uzpp",
+                    "match": "^\\s*\\b(ulash|ulash_kutubxona|makro)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.import.uzpp" }
+                    }
+                },
+                {
+                    "name": "meta.preprocessor.uzpp",
+                    "match": "^\\s*#\\s*(include|define|pragma|ifdef|ifndef|endif|else|elif)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.import.uzpp" }
+                    }
+                }
+            ]
+        },
+
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.uzpp",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.uzpp",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+
+        "class-definition": {
+            "comment": "Highlights class/struct name after 'sinf' or 'tuzilma'",
+            "match": "\\b(sinf|tuzilma|shartnoma)\\s+([a-zA-Z_][a-zA-Z0-9_']*)",
+            "captures": {
+                "1": { "name": "storage.type.class.uzpp" },
+                "2": { "name": "entity.name.type.uzpp" }
+            }
+        },
+
+        "function-definition": {
+            "comment": "ReturnType FunctionName( — highlights the function name",
+            "match": "(?<!\\.)\\b([a-zA-Z_][a-zA-Z0-9_']*)\\s*(?=\\([^;]*\\)\\s*(?::|\\{|ustidan_yozish|mavhum))",
+            "captures": {
+                "1": { "name": "entity.name.function.definition.uzpp" }
+            }
+        },
+
+        "keywords-control": {
+            "name": "keyword.control.uzpp",
+            "match": "\\b(agar|aks_holda|uchun|holda|qaytarish|davom|tuxta|moslash|holat|urinish|ushlash|irgitish|siklni_tuxtat|keyingi)\\b"
+        },
+
+        "keywords-declaration": {
+            "patterns": [
+                {
+                    "name": "storage.type.class.uzpp",
+                    "match": "\\b(sinf|tuzilma|sanab_olish|shartnoma)\\b"
+                },
+                {
+                    "name": "keyword.declaration.uzpp",
+                    "match": "\\b(shablon|tur|nomlar_fazosi|funksiya|ulash|eksport|import|tushuncha|makro|asinxron)\\b"
+                }
+            ]
+        },
+
+        "keywords-modifier": {
+            "name": "storage.modifier.uzpp",
+            "match": "\\b(ozgaruvchan|ozgarmas|ochiq|yopiq|himoyalangan|mavhum|ustidan_yozish|statik|inline|tashqi|ichki|virtual|shaxsiy)\\b"
+        },
+
+        "types": {
+            "name": "support.type.uzpp",
+            "match": "\\b(butun|haqiqiy|matn|mantiqiy|bosh|uzun|qisqa|belgi|haqiqiy32|ulkan|bayt|vektor|lug'at|tartiblangan_lugat|to'plam|juft|uchlik|ixtiyoriy|kutilgan|natija|tanlov|kelajak|vazifa)\\b"
+        },
+
+        "constants": {
+            "patterns": [
+                {
+                    "name": "constant.language.boolean.uzpp",
+                    "match": "\\b(rost|yolg'on)\\b"
+                },
+                {
+                    "name": "constant.language.null.uzpp",
+                    "match": "\\b(nol|nullptr|NULL)\\b"
+                },
+                {
+                    "name": "constant.language.uzpp",
+                    "match": "\\b(va|yoki|emas|this)\\b"
+                }
+            ]
+        },
+
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.hex.uzpp",
+                    "match": "\\b0[xX][0-9a-fA-F]+[uUlL]*\\b"
+                },
+                {
+                    "name": "constant.numeric.float.uzpp",
+                    "match": "\\b\\d+\\.\\d+([eE][+-]?\\d+)?[fFlL]?\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.uzpp",
+                    "match": "\\b\\d+[uUlL]*\\b"
+                }
+            ]
+        },
+
+        "function-call": {
+            "comment": "Any identifier immediately followed by ( — function/method call",
+            "match": "\\b([a-zA-Z_][a-zA-Z0-9_']*)\\s*(?=\\()",
+            "captures": {
+                "1": { "name": "entity.name.function.uzpp" }
+            }
+        },
+
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.arithmetic.uzpp",
+                    "match": "\\+\\+|--|\\+=|-=|\\*=|/=|%=|\\+|-|\\*|/|%"
+                },
+                {
+                    "name": "keyword.operator.comparison.uzpp",
+                    "match": "==|!=|<=|>=|<|>"
+                },
+                {
+                    "name": "keyword.operator.logical.uzpp",
+                    "match": "&&|\\|\\||!"
+                },
+                {
+                    "name": "keyword.operator.bitwise.uzpp",
+                    "match": "&=|\\|=|\\^=|<<=|>>=|&|\\||\\^|~|<<|>>"
+                },
+                {
+                    "name": "keyword.operator.assignment.uzpp",
+                    "match": "="
+                },
+                {
+                    "name": "keyword.operator.arrow.uzpp",
+                    "match": "->|=>"
+                },
+                {
+                    "name": "keyword.operator.scope.uzpp",
+                    "match": "::"
+                }
+            ]
+        },
+
+        "namespace-access": {
+            "comment": "Highlights namespace/type qualifiers like uzpp::, std::",
+            "match": "\\b([a-zA-Z_][a-zA-Z0-9_']*)(?=::)",
+            "captures": {
+                "1": { "name": "entity.name.namespace.uzpp" }
+            }
+        },
+
+        "template-args": {
+            "comment": "Type parameter T in shablon<tur T>",
+            "match": "\\b(tur|typename)\\s+([a-zA-Z_][a-zA-Z0-9_']*)",
+            "captures": {
+                "1": { "name": "keyword.declaration.uzpp" },
+                "2": { "name": "entity.name.type.parameter.uzpp" }
+            }
+        }
+    }
+}

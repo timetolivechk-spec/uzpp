@@ -1,0 +1,14 @@
+ulash "uzpp_runtime.hpp"
+
+shablon <tur T>
+bosh royhat_chiqar(matn sarlavha, vektor<T> v) {
+    yozish << sarlavha << ": ";
+    uchun (o'zgaruvchan x : v) yozish << x << " ";
+    yozish << qator_oxiri;
+}
+
+butun asosiy() {
+    vektor<butun> sonlar = [5, 3, 8];
+    royhat_chiqar("Sonlar", sonlar);
+    qaytarish 0;
+}

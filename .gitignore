@@ -1,0 +1,38 @@
+# Скомпилированные бинарники
+*.exe
+*.o
+*.a
+*.obj
+*.dll
+*.so
+*.dylib
+
+# Генерированные C++ файлы
+*.generated.cpp
+
+# Директория сборки CMake
+build/
+
+# Node.js зависимости (vscode-uzpp расширение)
+node_modules/
+vscode-uzpp/node_modules/
+
+# Большие бинарники (собираются из исходников)
+vscode-uzpp/bin/
+vscode-uzpp/*.vsix
+
+# Временные тестовые файлы
+test_fayl.txt
+test_out.txt
+test.txt
+
+# CMake кэш
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# IDE
+.vscode/settings.json
+
+# Claude AI настройки
+.claude/

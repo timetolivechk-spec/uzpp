@@ -1,0 +1,47 @@
+// uz++ — Ko'p oqimlilik: parallel hisoblash
+
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+
+butun ogir_hisoblash(butun boshlanish, butun oxir) {
+    butun yigindi = 0;
+    uchun (butun i = boshlanish; i <= oxir; i++) {
+        yigindi = yigindi + (i * i);
+    }
+    qaytarish yigindi;
+}
+
+butun asosiy() {
+    butun umumiy = 1000000;
+    butun yarim = umumiy / 2;
+
+    // Ketma-ket hisoblash
+    yozish << "Ketma-ket hisoblash boshlandi..." << qator_oxiri;
+    butun ketma_ket = ogir_hisoblash(1, umumiy);
+    yozish << "Ketma-ket natija: " << ketma_ket << qator_oxiri;
+
+    // Parallel hisoblash (ikkita oqimda)
+    yozish << "\nParallel hisoblash boshlandi..." << qator_oxiri;
+
+    o'zgaruvchan oqim1 = std::async(std::launch::async, ogir_hisoblash, 1, yarim);
+    o'zgaruvchan oqim2 = std::async(std::launch::async, ogir_hisoblash, yarim + 1, umumiy);
+
+    butun parallel = oqim1.get() + oqim2.get();
+    yozish << "Parallel natija: " << parallel << qator_oxiri;
+    yozish << "Natijalar mos: " << (ketma_ket == parallel ? "HA" : "YOQ") << qator_oxiri;
+
+    // Thread Pool bilan ishlash
+    yozish << "\nOqim havzasi bilan ishlash:" << qator_oxiri;
+    uzpp::OqimPool havza(4);
+
+    uchun (butun i = 0; i < 4; i++) {
+        butun num = i + 1;
+        havza.vazifaQosh([num]() {
+            yozish << "  Vazifa " << num << " bajarildi" << qator_oxiri;
+        });
+    }
+
+    havza.kutish();
+    yozish << "Barcha vazifalar yakunlandi!" << qator_oxiri;
+    qaytarish 0;
+}

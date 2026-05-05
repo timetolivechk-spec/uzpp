@@ -1,0 +1,38 @@
+// uz++ — Matn ishlash: qidirish, almashtirish, formatlash
+
+ulash "uzpp_runtime.hpp"
+ulash "matn.hpp"
+
+butun asosiy() {
+    matn gap = "  Salom, uz++ Dasturlash Tili!  ";
+
+    yozish << "Asl:       '" << gap << "'" << qator_oxiri;
+    yozish << "Qirqilgan: '" << uzpp::Matn::qirqish(gap) << "'" << qator_oxiri;
+    yozish << "Kichik:    '" << uzpp::Matn::kichik_harfga(gap) << "'" << qator_oxiri;
+    yozish << "Katta:     '" << uzpp::Matn::katta_harfga(gap) << "'" << qator_oxiri;
+
+    matn matn1 = uzpp::Matn::qirqish(gap);
+    yozish << "\nAjratish (boshlanish bo'shliq bo'yicha):" << qator_oxiri;
+    vektor<matn> sozlar = uzpp::Matn::ajratish(matn1, " ");
+    uchun (matn soz : sozlar) {
+        yozish << "  - '" << soz << "'" << qator_oxiri;
+    }
+
+    matn birlashtirilgan = uzpp::Matn::birlashtirish(sozlar, "_");
+    yozish << "\nBirlashtirilgan: " << birlashtirilgan << qator_oxiri;
+
+    matn manba = "Dunyo chiroyli, dunyo katta!";
+    matn almashtirilgan = uzpp::Matn::almashtirish(manba, "dunyo", "uz++");
+    yozish << "\nAsl: " << manba << qator_oxiri;
+    yozish << "Almashtirilgan: " << almashtirilgan << qator_oxiri;
+
+    yozish << "\nBoshlanganda 'Dunyo': " << uzpp::Matn::boshlanganda(manba, "Dunyo") << qator_oxiri;
+    yozish << "Tugaganda 'katta!': " << uzpp::Matn::tugaganda(manba, "katta!") << qator_oxiri;
+
+    // Son va matn ogirish
+    matn son_matni = "42";
+    butun son = uzpp::Matn::butun_songa(son_matni);
+    yozish << "\n'" << son_matni << "' + 8 = " << (son + 8) << qator_oxiri;
+
+    qaytarish 0;
+}

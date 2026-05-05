@@ -1,0 +1,6 @@
+// uz++ — Birinchi dastur: Salom, Dunyo!
+
+butun asosiy() {
+    yozish << "Salom, Dunyo!" << qator_oxiri;
+    qaytarish 0;
+}

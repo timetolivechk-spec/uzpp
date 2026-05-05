@@ -1,0 +1,41 @@
+// uz++ — Xatolik boshqaruvi: Natija turi va try/catch
+
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+
+uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+    agar (b == 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
+}
+
+uzpp::Natija<haqiqiy> xavfsiz_ildiz(haqiqiy x) {
+    agar (x < 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz olish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(uzpp::Matematika::ildiz(x));
+}
+
+bosh sinab_kor(haqiqiy a, haqiqiy b) {
+    o'zgaruvchan natija = xavfsiz_bolish(a, b);
+    agar (natija.yaroqliMi()) {
+        yozish << a << " / " << b << " = " << natija.qiymat() << qator_oxiri;
+    } aks_holda {
+        yozish << "Xato: " << natija.xatoMazmun() << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    sinab_kor(10.0, 3.0);
+    sinab_kor(7.5, 0.0);
+
+    o'zgaruvchan ildiz_natija = xavfsiz_ildiz(16.0);
+    yozish << "sqrt(16) = " << ildiz_natija.qiymat() << qator_oxiri;
+
+    o'zgaruvchan manfiy = xavfsiz_ildiz(-4.0);
+    yozish << "sqrt(-4): " << manfiy.xatoMazmun() << qator_oxiri;
+
+    yozish << "Hamma narsa joyida!" << qator_oxiri;
+    qaytarish 0;
+}

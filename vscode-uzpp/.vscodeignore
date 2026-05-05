@@ -1,0 +1,19 @@
+.git
+.gitignore
+*.vsix
+.vscode-test/
+out/
+node_modules/
+src/
+*.ts
+*.js.map
+*.d.ts
+tsconfig.json
+webpack.config.js
+.nycrc*
+.mocharc.json
+
+# ВКЛЮЧАЕМ встроенный компилятор!
+!bin/
+!bin/**
+!bin/uzpp.exe

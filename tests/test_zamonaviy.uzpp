@@ -1,0 +1,44 @@
+ulash "uzpp_runtime.hpp"
+
+// FAZA 26: Zamonaviy uz++ til xususiyatlari namoyishi
+
+// === 1) TUR ALIASI ===
+tur Raqam = butun;
+tur Kasr64 = ikkilangan;
+
+// === 2) PIPELINE OPERATORI |> ===
+butun ikkilashtir(butun n) { qaytarish n * 2; }
+butun kvadrat(butun n)     { qaytarish n * n; }
+
+butun pipelineTesti() {
+    Raqam natija = 3 |> ikkilashtir |> kvadrat;
+    yozish << "3 |> *2 |> ^2 = " << natija << qator_oxiri;
+    qaytarish natija;
+}
+
+// === 3) TERNARY IFODA ===
+butun absQiymat(butun n) {
+    qaytarish n >= 0 ? n : -n;
+}
+
+// === 4) SINF ===
+sinf Hisoblash {
+    butun qoshish(butun a, butun b) {
+        qaytarish a + b;
+    }
+}
+
+butun asosiy() {
+    pipelineTesti();
+
+    butun qiymat = -42;
+    yozish << "Abs(-42) = " << absQiymat(qiymat) << qator_oxiri;
+
+    Raqam son = 100;
+    yozish << "son = " << son << qator_oxiri;
+
+    Hisoblash h;
+    yozish << "5 + 7 = " << h.qoshish(5, 7) << qator_oxiri;
+
+    qaytarish 0;
+}

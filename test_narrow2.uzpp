@@ -1,0 +1,31 @@
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+ulash "matn.hpp"
+
+uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+    agar (b == 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
+}
+
+butun fibonacci(butun n) {
+    agar (n <= 1) qaytarish n;
+    qaytarish fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+butun asosiy() {
+    lug'at<matn, butun> yoshlar;
+    yoshlar["Ali"] = 30;
+    yoshlar["Malika"] = 25;
+    yozish << yoshlar["Ali"] << qator_oxiri;
+
+    vektor<haqiqiy> kasr_sonlar = [4.0, 9.0, 16.0, 25.0];
+    uchun (o'zgaruvchan& x : kasr_sonlar) {
+        yozish << "sqrt(" << x << ") = " << uzpp::Matematika::ildiz(x) << qator_oxiri;
+    }
+
+    matn jumla = "  salom dunyo  ";
+    yozish << uzpp::Matn::tozala(jumla) << qator_oxiri;
+    qaytarish 0;
+}
