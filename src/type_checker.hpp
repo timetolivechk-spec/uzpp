@@ -34,6 +34,8 @@ private:
     std::vector<SemanticError> warnings_;
     std::unordered_map<std::string, std::string> functionReturns_;
     std::unordered_map<std::string, std::vector<std::string>> functionParams_;
+    // Standart qiymatli parametrlarni inobatga olib, minimal argument soni
+    std::unordered_map<std::string, std::size_t> functionMinArgs_;
     std::unordered_map<std::string, ClassInfo> classes_;
     std::unordered_set<std::string> templateFunctions_;
     std::string currentReturnType_ = "";
@@ -168,6 +170,12 @@ private:
                 }
             }
             scopes_.pop_back();
+        }
+    }
+
+    void markUsed(const std::string& name) {
+        for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
+            if (it->contains(name)) { (*it)[name].used = true; return; }
         }
     }
 
@@ -308,8 +316,13 @@ private:
                 declareVar(func->getName(), "funktsiya", func->getFunctionToken());
                 
                 std::vector<std::string> pTypes;
-                for (const auto& p : func->getParameters()) pTypes.push_back(p.type);
+                std::size_t minArgs = 0;
+                for (const auto& p : func->getParameters()) {
+                    pTypes.push_back(p.type);
+                    if (p.defaultValue.empty()) minArgs++;
+                }
                 functionParams_[func->getName()] = pTypes;
+                functionMinArgs_[func->getName()] = minArgs;
                 functionReturns_[func->getName()] = func->getReturnType();
                 
                 std::string prevRet = currentReturnType_;
@@ -509,16 +522,66 @@ private:
                 }
                 break;
             }
+            case ASTNodeType::EnumDeclaration: {
+                auto en = static_cast<const EnumDeclaration*>(node);
+                // Register enum type so "EnumName::Value" expressions don't trigger warnings
+                ClassInfo info;
+                for (const auto& v : en->getValues()) {
+                    info.fields[v.name] = en->getName();
+                }
+                // Helper function registered as built-in so TypeChecker doesn't complain
+                functionParams_[en->getName() + "_nomi"] = {en->getName()};
+                functionReturns_[en->getName() + "_nomi"] = "matn";
+                classes_[en->getName()] = info;
+                break;
+            }
             default: break;
         }
+    }
+
+    // F-string ichidagi o'zgaruvchi nomlarini ajratib olish
+    static std::vector<std::string> extractFStringVars(const std::string& s) {
+        std::vector<std::string> vars;
+        size_t i = 0;
+        while (i < s.size()) {
+            if (s[i] == '{' && i + 1 < s.size() && s[i+1] != '{') {
+                size_t end = s.find('}', i + 1);
+                if (end != std::string::npos) {
+                    std::string inner = s.substr(i + 1, end - i - 1);
+                    // Only simple identifiers (no dots, no spaces at start)
+                    if (!inner.empty() && (std::isalpha(inner[0]) || inner[0] == '_')) {
+                        // Trim any format spec after ':'
+                        size_t colon = inner.find(':');
+                        if (colon != std::string::npos) inner = inner.substr(0, colon);
+                        vars.push_back(inner);
+                    }
+                    i = end + 1;
+                    continue;
+                }
+            }
+            i++;
+        }
+        return vars;
     }
 
     void checkExpr(const Expression* expr) {
         if (!expr) return;
         switch (expr->getType()) {
+            case ASTNodeType::LiteralExpression: {
+                auto lit = static_cast<const LiteralExpression*>(expr);
+                if (lit->getLiteralType() == LiteralExpression::LiteralType::FormatString) {
+                    // F-string ichidagi o'zgaruvchilarni "ishlatilgan" deb belgilash
+                    for (const auto& varName : extractFStringVars(lit->getValue())) {
+                        markUsed(varName);
+                    }
+                }
+                break;
+            }
             case ASTNodeType::IdentifierExpression: {
                 auto id = static_cast<const IdentifierExpression*>(expr);
                 std::string name = id->getName();
+                // Shablon argumenti bo'lgan nomlar (<...> ichida) — standart funksiyalar
+                if (name.find('<') != std::string::npos) break;
                 // Ogohlantirish faqat kichik harf bilan boshlangan va "::" qatnashmagan noma'lum o'zgaruvchilarga
                 if (!name.empty() && std::islower(name[0]) && name.find("::") == std::string::npos && !isDeclared(name)) {
                     reportWarning("Noma'lum o'zgaruvchi ishlatilmoqda -> " + name, id->getSourceToken());
@@ -604,14 +667,19 @@ private:
                     std::string name = static_cast<const IdentifierExpression*>(call->getCallee())->getName();
                     if (functionParams_.contains(name) && !templateFunctions_.contains(name)) {
                         const auto& expectedParams = functionParams_[name];
-                        if (expectedParams.size() != call->getArguments().size()) {
-                            reportError("Funksiya '" + name + "' " + std::to_string(expectedParams.size()) + " ta argument kutadi, lekin " + std::to_string(call->getArguments().size()) + " ta berildi.", call->getCallToken());
+                        std::size_t minArgs = functionMinArgs_.contains(name) ? functionMinArgs_[name] : expectedParams.size();
+                        std::size_t gotArgs = call->getArguments().size();
+                        if (gotArgs < minArgs || gotArgs > expectedParams.size()) {
+                            std::string expected = minArgs == expectedParams.size()
+                                ? std::to_string(expectedParams.size())
+                                : std::to_string(minArgs) + ".." + std::to_string(expectedParams.size());
+                            reportError("Funksiya '" + name + "' " + expected + " ta argument kutadi, lekin " + std::to_string(gotArgs) + " ta berildi.", call->getCallToken());
                         } else {
                             auto stripRef = [](std::string t) {
                                 while (!t.empty() && (t.back() == '&' || t.back() == '*')) t.pop_back();
                                 return t;
                             };
-                            for (size_t i = 0; i < expectedParams.size(); ++i) {
+                            for (size_t i = 0; i < gotArgs; ++i) {
                                 std::string argType = inferType(call->getArguments()[i].get());
                                 std::string expBase = stripRef(expectedParams[i]);
                                 if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" && argType != expectedParams[i] && argType != expBase) {
@@ -646,6 +714,11 @@ private:
                 }
                 
                 for (const auto& arg : call->getArguments()) checkExpr(arg.get());
+                break;
+            }
+            case ASTNodeType::UnaryExpression: {
+                auto un = static_cast<const UnaryExpression*>(expr);
+                checkExpr(un->getExpression());
                 break;
             }
             case ASTNodeType::BinaryExpression: {

@@ -1,15 +1,17 @@
-nomlar_fazosi uzpp::Xavfsizlik;
+// uz++ — Zamonaviy xususiyatlar testi
 
-bosh asosiy() {
-    // 1. Formatlangan matn
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // 1. Formatlangan matn (f-string)
     matn ism = "Antigravity";
-    butun yosh = 1;
-    yozish << f"Salom, mening ismim {ism} va yoshim {yosh} da!" << qator_oxiri;
+    butun yosh = 3;
+    yozish << f"Salom, mening ismim {ism} va yoshim {yosh}!" << qator_oxiri;
 
     // 2. Pattern Matching (Moslash)
     moslash (yosh) {
         holat 0:
-            yozish << "Yangi tug'ilgan" << qator_oxiri;
+            yozish << "Yangi" << qator_oxiri;
         holat 1:
             yozish << "Bir yoshda" << qator_oxiri;
         boshqa:
@@ -18,23 +20,31 @@ bosh asosiy() {
 
     moslash (ism) {
         holat "Antigravity":
-            yozish << "U sun'iy intellekt!" << qator_oxiri;
+            yozish << "Bu sun'iy intellekt!" << qator_oxiri;
         boshqa:
-            yozish << "Oddiy odam" << qator_oxiri;
+            yozish << "Oddiy ism" << qator_oxiri;
     }
 
-    // 3. Null-Coalescing
-    Tanlov<butun> qiymatyoq; // empty std::optional
-    Tanlov<butun> qiymatbor = 100;
-    
-    butun natija1 = qiymatyoq ?? 50; 
-    butun natija2 = qiymatbor ?? 50; 
-    
-    yozish << f"Natijalar: {natija1} va {natija2}" << qator_oxiri;
+    // 3. Tanlov<T> (optional/maybe monad)
+    Tanlov<butun> qiymatyoq = uzpp::Tanlov<butun>::yoq();
+    Tanlov<butun> qiymatbor = uzpp::bor(100);
+
+    yozish << "Bo'sh: " << (qiymatyoq.borMi() ? "bor" : "yo'q") << qator_oxiri;
+    yozish << "Qiymat: " << (qiymatbor.borMi() ? "bor" : "yo'q") << qator_oxiri;
+    yozish << "Qiymat = " << qiymatbor.qiymat() << qator_oxiri;
+    yozish << "Standart = " << qiymatyoq.qiymat_yoki(42) << qator_oxiri;
 
     // 4. Smart Pointers (Xavfsiz xotira)
-    yagona<butun> ptr = yangi_yagona<butun>(42);
-    // umumiy<butun> s_ptr = yangi_umumiy<butun>(42);
-    
+    yagona_korsatkich<butun> ptr = yangi_yagona<butun>(42);
+    yozish << "Ko'rsatkich qiymati: " << *ptr << qator_oxiri;
+
+    // 5. Natija<T> (Result type)
+    uzpp::Natija<butun> muvaffaq = uzpp::Natija<butun>::muvaffaqiyat(99);
+    uzpp::Natija<butun> xatolik = uzpp::Natija<butun>::xato("test xato");
+
+    yozish << "Natija: " << (muvaffaq.yaroqliMi() ? "muvaffaq" : "xato") << " = " << muvaffaq.qiymat() << qator_oxiri;
+    yozish << "Xato: " << xatolik.xatoMazmun() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }

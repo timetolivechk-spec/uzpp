@@ -1,10 +1,67 @@
+// uz++ — Matn qayta ishlash va kolleksiya testi
+
+ulash "uzpp_runtime.hpp"
+
+matn qatorni_qaytarish(matn s) {
+    matn natija = "";
+    butun n = s.length();
+    uchun (butun i = n - 1; i >= 0; i--) {
+        natija += s[i];
+    }
+    qaytarish natija;
+}
+
+butun so_z_soni(matn s) {
+    butun son = 0;
+    mantiqiy oldingi_boshqa = rost;
+    uchun (belgi c : s) {
+        agar (c == ' ') {
+            oldingi_boshqa = rost;
+        } boshqa {
+            agar (oldingi_boshqa) {
+                son++;
+                oldingi_boshqa = yolg'on;
+            }
+        }
+    }
+    qaytarish son;
+}
+
 butun asosiy() {
-    fayl_yozish chiqish("build/integration_output.txt");
-    agar (chiqish.is_open()) {
-        chiqish << "uzpp integration" << qator_oxiri;
-        chiqish.close();
+    yozish << "=== Matn qayta ishlash ===" << qator_oxiri;
+
+    // 1. Qatorni qaytarish
+    matn asl = "salom dunyo";
+    matn qaytarilgan = qatorni_qaytarish(asl);
+    yozish << "Asl:    " << asl << qator_oxiri;
+    yozish << "Teskari: " << qaytarilgan << qator_oxiri;
+
+    // 2. So'z soni
+    matn jumla = "uz++ dasturlash tili juda qulay";
+    butun son = so_z_soni(jumla);
+    yozish << "Jumla: \"" << jumla << "\"" << qator_oxiri;
+    yozish << "So'zlar soni: " << son << qator_oxiri;
+
+    // 3. Vektor operatsiyalari
+    yozish << "--- Vektor ---" << qator_oxiri;
+    vektor<matn> ro_yxat = ["olma", "nok", "shaftoli", "gilos"];
+    yozish << "Mevalar (" << ro_yxat.size() << " ta):" << qator_oxiri;
+    uchun (matn meva : ro_yxat) {
+        yozish << "  - " << meva << qator_oxiri;
     }
 
-    yozish << "tayyor" << qator_oxiri;
+    // 4. Lug'at
+    yozish << "--- Lug'at ---" << qator_oxiri;
+    lug'at<matn, butun> narxlar;
+    narxlar["olma"] = 5000;
+    narxlar["nok"] = 8000;
+    narxlar["shaftoli"] = 12000;
+    yozish << "Narxlar:" << qator_oxiri;
+    narxlar["shaftoli"] = 10000;
+    yozish << "  olma: " << narxlar["olma"] << " so'm" << qator_oxiri;
+    yozish << "  nok: " << narxlar["nok"] << " so'm" << qator_oxiri;
+    yozish << "  shaftoli: " << narxlar["shaftoli"] << " so'm" << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }

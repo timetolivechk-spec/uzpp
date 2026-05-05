@@ -1,0 +1,52 @@
+// uz++ — Standart parametrlar testi
+
+ulash "uzpp_runtime.hpp"
+
+// Oddiy standart qiymat
+butun qo_sh(butun a, butun b = 0) {
+    qaytarish a + b;
+}
+
+// Ko'p standart qiymat
+matn salom(matn ism = "Dunyo", butun marta = 1) {
+    matn natija = "";
+    uchun (butun i = 0; i < marta; i++) {
+        natija += "Salom, " + ism + "! ";
+    }
+    qaytarish natija;
+}
+
+// Haqiqiy son standart qiymat
+haqiqiy ko_paytir(haqiqiy a, haqiqiy koeffitsent = 1.0) {
+    qaytarish a * koeffitsent;
+}
+
+// Mantiqiy standart qiymat
+bosh chiqar(matn xabar, mantiqiy yangi_qator = rost) {
+    yozish << xabar;
+    agar (yangi_qator) yozish << qator_oxiri;
+}
+
+butun asosiy() {
+    // qo'sh — ikkinchi argument standart (0)
+    yozish << qo_sh(5) << qator_oxiri;       // 5
+    yozish << qo_sh(5, 3) << qator_oxiri;    // 8
+
+    // salom — ikkala argument standart
+    yozish << salom() << qator_oxiri;              // Salom, Dunyo!
+    yozish << salom("Ali") << qator_oxiri;         // Salom, Ali!
+    yozish << salom("Ali", 2) << qator_oxiri;      // Salom, Ali! Salom, Ali!
+
+    // ko'paytir — koeffitsent standart 1.0
+    yozish << ko_paytir(3.14) << qator_oxiri;      // 3.14
+    yozish << ko_paytir(3.14, 2.0) << qator_oxiri; // 6.28
+
+    // chiqar — yangi_qator standart rost
+    chiqar("A");
+    chiqar("B");
+    chiqar("C — oxirgi", yolg'on);
+    yozish << " <-- bir qatorda" << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

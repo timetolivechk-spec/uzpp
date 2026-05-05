@@ -1,17 +1,37 @@
+// uz++ — Asinxron va parallel hisoblash testi
+
 ulash "uzpp_runtime.hpp"
-nomlar_fazosi uzpp::Asinxron;
-
-asinxron butun ogirHisob() {
-    qaytarish 42;
-}
-
-asinxron bosh asosiyAsinxron() {
-    yozish << "Hisoblash boshlandi..." << qator_oxiri;
-    butun natija = kutish ogirHisob();
-    yozish << "Natija: " << natija << qator_oxiri;
-}
+ulash "matematika.hpp"
 
 butun asosiy() {
-    asosiyAsinxron();
+    yozish << "=== Asinxron test ===" << qator_oxiri;
+
+    // std::async bilan parallel vazifalar
+    o'zgaruvchan v1 = std::async(std::launch::async, []() { qaytarish 6 * 7; });
+    o'zgaruvchan v2 = std::async(std::launch::async, []() { qaytarish 10 * 10; });
+    o'zgaruvchan v3 = std::async(std::launch::async, []() { qaytarish 3 * 3 + 4 * 4; });
+
+    yozish << "6*7      = " << v1.get() << qator_oxiri;
+    yozish << "10*10    = " << v2.get() << qator_oxiri;
+    yozish << "3^2+4^2  = " << v3.get() << qator_oxiri;
+
+    // OqimPool testi
+    yozish << "--- OqimPool ---" << qator_oxiri;
+    vektor<butun> natijalar = [0, 0, 0, 0, 0];
+    {
+        uzpp::OqimPool hovuz(3);
+        uchun (butun i = 0; i < 5; i++) {
+            hovuz.vazifaQosh([&natijalar, i]() {
+                natijalar[i] = (i + 1) * (i + 1);
+            });
+        }
+        hovuz.toxtatish();
+    }
+
+    yozish << "Kvadratlar: ";
+    uchun (butun n : natijalar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }

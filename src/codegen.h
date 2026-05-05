@@ -67,6 +67,8 @@ private:
     void emitGroupNode(const GroupNode* node);
 
     std::string translateToken(const Token& token, const ASTNode* nextNode) const;
+    // Standart qiymatni (uz++ sintaksisida) C++ ga tarjima qilish
+    std::string translateDefaultValue(const std::string& val) const;
     bool needsSpaceBefore(const std::string& previous, const std::string& current) const;
     void writeIndentIfNeeded();
     void emitRawToken(const std::string& token);
@@ -118,6 +120,7 @@ private:
     void visitExportModuleStatement(const ExportModuleStatement* stmt);
     void visitLinkStatement(const LinkStatement* stmt);
     void visitTypeAlias(const TypeAlias* decl);
+    void visitEnumDeclaration(const EnumDeclaration* decl);
     
     // Helper methods
     std::string getOperatorSymbol(const std::string& op) const;

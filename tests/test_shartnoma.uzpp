@@ -1,27 +1,58 @@
-#include <iostream>
+// uz++ — Shartnoma (interfeys) testi
 
-// Interface (shartnoma)
+ulash "uzpp_runtime.hpp"
+
+// Shartnoma e'lon qilish
 shartnoma Shakl {
-    butun yuzasi();
-    bosh malumot(matn prefix);
+    haqiqiy yuzasi();
+    haqiqiy perimetri();
 }
 
-// Sinf (class) interfeyisdan meros olmoqda
+// Kvadrat sinfi Shakl shartnomasini amalga oshiradi
 sinf Kvadrat : Shakl {
-    butun tomon;
+ochiq:
+    haqiqiy tomon;
 
-    // Interface methodlari realizatsiyasi
-    butun yuzasi() {
-        qaytish 5 * 5; // Hoziroq tomon qiymatlarini hardcode qilamiz test uchun
+    Kvadrat(haqiqiy t) : tomon(t) {}
+
+    haqiqiy yuzasi() {
+        qaytarish tomon * tomon;
     }
 
-    bosh malumot(matn prefix) {
-        std::cout << prefix << ": Kvadrat";
+    haqiqiy perimetri() {
+        qaytarish 4.0 * tomon;
+    }
+}
+
+// Doira sinfi
+sinf Doira : Shakl {
+ochiq:
+    haqiqiy radius;
+
+    Doira(haqiqiy r) : radius(r) {}
+
+    haqiqiy yuzasi() {
+        qaytarish 3.14159 * radius * radius;
+    }
+
+    haqiqiy perimetri() {
+        qaytarish 2.0 * 3.14159 * radius;
     }
 }
 
 butun asosiy() {
-    Kvadrat k;
-    std::cout << "Yuzasi: " << k.yuzasi();
-    qaytish 0;
+    Kvadrat k(5.0);
+    Doira d(3.0);
+
+    yozish << "=== Shartnoma testi ===" << qator_oxiri;
+
+    yozish << "Kvadrat (tomon=5):" << qator_oxiri;
+    yozish << "  Yuzasi:    " << k.yuzasi() << qator_oxiri;
+    yozish << "  Perimetri: " << k.perimetri() << qator_oxiri;
+
+    yozish << "Doira (radius=3):" << qator_oxiri;
+    yozish << "  Yuzasi:    " << d.yuzasi() << qator_oxiri;
+    yozish << "  Perimetri: " << d.perimetri() << qator_oxiri;
+
+    qaytarish 0;
 }

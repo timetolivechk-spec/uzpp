@@ -1,0 +1,48 @@
+// uz++ — Ichma-ich shablon tiplari testi
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // 1. vektor<vektor<T>> — matritsa
+    vektor<vektor<butun>> matritsa;
+    vektor<butun> qator1 = [1, 2, 3];
+    vektor<butun> qator2 = [4, 5, 6];
+    vektor<butun> qator3 = [7, 8, 9];
+    matritsa.push_back(qator1);
+    matritsa.push_back(qator2);
+    matritsa.push_back(qator3);
+
+    yozish << "Matritsa:" << qator_oxiri;
+    uchun (vektor<butun> qator : matritsa) {
+        uchun (butun el : qator) {
+            yozish << el << " ";
+        }
+        yozish << qator_oxiri;
+    }
+
+    // 2. lug'at<matn, vektor<butun>>
+    lug'at<matn, vektor<butun>> guruhlar;
+    guruhlar["juft"] = [2, 4, 6, 8];
+    guruhlar["toq"]  = [1, 3, 5, 7];
+
+    yozish << "Juft sonlar: ";
+    uchun (butun n : guruhlar["juft"]) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    yozish << "Toq sonlar: ";
+    uchun (butun n : guruhlar["toq"]) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    // 3. vektor<lug'at<matn, butun>>
+    vektor<lug'at<matn, butun>> jadval;
+    lug'at<matn, butun> ism_yosh1;
+    ism_yosh1["Ali"] = 20;
+    lug'at<matn, butun> ism_yosh2;
+    ism_yosh2["Vali"] = 25;
+    jadval.push_back(ism_yosh1);
+    jadval.push_back(ism_yosh2);
+
+    yozish << "Jadval satr soni: " << jadval.size() << qator_oxiri;
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

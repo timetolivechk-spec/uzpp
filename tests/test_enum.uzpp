@@ -1,0 +1,40 @@
+// uz++ — Enum (sanab_olish) testi
+
+ulash "uzpp_runtime.hpp"
+
+sanab_olish Rang { Qizil, Yashil, Ko_k }
+
+sanab_olish Daraja { Boshlangich = 1, Orta = 5, Yuqori = 10 }
+
+butun asosiy() {
+    // Asosiy foydalanish
+    Rang r = Rang::Yashil;
+    yozish << Rang_nomi(r) << qator_oxiri;      // Yashil
+
+    Daraja d = Daraja::Orta;
+    yozish << Daraja_nomi(d) << qator_oxiri;    // Orta
+
+    // Taqqoslash
+    agar (r == Rang::Yashil) {
+        yozish << "Rang yashil!" << qator_oxiri;
+    }
+
+    agar (d == Daraja::Yuqori) {
+        yozish << "Yuqori daraja" << qator_oxiri;
+    } boshqa {
+        yozish << "Yuqori emas" << qator_oxiri;
+    }
+
+    // moslash bilan enum (har bir holat — bitta ifoda)
+    moslash (r) {
+        holat Rang::Qizil:
+            yozish << "Qizil" << qator_oxiri;
+        holat Rang::Yashil:
+            yozish << "Yashil!" << qator_oxiri;
+        boshqa:
+            yozish << "Ko_k" << qator_oxiri;
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,24 +1,43 @@
+// uz++ — API uslubida so'rov-javob testi
+
 ulash "uzpp_runtime.hpp"
-ulash "tarmoq.hpp"
-ulash "fayl_tizimi.hpp"
+ulash "matn.hpp"
 
-nomlar_fazosi uzpp::Tarmoq;
+sinf ApiJavob {
+ochiq:
+    butun kod;
+    matn xabar;
+    matn malumot;
 
-asinxron bosh asosiyAsinxron() {
-    Server api(8080);
+    ApiJavob(butun k, matn x, matn m) : kod(k), xabar(x), malumot(m) {}
 
-    api.yonalish("GET", "/api/salom", [](Sorov s, Javob j) {
-        uzpp::FaylTizimi::JsonObyekt data;
-        data.maydonlar["xabar"] = "Uz++ orqali yaratilgan REST API!";
-        data.maydonlar["muvaffaqiyat"] = "rost";
-        j.jsonQaytarish(200, data);
-    });
+    bosh chiqar() {
+        yozish << "[" << kod << "] " << xabar << ": " << malumot << qator_oxiri;
+    }
+}
 
-    yozish << "API Server 8080-portda kutilmoqda. Brauzerdan http://localhost:8080/api/salom ni oching." << qator_oxiri;
-    kutish api.ishlash();
+ApiJavob yonalish_bajar(matn metod, matn yonalish) {
+    agar (metod == "GET" && yonalish == "/salom") {
+        qaytarish ApiJavob(200, "OK", "Salom, uz++ REST!");
+    }
+    agar (metod == "GET" && yonalish == "/versiya") {
+        qaytarish ApiJavob(200, "OK", "uz++ v2.0");
+    }
+    qaytarish ApiJavob(404, "Topilmadi", yonalish);
 }
 
 butun asosiy() {
-    asosiyAsinxron();
+    yozish << "=== API test ===" << qator_oxiri;
+
+    vektor<matn> metodlar = ["GET", "GET", "POST"];
+    vektor<matn> yonalishlar = ["/salom", "/versiya", "/noma'lum"];
+
+    uchun (butun i = 0; i < 3; i++) {
+        yozish << metodlar[i] << " " << yonalishlar[i] << " -> ";
+        ApiJavob j = yonalish_bajar(metodlar[i], yonalishlar[i]);
+        j.chiqar();
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }

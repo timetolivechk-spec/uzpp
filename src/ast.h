@@ -541,6 +541,7 @@ public:
     struct Parameter {
         std::string name;
         std::string type;
+        std::string defaultValue; // Standart qiymat, masalan: "0", "\"\"", "rost"
         bool isConst = false;
         Token token;
     };
@@ -701,6 +702,27 @@ public:
 
 private:
     std::string moduleName_;
+    Token token_;
+};
+
+class EnumDeclaration final : public Declaration {
+public:
+    struct EnumValue {
+        std::string name;
+        std::string explicitValue; // ixtiyoriy: "= 5" kabi
+    };
+
+    EnumDeclaration(std::string name, std::vector<EnumValue> values, Token token = Token())
+        : name_(std::move(name)), values_(std::move(values)), token_(std::move(token)) {}
+
+    ASTNodeType getType() const override { return ASTNodeType::EnumDeclaration; }
+    const std::string& getName() const { return name_; }
+    const std::vector<EnumValue>& getValues() const { return values_; }
+    const Token& getToken() const { return token_; }
+
+private:
+    std::string name_;
+    std::vector<EnumValue> values_;
     Token token_;
 };
 

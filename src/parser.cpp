@@ -21,6 +21,7 @@ namespace {
             while (i < tokens.size() && depth > 0) {
                 if (tokens[i].value == "<") depth++;
                 else if (tokens[i].value == ">") depth--;
+                else if (tokens[i].value == ">>") depth -= 2;
                 i++;
             }
         }
@@ -90,6 +91,53 @@ std::string Parser::formatLocation(const Token& token) const {
     std::ostringstream builder;
     builder << "qator: " << token.line << " ustun: " << token.column;
     return builder.str();
+}
+
+// ===== TYPE STRING PARSING =====
+
+std::string Parser::parseTypeString() {
+    // Base name (may include namespace like uzpp::Tanlov)
+    std::string typeStr = advance().value;
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
+        typeStr += advance().value; // "::"
+        if (!isAtEnd()) typeStr += advance().value; // next segment
+    }
+
+    // Template arguments: handle nested >> correctly
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
+        typeStr += advance().value; // consume "<"
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            const std::string& val = peek().value;
+            if (val == "<") {
+                depth++;
+                typeStr += advance().value;
+            } else if (val == ">") {
+                depth--;
+                typeStr += advance().value;
+            } else if (val == ">>") {
+                // Split ">>" into two ">" — handles vektor<vektor<T>>
+                advance(); // consume the ">>" token
+                depth -= 2;
+                if (depth >= 0) {
+                    typeStr += ">>";
+                } else {
+                    // depth was 1, so only one > belongs here
+                    typeStr += ">";
+                    depth = 0;
+                }
+            } else {
+                typeStr += advance().value;
+            }
+        }
+    }
+
+    // Trailing reference/pointer qualifiers
+    while (!isAtEnd() && peek().type == TokenType::Symbol &&
+           (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
+        typeStr += advance().value;
+    }
+    return typeStr;
 }
 
 // ===== LEGACY TOKEN-BASED PARSING (MAINTAINED FOR COMPATIBILITY) =====
@@ -799,10 +847,13 @@ std::unique_ptr<Expression> Parser::parseIdentifierOrCall() {
                 depth--;
                 if (depth == 0) { isTemplate = true; break; }
             }
+            else if (tokens_[i].value == ">>") {
+                depth -= 2;
+                if (depth <= 0) { isTemplate = true; break; }
+            }
             else if (tokens_[i].value == ";" || tokens_[i].value == "{" || tokens_[i].value == "}") {
                 break;
             }
-            // Logical/comparison operators can't appear inside template args — stop scanning
             else if (depth == 1 && (tokens_[i].value == "||" || tokens_[i].value == "&&" ||
                                     tokens_[i].value == "!=" || tokens_[i].value == "yoki" ||
                                     tokens_[i].value == "va")) {
@@ -810,13 +861,22 @@ std::unique_ptr<Expression> Parser::parseIdentifierOrCall() {
             }
             i++;
         }
-        
+
         if (isTemplate) {
             token.value += advance().value; // '<'
-            while (peek().value != ">") {
-                token.value += advance().value;
+            int tDepth = 1;
+            while (!isAtEnd() && tDepth > 0) {
+                const std::string& tv = peek().value;
+                if (tv == "<") { tDepth++; token.value += advance().value; }
+                else if (tv == ">") { tDepth--; token.value += advance().value; }
+                else if (tv == ">>") {
+                    advance();
+                    tDepth -= 2;
+                    if (tDepth >= 0) { token.value += ">>"; }
+                    else { token.value += ">"; tDepth = 0; }
+                }
+                else { token.value += advance().value; }
             }
-            token.value += advance().value; // '>'
 
             // After template params, handle any trailing ::Segment chains
             // e.g. uzpp::Natija<butun>::xato(...)
@@ -1035,6 +1095,14 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
         } else {
             elseBranch = parseStatement();
         }
+    } else if (checkKeyword("boshqa") && !isAtEnd()) {
+        // boshqa { ... } — else clause (not switch default which uses boshqa:)
+        size_t next = current_ + 1;
+        bool isElse = next < tokens_.size() && tokens_[next].value == "{";
+        if (isElse) {
+            advance(); // consume 'boshqa'
+            elseBranch = parseStatement();
+        }
     }
 
     return std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch),
@@ -1190,28 +1258,6 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
             isConst = true;
             advance(); // consume o'zgarmas
         }
-
-        auto parseTypeString = [this]() -> std::string {
-            std::string typeStr = advance().value;
-            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
-                typeStr += advance().value;
-                if (!isAtEnd()) typeStr += advance().value;
-            }
-            if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
-                typeStr += advance().value;
-                int depth = 1;
-                while (!isAtEnd() && depth > 0) {
-                    if (peek().value == "<") depth++;
-                    else if (peek().value == ">") depth--;
-                    typeStr += advance().value;
-                }
-            }
-            while (!isAtEnd() && peek().type == TokenType::Symbol &&
-                   (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
-                typeStr += advance().value;
-            }
-            return typeStr;
-        };
 
         std::string typeName = parseTypeString();
         if (isConst) typeName = "o'zgarmas " + typeName;
@@ -1372,20 +1418,25 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         const Token enumToken = advance();
         std::string name = advance().value;
         if (isAtEnd() || peek().value != "{") throw ParseError("Kutilgan '{' sanab_olishdan keyin");
-        advance();
-        
-        std::string enumBody = "enum class " + name + " {\n";
+        advance(); // '{'
+
+        std::vector<EnumDeclaration::EnumValue> values;
         while (!isAtEnd() && peek().value != "}") {
-            enumBody += advance().value;
-            if (peek().value == ",") enumBody += ",\n";
-            else if (peek().value == "=") enumBody += " = ";
+            // Skip commas between values
+            if (peek().value == ",") { advance(); continue; }
+            EnumDeclaration::EnumValue ev;
+            ev.name = advance().value;
+            if (!isAtEnd() && peek().value == "=") {
+                advance(); // '='
+                // Collect the explicit value (integer literal or identifier)
+                ev.explicitValue = advance().value;
+            }
+            values.push_back(std::move(ev));
         }
-        advance(); // '}'
+        if (!isAtEnd()) advance(); // '}'
         if (!isAtEnd() && peek().value == ";") advance();
-        enumBody += "\n};";
-        
-        Token dummy = enumToken; dummy.value = enumBody;
-        return std::make_unique<TokenNode>(dummy);
+
+        return std::make_unique<EnumDeclaration>(name, std::move(values), enumToken);
     }
 
     // Handle empty statements (just `;`)
@@ -1476,31 +1527,9 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
     
     // C-Style disambiguation: <Type> <Name>
     if (looksLikeDeclHelper(tokens_, current_)) {
-        auto parseTypeString = [this]() -> std::string {
-            std::string typeStr = advance().value;
-            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
-                typeStr += advance().value;
-                if (!isAtEnd()) typeStr += advance().value;
-            }
-            if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
-                typeStr += advance().value;
-                int depth = 1;
-                while (!isAtEnd() && depth > 0) {
-                    if (peek().value == "<") depth++;
-                    else if (peek().value == ">") depth--;
-                    typeStr += advance().value;
-                }
-            }
-            while (!isAtEnd() && peek().type == TokenType::Symbol && 
-                   (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
-                typeStr += advance().value;
-            }
-            return typeStr;
-        };
-
         std::string typeName = parseTypeString();
         std::string name = advance().value;
-        
+
         if (peek().type == TokenType::Symbol && peek().value == "(") {
                 // Could be:
                 // 1. Function declaration: Type Name(Type param1, Type param2) {...}
@@ -1577,12 +1606,10 @@ std::unique_ptr<NamespaceDeclaration> Parser::parseNamespaceDeclaration() {
     }
     
     if (peek().type == TokenType::Symbol && peek().value == ";") {
-        advance(); // C++17 single-line namespace
-        std::vector<std::unique_ptr<ASTNode>> globals;
-        while (!isAtEnd()) {
-            globals.push_back(parseGlobalDeclaration());
-        }
-        return std::make_unique<NamespaceDeclaration>(name, std::move(globals), token);
+        advance(); // "nomlar_fazosi X;" -> "using namespace X;"
+        Token usingTok = token;
+        usingTok.value = "using namespace " + name + ";";
+        return std::make_unique<NamespaceDeclaration>(name, std::vector<std::unique_ptr<ASTNode>>{}, token);
     }
     
     // Traditional bracketed namespace
@@ -1720,28 +1747,6 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
             advance();
         }
         
-        auto parseTypeString = [this]() -> std::string {
-            std::string typeStr = advance().value;
-            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
-                typeStr += advance().value;
-                if (!isAtEnd()) typeStr += advance().value;
-            }
-            if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
-                typeStr += advance().value;
-                int depth = 1;
-                while (!isAtEnd() && depth > 0) {
-                    if (peek().value == "<") depth++;
-                    else if (peek().value == ">") depth--;
-                    typeStr += advance().value;
-                }
-            }
-            while (!isAtEnd() && peek().type == TokenType::Symbol && 
-                   (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
-                typeStr += advance().value;
-            }
-            return typeStr;
-        };
-        
         param.type = parseTypeString();
         
         // Second identifier = name (if present)
@@ -1755,19 +1760,40 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
             param.token = previous();
         }
         
+        // Standart qiymat: butun son = 0
+        if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "=") {
+            advance(); // consume '='
+            // Collect the default value expression as a token string
+            // Handle nested parens/brackets/angles
+            std::string defVal;
+            int pDepth = 0;
+            while (!isAtEnd()) {
+                const std::string& v = peek().value;
+                if (v == "(" || v == "[" || v == "{") { pDepth++; defVal += advance().value; }
+                else if (v == ")" || v == "]" || v == "}") {
+                    if (pDepth == 0) break;
+                    pDepth--;
+                    defVal += advance().value;
+                }
+                else if (v == "," && pDepth == 0) break;
+                else defVal += advance().value;
+            }
+            param.defaultValue = defVal;
+        }
+
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
             advance();
         }
-        
+
         params.push_back(param);
     }
-    
+
     if (isAtEnd() || peek().value != ")") {
         throw ParseError("Kutilgan ')' " + formatLocation(peek()));
     }
-    
+
     advance(); // consume ')'
-    
+
     return params;
 }
 
@@ -1889,27 +1915,6 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
 
         // Method or Field: Type Name ...
         if (looksLikeDeclHelper(tokens_, current_)) {
-            auto parseTypeString = [this]() -> std::string {
-                std::string typeStr = advance().value;
-                while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
-                    typeStr += advance().value;
-                    if (!isAtEnd()) typeStr += advance().value;
-                }
-                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
-                    typeStr += advance().value;
-                    int depth = 1;
-                    while (!isAtEnd() && depth > 0) {
-                        if (peek().value == "<") depth++;
-                        else if (peek().value == ">") depth--;
-                        typeStr += advance().value;
-                    }
-                }
-                while (!isAtEnd() && peek().type == TokenType::Symbol && 
-                       (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
-                    typeStr += advance().value;
-                }
-                return typeStr;
-            };
             std::string typeName = parseTypeString();
             std::string name = advance().value;
             

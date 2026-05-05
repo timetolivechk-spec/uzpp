@@ -1,30 +1,71 @@
+// uz++ — Xotira-ichida jadval (baza) testi
+
 ulash "uzpp_runtime.hpp"
-ulash "malumotlar_bazasi.hpp"
+ulash "matn.hpp"
 
-nomlar_fazosi uzpp::Baza;
+sinf Qator {
+ochiq:
+    butun id;
+    matn ism;
+    butun yosh;
 
-asinxron bosh bazaniSinash() {
-    auto dbNatija = kutish Ulanish::ochish("sinov.db");
-    agar (!dbNatija.has_value()) {
-        yozish << "Baza ochilmadi: " << dbNatija.error() << qator_oxiri;
-        qaytarish;
+    Qator(butun i, matn s, butun y) : id(i), ism(s), yosh(y) {}
+
+    bosh chiqar() {
+        yozish << id << " | " << ism << " | " << yosh << " yosh" << qator_oxiri;
     }
-    
-    Ulanish db = std::move(dbNatija.value());
-    kutish db.bajarish("CREATE TABLE IF NOT EXISTS Odamlar (id INTEGER PRIMARY KEY, ism TEXT);");
-    kutish db.bajarish("INSERT INTO Odamlar (ism) VALUES (?);", std::string("Alisher"));
-    kutish db.bajarish("INSERT INTO Odamlar (ism) VALUES (?);", std::string("Bobur"));
-    
-    auto qatorlarNat = kutish db.bajarish("SELECT * FROM Odamlar;");
-    agar (qatorlarNat.has_value()) {
-        auto qatorlar = qatorlarNat.value();
-        uchun (o'zgaruvchan qator : qatorlar) {
-            yozish << "ID: " << qator["id"] << ", Ism: " << qator["ism"] << qator_oxiri;
+}
+
+sinf Jadval {
+ochiq:
+    matn nomi;
+    vektor<Qator> satrlar;
+
+    Jadval(matn n) : nomi(n) {}
+
+    bosh qoshish(Qator q) {
+        satrlar.push_back(q);
+    }
+
+    bosh chiqar() {
+        yozish << "=== " << nomi << " ===" << qator_oxiri;
+        yozish << "ID | ISM       | YOSH" << qator_oxiri;
+        yozish << "---+----------+-----" << qator_oxiri;
+        uchun (o'zgaruvchan& q : satrlar) {
+            q.chiqar();
         }
+        yozish << "Jami: " << satrlar.size() << " ta" << qator_oxiri;
+    }
+
+    vektor<Qator> qidirish(matn ism_qismi) {
+        vektor<Qator> natija;
+        uchun (o'zgaruvchan& q : satrlar) {
+            agar (q.ism.find(ism_qismi) != std::string::npos) {
+                natija.push_back(q);
+            }
+        }
+        qaytarish natija;
     }
 }
 
 butun asosiy() {
-    bazaniSinash();
+    yozish << "=== Baza testi ===" << qator_oxiri;
+
+    Jadval odamlar("odamlar");
+    odamlar.qoshish(Qator(1, "Alisher", 25));
+    odamlar.qoshish(Qator(2, "Malika", 22));
+    odamlar.qoshish(Qator(3, "Bobur", 30));
+    odamlar.qoshish(Qator(4, "Alibek", 27));
+    odamlar.qoshish(Qator(5, "Shahnoza", 24));
+
+    odamlar.chiqar();
+
+    yozish << "--- 'ali' qidirish ---" << qator_oxiri;
+    vektor<Qator> topilganlar = odamlar.qidirish("ali");
+    uchun (o'zgaruvchan& q : topilganlar) {
+        q.chiqar();
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }

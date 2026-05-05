@@ -199,6 +199,9 @@ void CodeGen::emitNode(const ASTNode* node, const ASTNode* nextNode) {
         case ASTNodeType::TypeAlias:
             visitTypeAlias(static_cast<const TypeAlias*>(node));
             break;
+        case ASTNodeType::EnumDeclaration:
+            visitEnumDeclaration(static_cast<const EnumDeclaration*>(node));
+            break;
         default:
             // Could be a Statement or Expression
             if (dynamic_cast<const Statement*>(node) != nullptr) {
@@ -489,6 +492,18 @@ std::string CodeGen::getOperatorSymbol(const std::string& op) const {
     return op;
 }
 
+std::string CodeGen::translateDefaultValue(const std::string& val) const {
+    // Uz++ kalit so'zlarini C++ ga tarjima qilish
+    if (val == "rost" || val == "to'g'ri") return "true";
+    if (val == "yolg'on" || val == "yolgon" || val == "noto'g'ri") return "false";
+    if (val == "bosh" || val == "nullptr") return "nullptr";
+    // Boolean literals already translated above; numbers and strings pass through.
+    // Translate keyword identifiers inside the value string using translateToken.
+    Token t; t.type = TokenType::Identifier; t.value = val;
+    std::string translated = translateToken(t, nullptr);
+    return translated;
+}
+
 std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
     if (depth > 50) {
         return "void /* XATO: Shablon rekursiyasi chegaradan oshdi! */";
@@ -623,6 +638,13 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"massiv", "std::array"},
         {"variant", "std::variant"},
         {"funksiya", "std::function"},
+        // Xotira boshqaruv funksiyalari (template argumentli chaqiruvlar uchun)
+        {"yangi_yagona", "std::make_unique"},
+        {"yangi_umumiy", "std::make_shared"},
+        {"tartibla", "std::sort"},
+        {"saralash", "std::sort"},
+        {"qidirish", "std::find"},
+        {"teskari", "std::reverse"},
     };
     
     const auto it = typeMap.find(uzppType);
@@ -1314,11 +1336,15 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
         if (params[i].isConst) emitRawToken("const");
         emitRawToken(getCppType(params[i].type));
         emitRawToken(safeIdent(params[i].name));
+        if (!params[i].defaultValue.empty()) {
+            emitRawToken("=");
+            emitRawToken(translateDefaultValue(params[i].defaultValue));
+        }
     }
-    
+
     emitRawToken(")");
     emitNewline();
-    
+
     bool oldAsyncState = currentFunctionIsAsync_;
     currentFunctionIsAsync_ = decl->isAsync();
     
@@ -1430,8 +1456,12 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
                 if (method->params[i].isConst) emitRawToken("const");
                 emitRawToken(getCppType(method->params[i].type));
                 emitRawToken(safeIdent(method->params[i].name));
+                if (!method->params[i].defaultValue.empty()) {
+                    emitRawToken("=");
+                    emitRawToken(translateDefaultValue(method->params[i].defaultValue));
+                }
             }
-            
+
             emitRawToken(")");
 
             // Emit constructor initializer list before body
@@ -1458,18 +1488,29 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
 void CodeGen::visitNamespaceDeclaration(const NamespaceDeclaration* decl) {
     if (decl == nullptr) return;
+    // "nomlar_fazosi X;" (no children) -> "using namespace X;"
+    if (decl->getChildren().empty()) {
+        writeIndentIfNeeded();
+        emitRawToken("using");
+        emitRawToken("namespace");
+        emitRawToken(decl->getName());
+        emitRawToken(";");
+        emitNewline();
+        return;
+    }
+
     writeIndentIfNeeded();
     emitRawToken("namespace");
-    emitRawToken(safeIdent(decl->getName()));
+    emitRawToken(decl->getName());
     emitRawToken("{");
     emitNewline();
     indentMore();
     namespaceDepth_++;
-    
+
     for (const auto& child : decl->getChildren()) {
         emitNode(child.get(), nullptr);
     }
-    
+
     indentLess();
     namespaceDepth_--;
     writeIndentIfNeeded();
@@ -1607,6 +1648,68 @@ void CodeGen::visitTypeAlias(const TypeAlias* decl) {
     emitRawToken("=");
     emitRawToken(getCppType(decl->getTarget()));
     emitRawToken(";");
+    emitNewline();
+}
+
+// Enum: sanab_olish Rang { Qizil, Yashil = 2, Ko'k }
+//   =>  enum class Rang { Qizil, Yashil = 2, Ko_k };
+//   +   std::string Rang_nomi(Rang v) { ... }
+void CodeGen::visitEnumDeclaration(const EnumDeclaration* decl) {
+    if (decl == nullptr) return;
+    const std::string safeName = safeIdent(decl->getName());
+
+    writeIndentIfNeeded();
+    emitRawToken("enum class");
+    emitRawToken(safeName);
+    emitRawToken("{");
+    emitNewline();
+    indentMore();
+
+    const auto& vals = decl->getValues();
+    for (std::size_t i = 0; i < vals.size(); ++i) {
+        writeIndentIfNeeded();
+        emitRawToken(safeIdent(vals[i].name));
+        if (!vals[i].explicitValue.empty()) {
+            emitRawToken("=");
+            emitRawToken(vals[i].explicitValue);
+        }
+        if (i + 1 < vals.size()) emitRawToken(",");
+        emitNewline();
+    }
+
+    indentLess();
+    writeIndentIfNeeded();
+    emitRawToken("};");
+    emitNewline();
+    emitNewline();
+
+    // Helper: EnumNomi_nomi() -> std::string
+    writeIndentIfNeeded();
+    emitRawToken("inline std::string");
+    emitRawToken(safeName + "_nomi");
+    emitRawToken("(" + safeName + " _v) {");
+    emitNewline();
+    indentMore();
+    writeIndentIfNeeded();
+    emitRawToken("switch (_v) {");
+    emitNewline();
+    indentMore();
+    for (const auto& v : vals) {
+        writeIndentIfNeeded();
+        emitRawToken("case " + safeName + "::" + safeIdent(v.name) + ":");
+        emitRawToken("return \"" + v.name + "\";");
+        emitNewline();
+    }
+    writeIndentIfNeeded();
+    emitRawToken("default: return \"?\";");
+    emitNewline();
+    indentLess();
+    writeIndentIfNeeded();
+    emitRawToken("}");
+    emitNewline();
+    indentLess();
+    writeIndentIfNeeded();
+    emitRawToken("}");
     emitNewline();
 }
 

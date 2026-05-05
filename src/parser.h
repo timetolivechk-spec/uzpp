@@ -95,6 +95,10 @@ private:
     bool matchKeyword(const std::string& keyword);
     bool isUzbekKeyword(const std::string& text) const;
     std::string getKeywordTranslation(const std::string& text) const;
+
+    // Tur satrini o'qish: "vektor<vektor<butun>>" kabi ichma-ich shablonlarni
+    // ham to'g'ri tahlil qiladi (>> belgisini ikki > deb tushunadi).
+    std::string parseTypeString();
 };
 
 } // namespace uzpp
