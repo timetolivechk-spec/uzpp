@@ -2,7 +2,7 @@
     "name": "uzpp",
     "displayName": "uz++",
     "description": "Full IDE support for uz++: syntax highlighting, diagnostics, autocomplete, one-click install.",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "publisher": "uzpp",
     "engines": { "vscode": "^1.75.0" },
     "categories": ["Programming Languages", "Linters"],

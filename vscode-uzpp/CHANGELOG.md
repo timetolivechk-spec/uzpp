@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] — 2026-05-06
+
+### O'zgarishlar
+- MinGW WinLibs GCC 14.2.0 dan to'g'ridan-to'g'ri yuklanadi (release artifact sifatida emas)
+- GitHub Release yaratildi: `uzpp-windows-x64.zip` (`uzpp.exe` + `stdlib/`)
+
 ## [2.1.0] — 2026-05-06
 
 ### Yangi imkoniyatlar
