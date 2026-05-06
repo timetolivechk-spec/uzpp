@@ -4,7 +4,7 @@
 
 **Ona tilingizda yozing. C++23 tezligida ishlating.**
 
-[![CI](https://github.com/timetolivechk-spec/uz-plus-plus/actions/workflows/ci.yml/badge.svg)](https://github.com/timetolivechk-spec/uz-plus-plus/actions/workflows/ci.yml)
+[![CI](https://github.com/timetolivechk-spec/uzpp/actions/workflows/ci.yml/badge.svg)](https://github.com/timetolivechk-spec/uzpp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](.github/workflows/ci.yml)
@@ -34,7 +34,7 @@ mahalliy mashina kodi sifatida ishlatadi. **Hech qanday ish vaqti ortiqligi yo'q
 ### Tezkor boshlash — 3 ta buyruq
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uz-plus-plus && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```
@@ -182,7 +182,7 @@ butun asosiy() {
 
 ```bash
 # Talablar: CMake 3.20+, GCC 14+ yoki Clang 18+, Ninja
-git clone https://github.com/timetolivechk-spec/uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
 cd uz-plus-plus
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
@@ -250,7 +250,7 @@ uz++/
 ### Hissa qo'shish
 
 [CONTRIBUTING.md](CONTRIBUTING.md) ni o'qing.
-[GitHub Issues](https://github.com/timetolivechk-spec/uz-plus-plus/issues) da xato yoki taklif qoldiring.
+[GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) da xato yoki taklif qoldiring.
 
 ---
 
@@ -264,7 +264,7 @@ uz++/
 ### Быстрый старт
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uz-plus-plus && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```
@@ -340,7 +340,7 @@ Uzbek speakers can now program in their native language, with the same power as 
 ### Quick start
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uz-plus-plus && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```
