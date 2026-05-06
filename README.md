@@ -23,6 +23,18 @@
 
 ---
 
+## 🚀 Eng tez yo'l — VS Code orqali
+
+> **1 daqiqada ishga tushirish:** hech qanday sozlama kerak emas.
+
+1. **VS Code** → Extensions → `uz++` → **Install**
+2. Welcome ekranida **"Hammasini o'rnatish"** tugmasini bosing
+3. `asosiy.uzpp` fayl oching → **F5** → dastur ishlaydi
+
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/uzpp.uzpp?label=VS%20Code%20Extension&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
+
+---
+
 ## 🇺🇿 O'zbekcha
 
 ### uz++ nima?
@@ -31,10 +43,10 @@
 Siz oddiy O'zbek sintaksisida kod yozasiz — kompilyator uni to'liq C++23 ga aylantiradi va
 mahalliy mashina kodi sifatida ishlatadi. **Hech qanday ish vaqti ortiqligi yo'q.**
 
-### Tezkor boshlash — 3 ta buyruq
+### Manba koddan yig'ish — 3 ta buyruq
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```
@@ -183,7 +195,7 @@ butun asosiy() {
 ```bash
 # Talablar: CMake 3.20+, GCC 14+ yoki Clang 18+, Ninja
 git clone https://github.com/timetolivechk-spec/uzpp
-cd uz-plus-plus
+cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ./build/uzpp --version
@@ -264,7 +276,7 @@ uz++/
 ### Быстрый старт
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```
@@ -340,7 +352,7 @@ Uzbek speakers can now program in their native language, with the same power as 
 ### Quick start
 
 ```bash
-git clone https://github.com/timetolivechk-spec/uzpp && cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build && cmake --build build
 ./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
 ```

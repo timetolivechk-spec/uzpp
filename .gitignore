@@ -21,10 +21,20 @@ vscode-uzpp/node_modules/
 vscode-uzpp/bin/
 vscode-uzpp/*.vsix
 
-# Временные тестовые файлы
+# Временные тестовые файлы в корне
 test_fayl.txt
 test_out.txt
 test.txt
+test_*.uzpp
+test_*.cpp
+test*.uzpp
+demo_*.uzpp
+
+# Release packaging artifacts
+release-pkg/
+uzpp-windows-x64.zip
+uzpp-linux-x64.tar.gz
+uzpp-macos-*.tar.gz
 
 # CMake кэш
 CMakeCache.txt

@@ -1,9 +1,0 @@
-ulash "uzpp_runtime.hpp"
-
-butun asosiy() {
-    vektor<matn> ismlar = ["Zafar", "Malika", "Bobur"];
-    o'zgaruvchan taqqosla = [](matn a, matn b) { qaytarish a < b; };
-    std::sort(ismlar.begin(), ismlar.end(), taqqosla);
-    yozish << ismlar[0] << qator_oxiri;
-    qaytarish 0;
-}
