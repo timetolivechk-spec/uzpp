@@ -7,23 +7,57 @@
 
 ---
 
-## Imkoniyatlar
+## O'rnatish — 2 qadam
 
-- **Sintaksis yorqinligi** — barcha uz++ kalit so'zlari rangli
-- **Real-vaqt diagnostika** — xatolar yozayotgan paytda ko'rsatiladi
-- **Avtoto'ldirish** — kalit so'zlar va funksiyalar uchun
-- **F5 bilan ishga tushirish** — bir tugma bilan dasturni bajarish
-- **C++ kodini ko'rish** — transpile qilingan C++ ni yonida ko'rsatish
-- **Status bar** — kompilyator versiyasi doim ko'zda
-- **Yangi loyiha** — bir buyruq bilan shablon yaratish
+**1.** VS Code → Extensions → "uz++" → **Install**
+
+**2.** Xush kelibsiz ekranida **"Hammasini o'rnatish"** tugmasini bosing
+
+Shundan so'ng F5 bilan dastur ishga tushadi. Boshqa hech narsa kerak emas.
+
+### Nima yuklanadi?
+
+| Komponent | Hajm | Tavsif |
+|-----------|------|--------|
+| uz++ kompilyatori | ~10 MB | Transpayler: `.uzpp` → C++ → binary |
+| Standart kutubxona | ~2 MB | `stdlib/uzpp_runtime.hpp` va boshqa modullar |
+| MinGW (faqat Windows) | ~150 MB | Portable C++ kompilyatori (g++), bir marta yuklanadi |
+
+Barcha komponentlar `~/.vscode/extensions-storage/uzpp.uzpp/` papkasida saqlanadi va kengaytma yangilanishlarida saqlanib qoladi.
+
+### Internet yo'q? (Offline o'rnatish)
+
+Arxivlarni oldindan yuklab, `Ctrl+Shift+P` → **"uz++: Fayldan o'rnatish"** orqali o'rnating.
 
 ---
 
-## Tezkor boshlash
+## Imkoniyatlar
 
-1. Kengaytmani o'rnating
-2. `.uzpp` faylini oching yoki yarating
-3. **F5** bosing — dastur ishga tushadi
+- **Sintaksis yorqinligi** — barcha uz++ kalit so'zlari rangli
+- **Real-vaqt diagnostika** — xatolar yozayotganda ko'rsatiladi (LSP)
+- **Avtoto'ldirish** — kalit so'zlar va funksiyalar
+- **F5 → ishga tushirish** — bir tugma bilan
+- **C++ kodini ko'rish** — transpile qilingan C++ ni yonida ochish
+- **Status bar** — kompilyator holati va versiyasi
+
+---
+
+## Buyruqlar
+
+| Tugma / Buyruq | Amal |
+|----------------|------|
+| `F5` | Faylni ishga tushirish |
+| `Ctrl+F5` | Faylni qurish (binary) |
+| `Ctrl+Shift+P` → `uz++ yangi loyiha` | Yangi loyiha yaratish |
+| `Ctrl+Shift+P` → `uz++ C++ kodi` | Generatsiya qilingan C++ ni ko'rish |
+| `Ctrl+Shift+P` → `uz++ komponentlar holati` | O'rnatilgan komponentlarni ko'rish |
+| `Ctrl+Shift+P` → `uz++ kompilyatorni yangilash` | Yangi versiyani GitHub'dan yuklash |
+| `Ctrl+Shift+P` → `uz++ fayldan o'rnatish` | Offline o'rnatish |
+| `Ctrl+Shift+P` → `uz++ reset` | Barcha komponentlarni o'chirish |
+
+---
+
+## Birinchi dastur
 
 ```uz++
 // salom.uzpp
@@ -35,25 +69,14 @@ butun asosiy() {
 }
 ```
 
----
-
-## Buyruqlar
-
-| Buyruq / Tugma | Tavsif |
-|---|---|
-| `F5` | Joriy faylni ishga tushirish |
-| `Ctrl+F5` | Faylni qurish (binary hosil qilish) |
-| `Ctrl+Shift+P` → `uz++ yangi loyiha` | Yangi loyiha papkasi va shablon yaratish |
-| `Ctrl+Shift+P` → `uz++ C++ kodi` | Generatsiya qilingan C++ ni yonida ko'rish |
-| `Ctrl+Shift+P` → `uz++ kompilyatorni yangilash` | GitHub Releases'dan eng yangi versiyani yuklash |
-| `Ctrl+Shift+P` → `uz++ faylni formatlash` | Faylni formatlash |
+Saqlang → `F5` → Natija terminala chiqadi.
 
 ---
 
-## Kalit so'zlar
+## Kalit so'zlar (qisqacha)
 
 | uz++ | C++ | uz++ | C++ |
-|---|---|---|---|
+|------|-----|------|-----|
 | `butun` | `int` | `yozish` | `std::cout` |
 | `haqiqiy` | `double` | `o'qish` | `std::cin` |
 | `matn` | `std::string` | `qaytarish` | `return` |
@@ -61,30 +84,36 @@ butun asosiy() {
 | `ozgaruvchan` | `auto` | `aks holda` | `else` |
 | `ozgarmas` | `const` | `uchun` | `for` |
 | `sinf` | `class` | `holda` | `while` |
-| `tuzilma` | `struct` | `urinish` | `try` |
-| `vektor` | `std::vector` | `ushlash` | `catch` |
-| `qator_oxiri` | `std::endl` | `asosiy` | `main` |
+| `vektor` | `std::vector` | `urinish` | `try` |
+| `qator_oxiri` | `std::endl` | `ushlash` | `catch` |
 
 ---
 
 ## Sozlamalar
 
-**`uzpp.compilerPath`** — uzpp.exe fayliga to'liq yo'l.  
-Bo'sh bo'lsa, kengaytma quyidagi tartibda qidiradi:
-1. Kengaytma ichidagi `bin/` papkasi (o'rnatilgan binar)
-2. Sozlamadagi yo'l
-3. Workspace papkasi
-4. Tizim PATH
+**`uzpp.compilerPath`** — Kompilyatorga maxsus yo'l (ixtiyoriy). Odatda bo'sh qoldiriladi — kengaytma o'zi topadi.
 
 ---
 
-## Talablar
+## Xato tuzatish
 
-- Windows 10/11, Linux, macOS
-- uz++ kompilyatori (kengaytma bilan birga yoki alohida o'rnatiladi)
+**Komponent yuklanmadi:** Internetni tekshiring, keyin `Ctrl+Shift+P` → `uz++ komponentlarni o'rnatish`.
+
+**"command not found":** `Ctrl+Shift+P` → `uz++ komponentlar holati` — nima yetishmayotganini ko'rsatadi.
+
+**VPN/proxy bilan muammo:** [GitHub Releases](https://github.com/timetolivechk-spec/uzpp/releases/latest) dan qo'lda yuklab, `uz++ fayldan o'rnatish` orqali o'rnating.
 
 ---
 
-## Muammo va takliflar
+## Maxfiylik
 
-[GitHub Issues](https://github.com/timetolivechk-spec/uz-plus-plus/issues)
+Kengaytma faqat `github.com/timetolivechk-spec/uzpp` manzilidan komponentlar yuklab oladi. Foydalanuvchi ma'lumotlari hech qayerga yuborilmaydi.
+
+---
+
+## Resurslar
+
+- [GitHub](https://github.com/timetolivechk-spec/uzpp)
+- [Boshlash qo'llanmasi](https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md)
+- [Misollar](https://github.com/timetolivechk-spec/uzpp/tree/main/examples)
+- [Muammo bildirish](https://github.com/timetolivechk-spec/uzpp/issues)

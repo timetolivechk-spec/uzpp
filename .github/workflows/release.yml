@@ -2,18 +2,27 @@ name: uz++ Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 permissions:
   contents: write
 
+# ─── Helper: what files go into the compiler zip ─────────────────────────────
+# Each platform job builds uzpp[.exe] then bundles it with stdlib/ into an archive.
+# The archive layout (which componentManager.js expects):
+#   uzpp-windows-x64.zip:
+#     uzpp.exe
+#     stdlib/uzpp_runtime.hpp
+#     stdlib/...
+#   uzpp-linux-x64.tar.gz:
+#     uzpp
+#     stdlib/...
+#   (same for macos)
+
 jobs:
   # ──────────────────────────────────────────────────────────
-  # Build binaries for all three platforms
-  # ──────────────────────────────────────────────────────────
   build-windows:
-    name: Windows binary
+    name: Windows — uzpp + stdlib zip
     runs-on: windows-latest
     defaults:
       run:
@@ -21,8 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
@@ -36,14 +44,26 @@ jobs:
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
           cmake --build build --config Release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Run unit tests
+        run: ./build/uzpp_frontend_tests.exe
+
+      - name: Package uzpp-windows-x64.zip
+        shell: pwsh
+        run: |
+          $pkg = "pkg-windows"
+          New-Item -ItemType Directory -Path $pkg | Out-Null
+          Copy-Item build/uzpp.exe $pkg/
+          Copy-Item -Recurse stdlib $pkg/stdlib
+          Compress-Archive -Path $pkg/* -DestinationPath uzpp-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
         with:
           name: uzpp-windows-x64
-          path: build/uzpp.exe
+          path: uzpp-windows-x64.zip
 
+  # ──────────────────────────────────────────────────────────
   build-linux:
-    name: Linux binary
+    name: Linux — uzpp + stdlib tar.gz
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -56,65 +76,111 @@ jobs:
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
       - name: Build
-        run: |
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
-          cmake --build build --config Release
         env:
           CC: gcc-14
           CXX: g++-14
+        run: |
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+          cmake --build build --config Release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Run unit tests
+        run: ./build/uzpp_frontend_tests
+
+      - name: Package uzpp-linux-x64.tar.gz
+        run: |
+          mkdir pkg-linux
+          cp build/uzpp pkg-linux/
+          cp -r stdlib pkg-linux/stdlib
+          tar -czf uzpp-linux-x64.tar.gz -C pkg-linux .
+
+      - uses: actions/upload-artifact@v4
         with:
           name: uzpp-linux-x64
-          path: build/uzpp
+          path: uzpp-linux-x64.tar.gz
 
-  build-macos:
-    name: macOS binary
+  # ──────────────────────────────────────────────────────────
+  build-macos-arm64:
+    name: macOS arm64 — uzpp + stdlib tar.gz
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: brew install cmake ninja
+      - run: brew install cmake ninja
 
       - name: Build
         run: |
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
           cmake --build build --config Release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Package uzpp-macos-arm64.tar.gz
+        run: |
+          mkdir pkg-macos-arm64
+          cp build/uzpp pkg-macos-arm64/
+          cp -r stdlib pkg-macos-arm64/stdlib
+          tar -czf uzpp-macos-arm64.tar.gz -C pkg-macos-arm64 .
+
+      - uses: actions/upload-artifact@v4
         with:
           name: uzpp-macos-arm64
-          path: build/uzpp
+          path: uzpp-macos-arm64.tar.gz
 
+  # ──────────────────────────────────────────────────────────
   build-macos-x64:
-    name: macOS x64 binary
+    name: macOS x64 — uzpp + stdlib tar.gz
     runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: brew install cmake ninja
+      - run: brew install cmake ninja
 
       - name: Build
         run: |
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
           cmake --build build --config Release
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Package uzpp-macos-x64.tar.gz
+        run: |
+          mkdir pkg-macos-x64
+          cp build/uzpp pkg-macos-x64/
+          cp -r stdlib pkg-macos-x64/stdlib
+          tar -czf uzpp-macos-x64.tar.gz -C pkg-macos-x64 .
+
+      - uses: actions/upload-artifact@v4
         with:
           name: uzpp-macos-x64
-          path: build/uzpp
+          path: uzpp-macos-x64.tar.gz
 
   # ──────────────────────────────────────────────────────────
-  # Create GitHub Release with all binaries
+  # Download a portable MinGW-w64 and re-upload as our release artifact.
+  # Using WinLibs GCC 14.2.0 UCRT64 posix/seh (no MSYS2 required, pure portable).
+  # URL: https://github.com/brechtsanders/winlibs_mingw/releases/
+  # Pin a specific release for reproducibility.
+  # ──────────────────────────────────────────────────────────
+  package-mingw:
+    name: Package MinGW-w64 for Windows
+    runs-on: ubuntu-latest
+    env:
+      MINGW_VERSION: "14.2.0posix-18.1.8-12.0.0-ucrt-r2"
+      MINGW_FILENAME: "winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2.zip"
+    steps:
+      - name: Download WinLibs MinGW
+        run: |
+          curl -L --retry 3 -o mingw-source.zip \
+            "https://github.com/brechtsanders/winlibs_mingw/releases/download/${MINGW_VERSION}/${MINGW_FILENAME}"
+
+      # Rename to our canonical artifact name so componentManager.js can download it
+      - name: Rename to canonical name
+        run: mv mingw-source.zip mingw-w64-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mingw-w64-windows
+          path: mingw-w64-windows-x64.zip
+
+  # ──────────────────────────────────────────────────────────
+  # Create GitHub Release with all artifacts
   # ──────────────────────────────────────────────────────────
   release:
     name: GitHub Release
-    needs: [build-windows, build-linux, build-macos, build-macos-x64]
+    needs: [build-windows, build-linux, build-macos-arm64, build-macos-x64, package-mingw]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,71 +190,79 @@ jobs:
         with:
           path: dist/
 
-      - name: Rename binaries
-        run: |
-          mv dist/uzpp-windows-x64/uzpp.exe  dist/uzpp-windows-x64.exe
-          mv dist/uzpp-linux-x64/uzpp        dist/uzpp-linux-x64
-          mv dist/uzpp-macos-arm64/uzpp      dist/uzpp-macos-arm64
-          mv dist/uzpp-macos-x64/uzpp        dist/uzpp-macos-x64
-          chmod +x dist/uzpp-linux-x64 dist/uzpp-macos-arm64 dist/uzpp-macos-x64
+      - name: List artifacts
+        run: find dist/ -type f | sort
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: "uz++ ${{ github.ref_name }}"
+          generate_release_notes: true
           body: |
             ## uz++ ${{ github.ref_name }}
 
-            ### O'rnatish
+            ### Tezkor o'rnatish (VS Code kengaytmasi orqali)
+
+            1. VS Code Extensions → "uz++" → Install
+            2. Welcome ekranida **"Hammasini o'rnatish"** tugmasini bosing
+            3. F5 → dastur ishga tushadi
+
+            ---
+
+            ### Qo'lda o'rnatish
 
             **Windows:**
-            ```
-            curl -L -o uzpp.exe https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-windows-x64.exe
+            ```powershell
+            curl -L -o uzpp.zip https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-windows-x64.zip
+            Expand-Archive uzpp.zip -DestinationPath uzpp-install
+            # uzpp.exe + stdlib/ hazir
             ```
 
             **Linux:**
-            ```
-            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-linux-x64
-            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
+            ```bash
+            curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-linux-x64.tar.gz
+            mkdir uzpp-install && tar -xzf uzpp.tar.gz -C uzpp-install
+            sudo cp uzpp-install/uzpp /usr/local/bin/
+            sudo cp -r uzpp-install/stdlib /usr/local/lib/uzpp/
             ```
 
             **macOS (Apple Silicon):**
-            ```
-            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-arm64
-            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
+            ```bash
+            curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-arm64.tar.gz
+            mkdir uzpp-install && tar -xzf uzpp.tar.gz -C uzpp-install
+            sudo cp uzpp-install/uzpp /usr/local/bin/
+            sudo cp -r uzpp-install/stdlib /usr/local/lib/uzpp/
             ```
 
-            **macOS (Intel):**
-            ```
-            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-x64
-            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
-            ```
+            ### Arxiv tarkibi
+
+            | Fayl | Tarkib |
+            |------|--------|
+            | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` |
+            | `uzpp-linux-x64.tar.gz` | `uzpp` + `stdlib/` |
+            | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (Apple Silicon) |
+            | `uzpp-macos-x64.tar.gz` | `uzpp` + `stdlib/` (Intel) |
+            | `mingw-w64-windows-x64.zip` | Portable C++ kompilyatori (g++) Windows uchun |
           files: |
-            dist/uzpp-windows-x64.exe
-            dist/uzpp-linux-x64
-            dist/uzpp-macos-arm64
-            dist/uzpp-macos-x64
+            dist/uzpp-windows-x64/uzpp-windows-x64.zip
+            dist/uzpp-linux-x64/uzpp-linux-x64.tar.gz
+            dist/uzpp-macos-arm64/uzpp-macos-arm64.tar.gz
+            dist/uzpp-macos-x64/uzpp-macos-x64.tar.gz
+            dist/mingw-w64-windows/mingw-w64-windows-x64.zip
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
   # ──────────────────────────────────────────────────────────
-  # Publish VS Code extension to Marketplace
+  # Publish VS Code extension (lightweight — no embedded binary)
   # ──────────────────────────────────────────────────────────
   publish-extension:
     name: Publish VS Code Extension
-    needs: [build-windows]
+    needs: [release]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Windows binary
-        uses: actions/download-artifact@v4
-        with:
-          name: uzpp-windows-x64
-          path: vscode-uzpp/bin/
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -196,13 +270,8 @@ jobs:
         working-directory: vscode-uzpp
         run: npm install
 
-      - name: Install vsce
-        run: npm install -g @vscode/vsce
-
-      - name: Package and publish
+      - name: Publish to Marketplace
         working-directory: vscode-uzpp
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: |
-          vsce package
-          vsce publish --pat "$VSCE_PAT"
+        run: npx @vscode/vsce publish --pat "$VSCE_PAT" --allow-missing-repository

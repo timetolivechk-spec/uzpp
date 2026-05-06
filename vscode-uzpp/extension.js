@@ -5,30 +5,46 @@ const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 const { LanguageClient, TransportKind } = require('vscode-languageclient/node');
+const cm = require('./componentManager');
 
-/** @type {LanguageClient | undefined} */
+/** @type {LanguageClient|undefined} */
 let client;
 /** @type {vscode.StatusBarItem} */
 let statusBarItem;
 
-// ─── Compiler Discovery ───────────────────────────────────────────────────────
+// ─── Compiler Resolution ──────────────────────────────────────────────────────
 
+/**
+ * Returns the path to run uzpp. Priority:
+ * 1. Wrapper script in globalStorage (handles CWD + MinGW PATH)
+ * 2. Embedded bin/ inside extension
+ * 3. User settings compilerPath
+ * 4. Workspace folder
+ * 5. PATH fallback
+ */
 function findCompilerPath(context) {
-    const embeddedPath = context.asAbsolutePath(
+    const p = cm.getPaths(context);
+
+    // Prefer the wrapper script — it sets CWD and PATH correctly
+    if (fs.existsSync(p.wrapperScript) && fs.existsSync(p.compilerExe)) {
+        return p.wrapperScript;
+    }
+
+    // Embedded in extension (legacy path for devs who manually placed the binary)
+    const embeddedExe = context.asAbsolutePath(
         path.join('bin', process.platform === 'win32' ? 'uzpp.exe' : 'uzpp')
     );
-    if (fs.existsSync(embeddedPath)) return embeddedPath;
+    if (fs.existsSync(embeddedExe)) return embeddedExe;
 
-    const config = vscode.workspace.getConfiguration('uzpp');
-    const configured = config.get('compilerPath');
+    // User setting
+    const configured = vscode.workspace.getConfiguration('uzpp').get('compilerPath');
     if (configured && configured.length > 0) return configured;
 
+    // Workspace folder
     const folders = vscode.workspace.workspaceFolders;
     if (folders && folders.length > 0) {
-        const candidate = path.join(
-            folders[0].uri.fsPath,
-            process.platform === 'win32' ? 'uzpp.exe' : 'uzpp'
-        );
+        const candidate = path.join(folders[0].uri.fsPath,
+            process.platform === 'win32' ? 'uzpp.exe' : 'uzpp');
         if (fs.existsSync(candidate)) return candidate;
     }
 
@@ -37,9 +53,14 @@ function findCompilerPath(context) {
 
 function getCompilerVersion(compilerPath) {
     try {
-        const out = execSync(`"${compilerPath}" --version`, { timeout: 5000 }).toString().trim();
+        // For wrapper .bat — invoke via cmd to get clean output
+        let cmd = `"${compilerPath}" --version`;
+        if (process.platform === 'win32' && compilerPath.endsWith('.bat')) {
+            cmd = `cmd /c "${cmd}"`;
+        }
+        const out = execSync(cmd, { timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
         const m = out.match(/\d+\.\d+\.\d+/);
-        return m ? m[0] : out.split('\n')[0];
+        return m ? m[0] : out.split('\n')[0].slice(0, 30);
     } catch {
         return null;
     }
@@ -48,11 +69,47 @@ function getCompilerVersion(compilerPath) {
 // ─── Terminal ─────────────────────────────────────────────────────────────────
 
 let _terminal = null;
-
 function getTerminal() {
     if (_terminal && !_terminal.exitStatus) return _terminal;
     _terminal = vscode.window.createTerminal({ name: 'uz++' });
     return _terminal;
+}
+
+/** Build the terminal invocation line for a given uzpp verb and file. */
+function buildRunCommand(context, verb, filePath) {
+    const compiler = findCompilerPath(context);
+    // On Windows with a .bat wrapper: invoke via & in PowerShell
+    if (process.platform === 'win32' && compiler.endsWith('.bat')) {
+        // & invokes the batch file in a subprocess — CWD change is isolated
+        return `& "${compiler}" ${verb} "${filePath}"`;
+    }
+    return `"${compiler}" ${verb} "${filePath}"`;
+}
+
+// ─── Component Guard ──────────────────────────────────────────────────────────
+
+/**
+ * Checks components are ready. If not, offers to install.
+ * Returns true if safe to proceed, false if user must install first.
+ */
+async function requireComponents(context) {
+    const status = cm.checkComponents(context);
+    if (status.allOk) return true;
+
+    const missing = [];
+    if (!status.compilerOk) missing.push('uz++ kompilyatori');
+    if (!status.stdlibOk)   missing.push('standart kutubxona');
+    if (process.platform === 'win32' && !status.mingwOk) missing.push('C++ kompilyatori (MinGW)');
+
+    const answer = await vscode.window.showWarningMessage(
+        `Zarur komponentlar topilmadi: ${missing.join(', ')}`,
+        "O'rnatish", 'Bekor qilish'
+    );
+    if (answer === "O'rnatish") {
+        await cmdInstallComponents(context);
+        return cm.checkComponents(context).allOk;
+    }
+    return false;
 }
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
@@ -61,32 +118,39 @@ async function cmdRunFile(context) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
     await editor.document.save();
-    const compiler = findCompilerPath(context);
+    if (!await requireComponents(context)) return;
+
     const file = editor.document.uri.fsPath;
     const term = getTerminal();
     term.show(true);
-    term.sendText(`"${compiler}" ishga-tushirish "${file}"`);
+    term.sendText(buildRunCommand(context, 'ishga-tushirish', file));
 }
 
 async function cmdBuildFile(context) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
     await editor.document.save();
-    const compiler = findCompilerPath(context);
+    if (!await requireComponents(context)) return;
+
     const file = editor.document.uri.fsPath;
     const term = getTerminal();
     term.show(true);
-    term.sendText(`"${compiler}" qurish "${file}"`);
+    term.sendText(buildRunCommand(context, 'qurish', file));
 }
 
 async function cmdFormatFile(context) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
     await editor.document.save();
+
     const compiler = findCompilerPath(context);
     const file = editor.document.uri.fsPath;
     try {
-        execSync(`"${compiler}" format "${file}"`, { timeout: 10000 });
+        let cmd = `"${compiler}" formatlah "${file}"`;
+        if (process.platform === 'win32' && compiler.endsWith('.bat')) {
+            cmd = `cmd /c ${cmd}`;
+        }
+        execSync(cmd, { timeout: 10000 });
         vscode.window.showInformationMessage('Fayl formatlandi.');
     } catch (e) {
         vscode.window.showErrorMessage(`Format xatosi: ${e.message}`);
@@ -97,42 +161,43 @@ async function cmdShowGeneratedCpp(context) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
     await editor.document.save();
+    if (!await requireComponents(context)) return;
 
-    const compiler = findCompilerPath(context);
     const file = editor.document.uri.fsPath;
-    const baseName = path.basename(file, '.uzpp');
-    const dir = path.dirname(file);
+    const stem = path.basename(file, '.uzpp');
+    const p = cm.getPaths(context);
 
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'C++ kodi generatsiya qilinmoqda...' },
         async () => {
             try {
-                execSync(`"${compiler}" qurish "${file}"`, { timeout: 30000 });
+                let cmd = `"${findCompilerPath(context)}" qurish "${file}"`;
+                if (process.platform === 'win32' && findCompilerPath(context).endsWith('.bat')) {
+                    cmd = `cmd /c ${cmd}`;
+                }
+                execSync(cmd, { timeout: 30000 });
             } catch (e) {
-                vscode.window.showErrorMessage(`Build xatosi: ${e.stderr ? e.stderr.toString() : e.message}`);
+                vscode.window.showErrorMessage(`Build xatosi: ${e.message}`);
                 return;
             }
-
-            // Look for generated .cpp in common locations
-            const candidates = [
-                path.join(dir, 'build', `${baseName}.generated.cpp`),
-                path.join(dir, `${baseName}.generated.cpp`),
-                path.join(dir, '..', 'build', `${baseName}.generated.cpp`),
-            ];
-
-            for (const candidate of candidates) {
-                if (fs.existsSync(candidate)) {
-                    const doc = await vscode.workspace.openTextDocument(candidate);
-                    await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-                    return;
-                }
-            }
-
-            vscode.window.showWarningMessage(
-                `Generatsiya qilingan C++ fayl topilmadi. build/ papkasini tekshiring.`
-            );
         }
     );
+
+    // Search in likely locations
+    const candidates = [
+        path.join(p.buildDir, `${stem}.generated.cpp`),      // via wrapper (CWD=storageRoot)
+        path.join(path.dirname(file), 'build', `${stem}.generated.cpp`), // local project
+        path.join(path.dirname(file), `${stem}.generated.cpp`),
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            const doc = await vscode.workspace.openTextDocument(candidate);
+            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+            return;
+        }
+    }
+    vscode.window.showWarningMessage('Generatsiya qilingan C++ fayl topilmadi. Birinchi qurish buyrug\'ini bajaring.');
 }
 
 async function cmdNewProject(context) {
@@ -168,10 +233,10 @@ async function cmdNewProject(context) {
         `[loyiha]`,
         `nom = "${name}"`,
         `versiya = "0.1.0"`,
-        ``,
+        '',
         `[kompilyator]`,
         `standart = "c++23"`,
-        ``
+        ''
     ].join('\n'));
 
     await vscode.commands.executeCommand(
@@ -181,38 +246,142 @@ async function cmdNewProject(context) {
     );
 }
 
+async function cmdInstallComponents(context) {
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: "uz++ komponentlari o'rnatilmoqda...",
+            cancellable: false,
+        },
+        async (progress) => {
+            try {
+                await cm.installAll(context, (msg, fraction) => {
+                    progress.report({ message: msg, increment: Math.round((fraction ?? 0) * 100) });
+                });
+                updateStatusBar(context);
+                vscode.window.showInformationMessage(
+                    "Tayyor! F5 tugmasini bosib birinchi dasturni ishga tushiring.",
+                    'Yangi loyiha'
+                ).then(action => {
+                    if (action === 'Yangi loyiha') cmdNewProject(context);
+                });
+            } catch (e) {
+                vscode.window.showErrorMessage(
+                    `O'rnatish xatosi: ${e.message}`,
+                    'Fayldan o\'rnatish'
+                ).then(action => {
+                    if (action === "Fayldan o'rnatish") cmdInstallFromFile(context);
+                });
+            }
+        }
+    );
+}
+
+async function cmdCheckComponents(context) {
+    const status = cm.checkComponents(context);
+    const p = status.paths;
+    const ok = (b) => b ? '✓' : '✗';
+    const lines = [
+        `uz++ kompilyatori: ${ok(status.compilerOk)} ${status.compilerOk ? p.compilerExe : '(topilmadi)'}`,
+        `Standart kutubxona: ${ok(status.stdlibOk)} ${status.stdlibOk ? p.stdlibDir : '(topilmadi)'}`,
+    ];
+    if (process.platform === 'win32') {
+        lines.push(`MinGW (C++ kompilyatori): ${ok(status.mingwOk)} ${status.mingwOk ? p.mingwBin : '(topilmadi)'}`);
+    } else {
+        lines.push(`Tizim C++ kompilyatori: ${ok(status.systemCpp !== null)} ${status.systemCpp || '(topilmadi)'}`);
+    }
+    lines.push(`Umumiy holat: ${status.allOk ? '✓ Tayyor' : '✗ Komponentlar yetishmayapti'}`);
+
+    const msg = lines.join('\n');
+    const action = await vscode.window.showInformationMessage(
+        msg,
+        ...(status.allOk ? [] : ["O'rnatish"])
+    );
+    if (action === "O'rnatish") await cmdInstallComponents(context);
+}
+
+async function cmdUninstallComponents(context) {
+    const answer = await vscode.window.showWarningMessage(
+        "Barcha uz++ komponentlarini o'chirishni xohlaysizmi? (kompilyator, stdlib, MinGW)",
+        "Ha, o'chirish", 'Bekor qilish'
+    );
+    if (answer !== "Ha, o'chirish") return;
+    cm.uninstallAll(context);
+    updateStatusBar(context);
+    vscode.window.showInformationMessage("Barcha komponentlar o'chirildi.");
+}
+
+async function cmdInstallFromFile(context) {
+    const fileResult = await vscode.window.showOpenDialog({
+        canSelectFolders: false, canSelectFiles: true,
+        openLabel: 'Arxivni tanlang',
+        filters: {
+            'Arxiv fayllari': ['zip', 'tar.gz', 'tgz'],
+            'Barcha fayllar': ['*']
+        }
+    });
+    if (!fileResult || fileResult.length === 0) return;
+
+    const archivePath = fileResult[0].fsPath;
+    const isMinGW = await vscode.window.showQuickPick(
+        [
+            { label: 'uz++ kompilyatori + stdlib', value: 'compiler' },
+            { label: 'MinGW (C++ kompilyatori, faqat Windows)', value: 'mingw' },
+        ],
+        { placeHolder: 'Bu arxiv nimani o\'z ichiga oladi?' }
+    );
+    if (!isMinGW) return;
+
+    await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Fayldan o\'rnatilmoqda...' },
+        async () => {
+            try {
+                cm.installFromArchive(context, archivePath, isMinGW.value);
+                updateStatusBar(context);
+                vscode.window.showInformationMessage('O\'rnatildi!');
+            } catch (e) {
+                vscode.window.showErrorMessage(`Xato: ${e.message}`);
+            }
+        }
+    );
+}
+
 async function cmdUpdateCompiler(context) {
-    const platform = process.platform;
-    const arch = process.arch;
-
-    const assetName = platform === 'win32' ? 'uzpp-windows-x64.exe'
-        : platform === 'darwin' ? (arch === 'arm64' ? 'uzpp-macos-arm64' : 'uzpp-macos-x64')
-        : 'uzpp-linux-x64';
-
     const answer = await vscode.window.showInformationMessage(
-        `uz++ kompilyatorini yangilash (${assetName})?`,
+        "uz++ kompilyatorini GitHub'dan yangilash (kompilator + stdlib)?",
         'Ha', "Yo'q"
     );
     if (answer !== 'Ha') return;
 
-    const binDir = context.asAbsolutePath('bin');
-    const destName = platform === 'win32' ? 'uzpp.exe' : 'uzpp';
-    const destPath = path.join(binDir, destName);
+    const p = cm.getPaths(context);
+    // Backup existing compiler dir
+    if (fs.existsSync(p.compilerDir)) {
+        const backup = p.compilerDir + '.bak';
+        if (fs.existsSync(backup)) fs.rmSync(backup, { recursive: true });
+        fs.renameSync(p.compilerDir, backup);
+    }
 
     await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Kompilyator yuklanmoqda...' },
-        async () => {
+        { location: vscode.ProgressLocation.Notification, title: 'Yangilanmoqda...' },
+        async (progress) => {
             try {
-                if (!fs.existsSync(binDir)) fs.mkdirSync(binDir, { recursive: true });
-                const url = `https://github.com/timetolivechk-spec/uz-plus-plus/releases/latest/download/${assetName}`;
-                const cmd = platform === 'win32'
-                    ? `curl -L --output "${destPath}" "${url}"`
-                    : `curl -L --output "${destPath}" "${url}" && chmod +x "${destPath}"`;
-                execSync(cmd, { timeout: 120000 });
+                await cm.installComponent(context, 'compiler', (msg, fraction) => {
+                    progress.report({ message: msg, increment: Math.round((fraction ?? 0) * 100) });
+                });
+                cm.ensureWrapperScript(context);
                 updateStatusBar(context);
-                vscode.window.showInformationMessage('uz++ kompilyatori muvaffaqiyatli yangilandi!');
+                // Remove backup
+                const backup = p.compilerDir + '.bak';
+                if (fs.existsSync(backup)) fs.rmSync(backup, { recursive: true });
+                vscode.window.showInformationMessage('uz++ muvaffaqiyatli yangilandi!');
             } catch (e) {
-                vscode.window.showErrorMessage(`Yuklash xatosi: ${e.message}`);
+                // Restore backup on failure
+                const backup = p.compilerDir + '.bak';
+                if (fs.existsSync(backup)) {
+                    if (fs.existsSync(p.compilerDir)) fs.rmSync(p.compilerDir, { recursive: true });
+                    fs.renameSync(backup, p.compilerDir);
+                }
+                vscode.window.showErrorMessage(`Yangilash xatosi: ${e.message}`);
             }
         }
     );
@@ -221,61 +390,167 @@ async function cmdUpdateCompiler(context) {
 // ─── Status Bar ───────────────────────────────────────────────────────────────
 
 function updateStatusBar(context) {
-    const compiler = findCompilerPath(context);
-    const version = getCompilerVersion(compiler);
-    statusBarItem.text = version ? `$(bracket) uz++ v${version}` : '$(bracket) uz++';
-    statusBarItem.tooltip = `uz++ kompilyatori: ${compiler}\nBosish: faylni ishga tushirish (F5)`;
-    statusBarItem.command = 'uzpp.runFile';
+    const status = cm.checkComponents(context);
+    if (status.allOk) {
+        const version = getCompilerVersion(status.paths.compilerExe);
+        statusBarItem.text    = version ? `$(bracket) uz++ v${version}` : '$(bracket) uz++';
+        statusBarItem.tooltip = `uz++ tayyor. F5 → ishga tushirish.`;
+        statusBarItem.color   = undefined;
+        statusBarItem.command = 'uzpp.runFile';
+    } else {
+        statusBarItem.text    = '$(bracket) uz++ ⚠';
+        statusBarItem.tooltip = "Komponentlar o'rnatilmagan. Bosing.";
+        statusBarItem.color   = new vscode.ThemeColor('statusBarItem.warningForeground');
+        statusBarItem.command = 'uzpp.installComponents';
+    }
     statusBarItem.show();
 }
 
 // ─── Welcome Screen ───────────────────────────────────────────────────────────
 
+function showWelcome(context) {
+    const panel = vscode.window.createWebviewPanel(
+        'uzppWelcome',
+        "uz++ — Xush Kelibsiz!",
+        vscode.ViewColumn.One,
+        { enableScripts: true, retainContextWhenHidden: true }
+    );
+
+    const status = cm.checkComponents(context);
+
+    panel.webview.onDidReceiveMessage(async (msg) => {
+        switch (msg.command) {
+            case 'installAll':
+                try {
+                    await cm.installAll(context, (text, fraction) => {
+                        panel.webview.postMessage({ type: 'progress', text, fraction: fraction ?? 0 });
+                    });
+                    cm.ensureWrapperScript(context);
+                    updateStatusBar(context);
+                    panel.webview.postMessage({ type: 'done' });
+                } catch (e) {
+                    panel.webview.postMessage({ type: 'error', text: e.message });
+                }
+                break;
+            case 'newProject':
+                await cmdNewProject(context);
+                break;
+            case 'installFromFile':
+                await cmdInstallFromFile(context);
+                break;
+            case 'openDocs':
+                vscode.env.openExternal(
+                    vscode.Uri.parse('https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md')
+                );
+                break;
+        }
+    }, undefined, context.subscriptions);
+
+    panel.webview.html = buildWelcomeHtml(status.allOk);
+    return panel;
+}
+
 async function showWelcomeIfFirstRun(context) {
     const key = 'uzpp.welcomeShown.v2';
     if (context.globalState.get(key)) return;
     await context.globalState.update(key, true);
+    showWelcome(context);
+}
 
-    const panel = vscode.window.createWebviewPanel(
-        'uzppWelcome',
-        "uz++ ga Xush Kelibsiz!",
-        vscode.ViewColumn.One,
-        { enableScripts: false }
-    );
+function buildWelcomeHtml(alreadyInstalled) {
+    const installSection = alreadyInstalled
+        ? `<div class="ready-box">
+             <div class="ready-icon">✓</div>
+             <div class="ready-text">Barcha komponentlar o'rnatilgan! F5 tugmasini bosing.</div>
+           </div>`
+        : `<div class="install-box">
+             <p>Birinchi ishlatishda uz++ uchta komponent o'rnatadi:</p>
+             <ul>
+               <li><strong>uz++ kompilyatori</strong> (~10 MB) — transpayler</li>
+               <li><strong>Standart kutubxona</strong> (~2 MB) — stdlib/</li>
+               ${process.platform === 'win32' ? '<li><strong>C++ kompilyatori MinGW</strong> (~150 MB) — g++</li>' : ''}
+             </ul>
+             <p class="note">Internet kerak. Bir marta yuklanadi va keyingi yangilanishlarda saqlanib qoladi.</p>
+             <button id="btn-install" class="btn-primary" onclick="startInstall()">
+               Hammasini o'rnatish — One-Click Install
+             </button>
+             <div id="progress-area" style="display:none">
+               <div class="progress-bar-bg"><div id="progress-bar" class="progress-bar-fill"></div></div>
+               <div id="progress-text" class="progress-text">Tayyorlanmoqda...</div>
+             </div>
+             <div id="error-area" style="display:none" class="error-box"></div>
+           </div>`;
 
-    panel.webview.html = `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
 <title>uz++ ga Xush Kelibsiz</title>
 <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-         max-width: 720px; margin: 40px auto; padding: 0 24px;
+         max-width: 720px; margin: 0 auto; padding: 32px 24px;
          color: var(--vscode-foreground);
-         background: var(--vscode-editor-background); line-height: 1.7; }
-  h1   { color: var(--vscode-textLink-foreground); font-size: 2em; margin-bottom: 4px; }
-  h2   { color: var(--vscode-textLink-foreground); margin-top: 2em; }
-  code { background: var(--vscode-textBlockQuote-background); padding: 2px 6px;
-         border-radius: 3px; font-family: 'Cascadia Code', Consolas, monospace; }
+         background: var(--vscode-editor-background);
+         line-height: 1.7; }
+  h1 { color: var(--vscode-textLink-foreground); font-size: 2em; margin-bottom: 6px; }
+  h2 { color: var(--vscode-textLink-foreground); margin: 28px 0 10px; font-size: 1.2em; }
+  .subtitle { color: var(--vscode-descriptionForeground); margin-bottom: 24px; }
+  pre, code { font-family: 'Cascadia Code', Consolas, monospace; }
   pre  { background: var(--vscode-textBlockQuote-background); padding: 16px;
-         border-radius: 6px; overflow-x: auto; font-family: 'Cascadia Code', Consolas, monospace; }
+         border-radius: 6px; overflow-x: auto; margin: 12px 0; font-size: 0.9em; }
+  code { background: var(--vscode-textBlockQuote-background);
+         padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+  a { color: var(--vscode-textLink-foreground); }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  td, th { border: 1px solid var(--vscode-editorGroup-border); padding: 7px 12px; text-align: left; }
+  th { background: var(--vscode-textBlockQuote-background); font-size: 0.9em; }
+  kbd { background: var(--vscode-keybindingLabel-background);
+        border: 1px solid var(--vscode-keybindingLabel-border);
+        padding: 2px 8px; border-radius: 4px; font-size: 0.88em; }
   .badge { display: inline-block; background: var(--vscode-badge-background);
            color: var(--vscode-badge-foreground); padding: 2px 10px;
-           border-radius: 12px; font-size: 0.82em; margin: 3px 2px; }
-  kbd  { background: var(--vscode-keybindingLabel-background);
-         border: 1px solid var(--vscode-keybindingLabel-border);
-         padding: 2px 7px; border-radius: 4px; font-size: 0.88em; }
-  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
-  td, th { border: 1px solid var(--vscode-editorGroup-border); padding: 8px 12px; text-align: left; }
-  th { background: var(--vscode-textBlockQuote-background); }
-  a  { color: var(--vscode-textLink-foreground); }
-  .subtitle { color: var(--vscode-descriptionForeground); font-size: 1.05em; }
+           border-radius: 12px; font-size: 0.8em; margin: 2px; }
+  .install-box, .ready-box { border: 1px solid var(--vscode-editorGroup-border);
+    border-radius: 8px; padding: 20px 24px; margin: 20px 0;
+    background: var(--vscode-editorWidget-background); }
+  .ready-box { display: flex; align-items: center; gap: 16px; }
+  .ready-icon { font-size: 2em; color: var(--vscode-testing-iconPassed); }
+  .btn-primary { display: inline-block; margin: 14px 0 8px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none; border-radius: 4px; padding: 10px 24px;
+    font-size: 1em; cursor: pointer; font-weight: 600; }
+  .btn-primary:hover { background: var(--vscode-button-hoverBackground); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary { display: inline-block; margin: 6px 8px 6px 0;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none; border-radius: 4px; padding: 8px 18px;
+    font-size: 0.95em; cursor: pointer; }
+  .progress-bar-bg { background: var(--vscode-editorGroup-border);
+    border-radius: 4px; height: 8px; margin: 14px 0 6px; }
+  .progress-bar-fill { background: var(--vscode-progressBar-background);
+    border-radius: 4px; height: 8px; width: 0%; transition: width 0.3s; }
+  .progress-text { font-size: 0.88em; color: var(--vscode-descriptionForeground); }
+  .error-box { background: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    border-radius: 4px; padding: 10px 14px; margin-top: 12px; font-size: 0.9em; }
+  .note { font-size: 0.85em; color: var(--vscode-descriptionForeground);
+    font-style: italic; margin: 6px 0; }
+  .actions { margin-top: 20px; }
 </style>
 </head>
 <body>
+
 <h1>uz++ 2.1</h1>
 <p class="subtitle">O'zbek tilidagi dasturlash tili — C++ ning barcha kuchi, o'z tilida.</p>
+
+${installSection}
 
 <h2>Birinchi dastur</h2>
 <pre>ulash "uzpp_runtime.hpp"
@@ -287,33 +562,67 @@ butun asosiy() {
 
 <h2>Asosiy buyruqlar</h2>
 <table>
-  <tr><th>Tugma</th><th>Amal</th></tr>
-  <tr><td><kbd>F5</kbd></td><td>Faylni ishga tushirish</td></tr>
-  <tr><td><kbd>Ctrl+F5</kbd></td><td>Faylni faqat qurish (build)</td></tr>
-  <tr><td><kbd>Ctrl+Shift+P</kbd> → <code>uz++ yangi loyiha</code></td><td>Yangi loyiha yaratish</td></tr>
-  <tr><td><kbd>Ctrl+Shift+P</kbd> → <code>uz++ C++ kodi</code></td><td>Generatsiya qilingan C++ ni ko'rish</td></tr>
-  <tr><td><kbd>Ctrl+Shift+P</kbd> → <code>uz++ kompilyatorni yangilash</code></td><td>Eng yangi versiyani yuklab olish</td></tr>
+  <tr><th>Tugma / Buyruq</th><th>Amal</th></tr>
+  <tr><td><kbd>F5</kbd></td><td>Faylni ishga tushirish (run)</td></tr>
+  <tr><td><kbd>Ctrl+F5</kbd></td><td>Faylni qurish (build)</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ yangi loyiha</code></td><td>Yangi loyiha yaratish</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ C++ kodi</code></td><td>Generatsiya qilingan C++ ni ko'rish</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ komponentlar holati</code></td><td>O'rnatilgan komponentlarni tekshirish</td></tr>
 </table>
 
 <h2>Kalit so'zlar</h2>
 <p>
   <span class="badge">butun</span> <span class="badge">haqiqiy</span>
   <span class="badge">matn</span> <span class="badge">mantiqiy</span>
-  <span class="badge">belgilangan</span> <span class="badge">ozgaruvchan</span>
-  <span class="badge">ozgarmas</span> <span class="badge">agar</span>
-  <span class="badge">aks holda</span> <span class="badge">uchun</span>
-  <span class="badge">holda</span> <span class="badge">qaytarish</span>
-  <span class="badge">sinf</span> <span class="badge">tuzilma</span>
+  <span class="badge">ozgaruvchan</span> <span class="badge">ozgarmas</span>
+  <span class="badge">agar</span> <span class="badge">aks holda</span>
+  <span class="badge">uchun</span> <span class="badge">holda</span>
+  <span class="badge">qaytarish</span> <span class="badge">sinf</span>
   <span class="badge">yozish</span> <span class="badge">o'qish</span>
   <span class="badge">urinish</span> <span class="badge">ushlash</span>
 </p>
 
-<h2>Resurslar</h2>
-<ul>
-  <li><a href="https://github.com/timetolivechk-spec/uz-plus-plus">GitHub repository</a></li>
-  <li><a href="https://github.com/timetolivechk-spec/uz-plus-plus/blob/main/docs/getting-started.md">Boshlash qo'llanmasi</a></li>
-  <li><a href="https://github.com/timetolivechk-spec/uz-plus-plus/tree/main/examples">Misollar (examples/)</a></li>
-</ul>
+<div class="actions">
+  <button class="btn-secondary" onclick="vscode.postMessage({command:'newProject'})">Yangi loyiha yaratish</button>
+  <button class="btn-secondary" onclick="vscode.postMessage({command:'openDocs'})">Qo'llanma (Docs)</button>
+  ${!alreadyInstalled ? '<button class="btn-secondary" onclick="vscode.postMessage({command:\'installFromFile\'})">Fayldan o\'rnatish (offline)</button>' : ''}
+</div>
+
+<script>
+  const vscode = acquireVsCodeApi();
+
+  function startInstall() {
+    const btn = document.getElementById('btn-install');
+    btn.disabled = true;
+    btn.textContent = "O'rnatilmoqda...";
+    document.getElementById('progress-area').style.display = 'block';
+    document.getElementById('error-area').style.display = 'none';
+    vscode.postMessage({ command: 'installAll' });
+  }
+
+  window.addEventListener('message', (event) => {
+    const msg = event.data;
+    if (msg.type === 'progress') {
+      document.getElementById('progress-text').textContent = msg.text;
+      document.getElementById('progress-bar').style.width = Math.round((msg.fraction ?? 0) * 100) + '%';
+    } else if (msg.type === 'done') {
+      document.getElementById('progress-bar').style.width = '100%';
+      document.getElementById('progress-text').textContent = "Tayyor! F5 tugmasini bosing.";
+      const btn = document.getElementById('btn-install');
+      if (btn) {
+        btn.textContent = "Yangi loyiha yaratish";
+        btn.disabled = false;
+        btn.onclick = () => vscode.postMessage({ command: 'newProject' });
+      }
+    } else if (msg.type === 'error') {
+      document.getElementById('error-area').style.display = 'block';
+      document.getElementById('error-area').textContent = "Xato: " + msg.text +
+        " — Internetni tekshiring yoki 'Fayldan o'rnatish' ni sinab ko'ring.";
+      const btn = document.getElementById('btn-install');
+      if (btn) { btn.disabled = false; btn.textContent = "Qayta urinish"; }
+    }
+  });
+</script>
 </body>
 </html>`;
 }
@@ -323,6 +632,7 @@ butun asosiy() {
 function activate(context) {
     const compilerPath = findCompilerPath(context);
 
+    // LSP server (the compiler itself handles LSP via "uzpp lsp")
     const serverOptions = {
         run:   { command: compilerPath, args: ['lsp'], transport: TransportKind.stdio },
         debug: { command: compilerPath, args: ['lsp'], transport: TransportKind.stdio }
@@ -333,28 +643,37 @@ function activate(context) {
         outputChannelName: 'uz++ Language Server'
     };
 
-    client = new LanguageClient('uzpp-lsp', 'uz++ Language Server', serverOptions, clientOptions);
-    client.start();
+    // Only start LSP if compiler is available
+    if (cm.checkComponents(context).compilerOk || fs.existsSync(compilerPath)) {
+        client = new LanguageClient('uzpp-lsp', 'uz++ Language Server', serverOptions, clientOptions);
+        client.start().catch(() => {/* LSP optional */});
+    }
 
     // Status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     context.subscriptions.push(statusBarItem);
     updateStatusBar(context);
 
-    // Commands
+    // Register all commands
     [
-        vscode.commands.registerCommand('uzpp.runFile',          () => cmdRunFile(context)),
-        vscode.commands.registerCommand('uzpp.buildFile',        () => cmdBuildFile(context)),
-        vscode.commands.registerCommand('uzpp.formatFile',       () => cmdFormatFile(context)),
-        vscode.commands.registerCommand('uzpp.showGeneratedCpp', () => cmdShowGeneratedCpp(context)),
-        vscode.commands.registerCommand('uzpp.newProject',       () => cmdNewProject(context)),
-        vscode.commands.registerCommand('uzpp.updateCompiler',   () => cmdUpdateCompiler(context)),
-        vscode.commands.registerCommand('uzpp.restartServer',    async () => {
-            if (client) { await client.stop(); client.start(); }
+        vscode.commands.registerCommand('uzpp.runFile',              () => cmdRunFile(context)),
+        vscode.commands.registerCommand('uzpp.buildFile',            () => cmdBuildFile(context)),
+        vscode.commands.registerCommand('uzpp.formatFile',           () => cmdFormatFile(context)),
+        vscode.commands.registerCommand('uzpp.showGeneratedCpp',     () => cmdShowGeneratedCpp(context)),
+        vscode.commands.registerCommand('uzpp.newProject',           () => cmdNewProject(context)),
+        vscode.commands.registerCommand('uzpp.installComponents',    () => cmdInstallComponents(context)),
+        vscode.commands.registerCommand('uzpp.checkComponents',      () => cmdCheckComponents(context)),
+        vscode.commands.registerCommand('uzpp.uninstallComponents',  () => cmdUninstallComponents(context)),
+        vscode.commands.registerCommand('uzpp.installFromFile',      () => cmdInstallFromFile(context)),
+        vscode.commands.registerCommand('uzpp.updateCompiler',       () => cmdUpdateCompiler(context)),
+        vscode.commands.registerCommand('uzpp.openWelcome',          () => showWelcome(context)),
+        vscode.commands.registerCommand('uzpp.restartServer', async () => {
+            if (client) { await client.stop(); client.start().catch(() => {}); }
             vscode.window.showInformationMessage('uz++ LSP qayta ishga tushirildi.');
         }),
     ].forEach(c => context.subscriptions.push(c));
 
+    // Show welcome on first run
     showWelcomeIfFirstRun(context);
 }
 

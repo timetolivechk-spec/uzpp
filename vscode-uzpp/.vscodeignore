@@ -9,11 +9,8 @@ src/
 *.d.ts
 tsconfig.json
 webpack.config.js
-.nycrc*
-.mocharc.json
 Kengaytma
 Kengaytma/**
 
-# Include embedded compiler
-!bin/
-!bin/**
+# bin/ is no longer bundled — components are downloaded at first run
+bin/**

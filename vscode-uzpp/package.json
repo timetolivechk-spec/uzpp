@@ -1,30 +1,19 @@
 {
     "name": "uzpp",
     "displayName": "uz++",
-    "description": "Full IDE support for uz++: syntax highlighting, real-time diagnostics, autocomplete, run/build commands.",
+    "description": "Full IDE support for uz++: syntax highlighting, diagnostics, autocomplete, one-click install.",
     "version": "2.1.0",
     "publisher": "uzpp",
-    "engines": {
-        "vscode": "^1.75.0"
-    },
-    "categories": [
-        "Programming Languages",
-        "Linters"
-    ],
-    "keywords": [
-        "uz++",
-        "uzbek",
-        "o'zbek",
-        "programming language",
-        "c++"
-    ],
+    "engines": { "vscode": "^1.75.0" },
+    "categories": ["Programming Languages", "Linters"],
+    "keywords": ["uz++", "uzbek", "o'zbek", "programming language", "c++"],
     "repository": {
         "type": "git",
-        "url": "https://github.com/timetolivechk-spec/uz-plus-plus"
+        "url": "https://github.com/timetolivechk-spec/uzpp"
     },
-    "activationEvents": [
-        "onLanguage:uzpp"
-    ],
+    "bugs":     { "url": "https://github.com/timetolivechk-spec/uzpp/issues" },
+    "homepage": "https://github.com/timetolivechk-spec/uzpp#readme",
+    "activationEvents": ["onStartupFinished"],
     "main": "./extension.js",
     "contributes": {
         "languages": [
@@ -43,61 +32,26 @@
             }
         ],
         "commands": [
-            {
-                "command": "uzpp.runFile",
-                "title": "uz++: Faylni ishga tushirish",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.buildFile",
-                "title": "uz++: Faylni qurish (build)",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.formatFile",
-                "title": "uz++: Faylni formatlash",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.showGeneratedCpp",
-                "title": "uz++: C++ kodini ko'rish",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.newProject",
-                "title": "uz++: Yangi loyiha yaratish",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.updateCompiler",
-                "title": "uz++: Kompilyatorni yangilash",
-                "category": "uz++"
-            },
-            {
-                "command": "uzpp.restartServer",
-                "title": "uz++: LSP serverni qayta ishga tushirish",
-                "category": "uz++"
-            }
+            { "command": "uzpp.runFile",             "title": "uz++: Faylni ishga tushirish",             "category": "uz++" },
+            { "command": "uzpp.buildFile",           "title": "uz++: Faylni qurish (build)",             "category": "uz++" },
+            { "command": "uzpp.formatFile",          "title": "uz++: Faylni formatlash",                 "category": "uz++" },
+            { "command": "uzpp.showGeneratedCpp",    "title": "uz++: C++ kodini ko'rish",                "category": "uz++" },
+            { "command": "uzpp.newProject",          "title": "uz++: Yangi loyiha yaratish",             "category": "uz++" },
+            { "command": "uzpp.installComponents",   "title": "uz++: Komponentlarni o'rnatish",          "category": "uz++" },
+            { "command": "uzpp.checkComponents",     "title": "uz++: Komponentlar holati",               "category": "uz++" },
+            { "command": "uzpp.uninstallComponents", "title": "uz++: Komponentlarni o'chirish (reset)",  "category": "uz++" },
+            { "command": "uzpp.installFromFile",     "title": "uz++: Fayldan o'rnatish (offline)",       "category": "uz++" },
+            { "command": "uzpp.updateCompiler",      "title": "uz++: Kompilyatorni yangilash",           "category": "uz++" },
+            { "command": "uzpp.openWelcome",         "title": "uz++: Xush kelibsiz ekranini ochish",     "category": "uz++" },
+            { "command": "uzpp.restartServer",       "title": "uz++: LSP serverni qayta ishga tushirish","category": "uz++" }
         ],
         "keybindings": [
-            {
-                "command": "uzpp.runFile",
-                "key": "F5",
-                "when": "editorLangId == uzpp"
-            },
-            {
-                "command": "uzpp.buildFile",
-                "key": "ctrl+F5",
-                "when": "editorLangId == uzpp"
-            }
+            { "command": "uzpp.runFile",   "key": "F5",      "when": "editorLangId == uzpp" },
+            { "command": "uzpp.buildFile", "key": "ctrl+F5", "when": "editorLangId == uzpp" }
         ],
         "menus": {
             "editor/title/run": [
-                {
-                    "command": "uzpp.runFile",
-                    "when": "editorLangId == uzpp",
-                    "group": "navigation"
-                }
+                { "command": "uzpp.runFile", "when": "editorLangId == uzpp", "group": "navigation" }
             ]
         },
         "configuration": {
@@ -106,7 +60,7 @@
                 "uzpp.compilerPath": {
                     "type": "string",
                     "default": "",
-                    "description": "uzpp.exe fayliga to'liq yo'l. Bo'sh bo'lsa, avval kengaytma ichidagi bin/ papkasidan, so'ng PATH'dan qidiradi."
+                    "description": "uzpp.exe fayliga to'liq yo'l (ixtiyoriy). Bo'sh bo'lsa, kengaytma globalStorage'dan qidiradi. Ishlab chiquvchilar uchun."
                 }
             }
         }
@@ -116,8 +70,8 @@
     },
     "scripts": {
         "vscode:prepublish": "echo ready",
-        "package": "vsce package",
-        "test": "echo \"no tests\""
+        "package": "npx @vscode/vsce package --allow-missing-repository",
+        "test": "echo no tests"
     },
     "author": "UzAICoding",
     "license": "MIT"
