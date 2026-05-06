@@ -33,12 +33,18 @@ const { execSync, spawnSync } = require('child_process');
 
 const RELEASE_BASE = 'https://github.com/timetolivechk-spec/uzpp/releases/latest/download';
 
+// MinGW is downloaded directly from WinLibs (portable GCC 14, no install needed).
+// ~170 MB zip, extracted to storageRoot/mingw/. Pinned to a specific release for reproducibility.
+const MINGW_URL = 'https://github.com/brechtsanders/winlibs_mingw/releases/download/' +
+    '14.2.0posix-18.1.8-12.0.0-ucrt-r2/' +
+    'winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2.zip';
+
 // Platform-specific asset names for GitHub releases
 const PLATFORM_ASSETS = {
-    'win32-x64':    { compiler: 'uzpp-windows-x64.zip',    exe: 'uzpp.exe', mingw: 'mingw-w64-windows-x64.zip' },
-    'linux-x64':    { compiler: 'uzpp-linux-x64.tar.gz',   exe: 'uzpp',     mingw: null },
-    'darwin-x64':   { compiler: 'uzpp-macos-x64.tar.gz',   exe: 'uzpp',     mingw: null },
-    'darwin-arm64': { compiler: 'uzpp-macos-arm64.tar.gz', exe: 'uzpp',     mingw: null },
+    'win32-x64':    { compiler: 'uzpp-windows-x64.zip',    exe: 'uzpp.exe', mingwUrl: MINGW_URL },
+    'linux-x64':    { compiler: 'uzpp-linux-x64.tar.gz',   exe: 'uzpp',     mingwUrl: null },
+    'darwin-x64':   { compiler: 'uzpp-macos-x64.tar.gz',   exe: 'uzpp',     mingwUrl: null },
+    'darwin-arm64': { compiler: 'uzpp-macos-arm64.tar.gz', exe: 'uzpp',     mingwUrl: null },
 };
 
 function getPlatformKey() {
@@ -229,13 +235,12 @@ async function installComponent(context, name, onProgress) {
     }
 
     if (name === 'mingw' && process.platform === 'win32') {
-        const assetName = p.asset.mingw;
-        if (!assetName) return;
-        const url     = `${RELEASE_BASE}/${assetName}`;
-        const tmpFile = path.join(tmpDir, assetName);
+        const mingwUrl = p.asset.mingwUrl;
+        if (!mingwUrl) return;
+        const tmpFile = path.join(tmpDir, 'mingw.zip');
 
         onProgress?.('Yuklab olinmoqda: C++ kompilyatori (MinGW) — 150+ MB...', 0);
-        await downloadFile(url, tmpFile, (dl, total) => {
+        await downloadFile(mingwUrl, tmpFile, (dl, total) => {
             const dlMB    = (dl    / 1048576).toFixed(1);
             const totalMB = total > 0 ? (total / 1048576).toFixed(1) : '?';
             onProgress?.(`MinGW (C++ kompilyatori) yuklanmoqda: ${dlMB}/${totalMB} MB`, total > 0 ? dl / total : 0);
