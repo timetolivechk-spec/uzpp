@@ -3,7 +3,6 @@
 *.vsix
 .vscode-test/
 out/
-node_modules/
 src/
 *.ts
 *.js.map
@@ -12,8 +11,9 @@ tsconfig.json
 webpack.config.js
 .nycrc*
 .mocharc.json
+Kengaytma
+Kengaytma/**
 
-# ВКЛЮЧАЕМ встроенный компилятор!
+# Include embedded compiler
 !bin/
 !bin/**
-!bin/uzpp.exe
