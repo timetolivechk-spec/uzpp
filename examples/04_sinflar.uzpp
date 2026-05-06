@@ -1,0 +1,115 @@
+// uz++ — Sinflar, meros va polimorfizm
+// Classes, inheritance and polymorphism
+
+ulash "uzpp_runtime.hpp"
+
+// --- Mavhum asosiy sinf ---
+
+sinf Hayvon {
+ochiq:
+    matn ism;
+    butun yosh;
+
+    Hayvon(matn i, butun y) : ism(i), yosh(y) {}
+
+    mavhum matn tovush() {
+        qaytarish "";
+    }
+
+    bosh tanishtir() {
+        yozish << ism << " (" << yosh << " yosh): " << tovush() << qator_oxiri;
+    }
+};
+
+// --- Meros olgan sinflar ---
+
+sinf Mushuk : Hayvon {
+ochiq:
+    Mushuk(matn i, butun y) : Hayvon(i, y) {}
+
+    matn tovush() ustidan_yozish {
+        qaytarish "Miyov!";
+    }
+};
+
+sinf It : Hayvon {
+ochiq:
+    It(matn i, butun y) : Hayvon(i, y) {}
+
+    matn tovush() ustidan_yozish {
+        qaytarish "Vov!";
+    }
+};
+
+// --- Encapsulation (yopiq/ochiq) ---
+
+sinf BankHisobi {
+yopiq:
+    matn    egasi;
+    haqiqiy balans;
+    butun   operatsiyalar;
+
+ochiq:
+    BankHisobi(matn ism, haqiqiy boshlangich)
+        : egasi(ism), balans(boshlangich), operatsiyalar(0) {}
+
+    bosh depozit(haqiqiy summa) {
+        agar (summa > 0.0) {
+            balans += summa;
+            operatsiyalar++;
+        }
+    }
+
+    mantiqiy yechish(haqiqiy summa) {
+        agar (summa > 0.0 && summa <= balans) {
+            balans -= summa;
+            operatsiyalar++;
+            qaytarish rost;
+        }
+        qaytarish yolg'on;
+    }
+
+    haqiqiy balansOlish() sabit { qaytarish balans; }
+    matn egasiniOlish() sabit { qaytarish egasi; }
+    butun operatsiyalarSoni() sabit { qaytarish operatsiyalar; }
+
+    bosh hisobot() sabit {
+        yozish << "=== Hisob: " << egasi << " ===" << qator_oxiri;
+        yozish << "  Balans: " << balans << " so'm" << qator_oxiri;
+        yozish << "  Operatsiyalar: " << operatsiyalar << qator_oxiri;
+    }
+};
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    // Polimorfizm
+    Mushuk m("Miti", 3);
+    It     it("Rex", 5);
+
+    m.tanishtir();
+    it.tanishtir();
+
+    // Yig'ma xulq
+    vektor<Mushuk> mushuklar;
+    mushuklar.push_back(Mushuk("Miti", 3));
+    mushuklar.push_back(Mushuk("Barsik", 1));
+
+    yozish << "Mushuklar:" << qator_oxiri;
+    uchun (Mushuk& ms : mushuklar) {
+        ms.tanishtir();
+    }
+
+    // Bank hisobi
+    BankHisobi hisob("Akbar Yusupov", 1000000.0);
+    hisob.depozit(500000.0);
+    hisob.yechish(200000.0);
+
+    agar (!hisob.yechish(5000000.0)) {
+        yozish << "Yetarli mablag' yo'q!" << qator_oxiri;
+    }
+
+    hisob.hisobot();
+
+    qaytarish 0;
+}

@@ -1,0 +1,93 @@
+// uz++ — Natija<T> turi: Rust-ga o'xshash xavfsiz xatolik boshqaruvi
+// Result<T> type: Rust-like safe error handling
+
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+
+// --- Xavfsiz matematika operatsiyalari ---
+
+uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+    agar (b == 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
+}
+
+uzpp::Natija<haqiqiy> xavfsiz_ildiz(haqiqiy x) {
+    agar (x < 0.0) {
+        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz olish mumkin emas!");
+    }
+    qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(uzpp::Matematika::ildiz(x));
+}
+
+uzpp::Natija<butun> xavfsiz_yashirin(matn s) {
+    urinish {
+        qaytarish uzpp::Natija<butun>::muvaffaqiyat(std::stoi(s));
+    } ushlash (std::exception& e) {
+        qaytarish uzpp::Natija<butun>::xato("Matndan songa o'tkazib bo'lmadi: " + s);
+    }
+}
+
+// --- Tanlov<T> turi (Option type) ---
+
+uzpp::Tanlov<butun> topish(vektor<butun>& v, butun qiymat) {
+    uchun (butun n : v) {
+        agar (n == qiymat) {
+            qaytarish uzpp::bor(n);
+        }
+    }
+    qaytarish uzpp::Tanlov<butun>::yoq();
+}
+
+// --- Natijalarni chop etish yordamchisi ---
+
+bosh natijani_chiqar(matn tavsif, uzpp::Natija<haqiqiy> r) {
+    yozish << tavsif << ": ";
+    agar (r.yaroqliMi()) {
+        yozish << r.qiymat() << qator_oxiri;
+    } aks_holda {
+        yozish << "XATO — " << r.xatoMazmun() << qator_oxiri;
+    }
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    yozish << "=== Xavfsiz bolish ===" << qator_oxiri;
+    natijani_chiqar("10 / 2", xavfsiz_bolish(10.0, 2.0));
+    natijani_chiqar("7 / 3", xavfsiz_bolish(7.0, 3.0));
+    natijani_chiqar("5 / 0", xavfsiz_bolish(5.0, 0.0));
+
+    yozish << qator_oxiri << "=== Xavfsiz ildiz ===" << qator_oxiri;
+    natijani_chiqar("sqrt(16)", xavfsiz_ildiz(16.0));
+    natijani_chiqar("sqrt(2)",  xavfsiz_ildiz(2.0));
+    natijani_chiqar("sqrt(-4)", xavfsiz_ildiz(-4.0));
+
+    yozish << qator_oxiri << "=== Matndan songa o'tkazish ===" << qator_oxiri;
+    vektor<matn> testlar = {"42", "3.14", "abc", "100", ""};
+    uchun (matn s : testlar) {
+        ozgaruvchan r = xavfsiz_yashirin(s);
+        yozish << "\"" << s << "\": ";
+        agar (r.yaroqliMi()) {
+            yozish << r.qiymat() << qator_oxiri;
+        } aks_holda {
+            yozish << r.xatoMazmun() << qator_oxiri;
+        }
+    }
+
+    yozish << qator_oxiri << "=== Tanlov<T> turi ===" << qator_oxiri;
+    vektor<butun> sonlar = {1, 5, 10, 15, 20};
+    vektor<butun> izlash = {10, 7, 20, 3};
+
+    uchun (butun q : izlash) {
+        ozgaruvchan t = topish(sonlar, q);
+        yozish << "topish(" << q << "): ";
+        agar (t.borMi()) {
+            yozish << "topildi — " << t.qiymat() << qator_oxiri;
+        } aks_holda {
+            yozish << "topilmadi" << qator_oxiri;
+        }
+    }
+
+    qaytarish 0;
+}

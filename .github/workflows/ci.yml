@@ -40,7 +40,7 @@ jobs:
       - name: Run C++ unit tests
         run: ./build/uzpp_frontend_tests.exe
 
-      - name: Run example programs (integration tests)
+      - name: Run misollar/ integration tests
         run: |
           PASS=0; FAIL=0
           for f in misollar/01_salom_dunyo.uzpp \
@@ -50,6 +50,28 @@ jobs:
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
+            echo "--- Testing: $f ---"
+            if ./build/uzpp.exe ishga-tushirish "$f"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              echo "FAILED: $f"
+            fi
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          [ $FAIL -eq 0 ]
+
+      - name: Run examples/ integration tests
+        run: |
+          PASS=0; FAIL=0
+          for f in examples/01_salom_dunyo.uzpp \
+                   examples/02_ozgaruvchilar.uzpp \
+                   examples/03_funksiyalar.uzpp \
+                   examples/04_sinflar.uzpp \
+                   examples/05_natija.uzpp \
+                   examples/06_moslik.uzpp \
+                   examples/08_kolleksiyalar.uzpp \
+                   examples/10_ilgor.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp.exe ishga-tushirish "$f"; then
               PASS=$((PASS+1))
@@ -99,7 +121,7 @@ jobs:
       - name: Run C++ unit tests
         run: ./build/uzpp_frontend_tests
 
-      - name: Run example programs (integration tests)
+      - name: Run misollar/ integration tests
         run: |
           PASS=0; FAIL=0
           for f in misollar/01_salom_dunyo.uzpp \
@@ -109,6 +131,28 @@ jobs:
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
+            echo "--- Testing: $f ---"
+            if ./build/uzpp ishga-tushirish "$f"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              echo "FAILED: $f"
+            fi
+          done
+          echo "Results: $PASS passed, $FAIL failed"
+          [ $FAIL -eq 0 ]
+
+      - name: Run examples/ integration tests
+        run: |
+          PASS=0; FAIL=0
+          for f in examples/01_salom_dunyo.uzpp \
+                   examples/02_ozgaruvchilar.uzpp \
+                   examples/03_funksiyalar.uzpp \
+                   examples/04_sinflar.uzpp \
+                   examples/05_natija.uzpp \
+                   examples/06_moslik.uzpp \
+                   examples/08_kolleksiyalar.uzpp \
+                   examples/10_ilgor.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp ishga-tushirish "$f"; then
               PASS=$((PASS+1))

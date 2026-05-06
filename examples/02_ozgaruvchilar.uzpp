@@ -1,0 +1,55 @@
+// uz++ — O'zgaruvchilar va asosiy turlar
+// Barcha C++ turlari o'zbek kalit so'zlari bilan
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // Asosiy turlar
+    butun     son      = 42;           // int
+    haqiqiy   raqam    = 3.14159;      // double
+    matn      ism      = "Akbar";      // std::string
+    mantiqiy  togri    = rost;         // bool = true
+    mantiqiy  noto_gri = yolg'on;      // bool = false
+
+    yozish << "butun:    " << son     << qator_oxiri;
+    yozish << "haqiqiy:  " << raqam   << qator_oxiri;
+    yozish << "matn:     " << ism     << qator_oxiri;
+    yozish << "mantiqiy: " << togri   << qator_oxiri;
+
+    // Avtomatik tur aniqlash (auto)
+    ozgaruvchan a = 100;
+    ozgaruvchan b = 3.14;
+    ozgaruvchan s = "uz++";
+
+    yozish << "auto butun:   " << a << qator_oxiri;
+    yozish << "auto haqiqiy: " << b << qator_oxiri;
+    yozish << "auto matn:    " << s << qator_oxiri;
+
+    // O'zgarmas (const)
+    ozgarmas haqiqiy PI       = 3.14159265358979;
+    ozgarmas haqiqiy EULER    = 2.71828182845904;
+    ozgarmas matn    DASTUR   = "uz++";
+
+    yozish << "PI = " << PI     << qator_oxiri;
+    yozish << "E  = " << EULER  << qator_oxiri;
+
+    // Arifmetik amallar
+    butun x = 10, y = 3;
+    yozish << x << " + " << y << " = " << (x + y) << qator_oxiri;
+    yozish << x << " - " << y << " = " << (x - y) << qator_oxiri;
+    yozish << x << " * " << y << " = " << (x * y) << qator_oxiri;
+    yozish << x << " / " << y << " = " << (x / y) << qator_oxiri;
+    yozish << x << " % " << y << " = " << (x % y) << qator_oxiri;
+
+    // Mantiqiy amallar
+    mantiqiy p = rost, q = yolg'on;
+    yozish << "p va q = " << (p va q) << qator_oxiri;
+    yozish << "p yoki q = " << (p yoki q) << qator_oxiri;
+
+    // Matn bilan ishlash
+    matn birinchi = "uz";
+    birinchi += "++";
+    yozish << "Til: " << birinchi << " (uzunlik: " << birinchi.size() << ")" << qator_oxiri;
+
+    qaytarish 0;
+}

@@ -1,0 +1,18 @@
+// uz++ — Birinchi dastur: "Salom, Dunyo!"
+// O'z ona tilingizda dasturlashni boshlang!
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // Ekranga matn chiqarish
+    yozish << "Salom, Dunyo!" << qator_oxiri;
+    yozish << "uz++ tilida xush kelibsiz!" << qator_oxiri;
+
+    // O'zgaruvchilar
+    matn ism = "O'zbekiston";
+    butun yil = 2024;
+
+    yozish << "Salom, " << ism << "! Hozir " << yil << " yil." << qator_oxiri;
+
+    qaytarish 0;
+}

@@ -1,0 +1,90 @@
+// uz++ — Asinxron dasturlash va ko'p oqimlilik
+// Async programming and multi-threading
+
+ulash "uzpp_runtime.hpp"
+
+// --- Parallel hisoblash ---
+
+butun uzoq_hisob(butun n, matn nom) {
+    butun jami = 0;
+    uchun (butun i = 1; i <= n; i++) {
+        jami += i;
+    }
+    yozish << nom << " tugadi: " << jami << qator_oxiri;
+    qaytarish jami;
+}
+
+haqiqiy pi_hisoblash(butun takror) {
+    haqiqiy pi = 0.0;
+    uchun (butun i = 0; i < takror; i++) {
+        haqiqiy ishorat = (i % 2 == 0) ? 1.0 : -1.0;
+        pi += ishorat / (2.0 * i + 1.0);
+    }
+    qaytarish pi * 4.0;
+}
+
+// --- Oqim havzasi misoli ---
+
+bosh oqim_havzasi_misol() {
+    yozish << "=== OqimPool misoli ===" << qator_oxiri;
+
+    vektor<butun> natijalar(5);
+    uzpp::OqimPool hovuz(4);
+
+    uchun (butun i = 0; i < 5; i++) {
+        hovuz.vazifaQosh([&natijalar, i]() {
+            natijalar[i] = (i + 1) * (i + 1);
+        });
+    }
+
+    hovuz.toxtatish();
+
+    yozish << "Kvadratlar: ";
+    uchun (butun n : natijalar) yozish << n << " ";
+    yozish << qator_oxiri;
+}
+
+// --- std::async bilan parallel ishlov ---
+
+bosh async_misol() {
+    yozish << "=== std::async parallel hisoblash ===" << qator_oxiri;
+
+    // Bir vaqtda bir nechta hisoblash
+    ozgaruvchan v1 = std::async(std::launch::async, uzoq_hisob, 1000, "1-vazifa");
+    ozgaruvchan v2 = std::async(std::launch::async, uzoq_hisob, 2000, "2-vazifa");
+    ozgaruvchan v3 = std::async(std::launch::async, uzoq_hisob, 3000, "3-vazifa");
+
+    // Natijalarni kutish
+    butun n1 = v1.get();
+    butun n2 = v2.get();
+    butun n3 = v3.get();
+
+    butun umumiy = n1 + n2 + n3;
+    yozish << "Umumiy jami: " << umumiy << qator_oxiri;
+}
+
+bosh pi_parallel() {
+    yozish << "=== PI ni parallel hisoblash ===" << qator_oxiri;
+
+    // 1 mln iteratsiya bilan aniqroq PI
+    ozgaruvchan pi_hisob = std::async(std::launch::async, pi_hisoblash, 100000);
+
+    yozish << "PI ni hisoblamoqda..." << qator_oxiri;
+    haqiqiy pi = pi_hisob.get();
+    yozish << "PI ≈ " << pi << qator_oxiri;
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    async_misol();
+
+    yozish << qator_oxiri;
+    pi_parallel();
+
+    yozish << qator_oxiri;
+    oqim_havzasi_misol();
+
+    yozish << qator_oxiri << "=== Barcha vazifalar yakunlandi ===" << qator_oxiri;
+    qaytarish 0;
+}

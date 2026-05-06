@@ -1,0 +1,112 @@
+// uz++ — Kolleksiyalar: vektor, lug'at, to'plam
+// Collections: vector, map, set
+
+ulash "uzpp_runtime.hpp"
+
+// --- Vektor bilan ishlash ---
+
+bosh vektor_misol() {
+    yozish << "=== Vektor ===" << qator_oxiri;
+
+    vektor<butun> sonlar = {5, 3, 8, 1, 9, 2, 7, 4, 6};
+
+    // Tartiblash
+    std::sort(sonlar.begin(), sonlar.end());
+    yozish << "Tartiblangan: ";
+    uchun (butun n : sonlar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    // Filtr (toq sonlar)
+    vektor<butun> toqlar;
+    uchun (butun n : sonlar) {
+        agar (n % 2 != 0) toqlar.push_back(n);
+    }
+    yozish << "Toq sonlar: ";
+    uchun (butun n : toqlar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    // Yig'indi
+    butun jami = 0;
+    uchun (butun n : sonlar) jami += n;
+    yozish << "Yig'indi: " << jami << qator_oxiri;
+
+    // Kvadratlar
+    yozish << "Kvadratlar: ";
+    ozgaruvchan kvadrat = [](butun x) { qaytarish x * x; };
+    uchun (butun n : sonlar) yozish << kvadrat(n) << " ";
+    yozish << qator_oxiri;
+}
+
+// --- Lug'at bilan ishlash ---
+
+bosh lugat_misol() {
+    yozish << qator_oxiri << "=== Lug'at ===" << qator_oxiri;
+
+    lug'at<matn, butun> yoshlar;
+    yoshlar["Akbar"] = 25;
+    yoshlar["Barno"] = 22;
+    yoshlar["Vohid"] = 30;
+    yoshlar["Dilnoza"] = 28;
+
+    yozish << "Talabalar yoshlari:" << qator_oxiri;
+    uchun (ozgaruvchan& juft : yoshlar) {
+        yozish << "  " << juft.first << ": " << juft.second << " yosh" << qator_oxiri;
+    }
+
+    // Qidirish
+    matn izlash_so_z = "Barno";
+    agar (yoshlar.find(izlash_so_z) != yoshlar.end()) {
+        yozish << izlash_so_z << " topildi, yoshi: " << yoshlar[izlash_so_z] << qator_oxiri;
+    }
+
+    // O'rtacha yosh
+    butun jami = 0;
+    uchun (ozgaruvchan& juft : yoshlar) jami += juft.second;
+    yozish << "O'rtacha yosh: " << jami / yoshlar.size() << qator_oxiri;
+}
+
+// --- Ichki struktura ---
+
+tuzilma Talaba {
+    matn    ism;
+    haqiqiy ball;
+    matn    daraja;
+
+    Talaba(matn i, haqiqiy b) : ism(i), ball(b) {
+        agar (b >= 90.0)      daraja = "A";
+        aks_holda agar (b >= 70.0) daraja = "B";
+        aks_holda agar (b >= 50.0) daraja = "C";
+        aks_holda              daraja = "F";
+    }
+};
+
+bosh tuzilma_misol() {
+    yozish << qator_oxiri << "=== Talabalar ro'yxati ===" << qator_oxiri;
+
+    vektor<Talaba> talabalar;
+    talabalar.push_back(Talaba("Akbar", 92.0));
+    talabalar.push_back(Talaba("Barno", 76.5));
+    talabalar.push_back(Talaba("Vohid", 45.0));
+    talabalar.push_back(Talaba("Dilnoza", 88.0));
+
+    // Ballga qarab tartiblash (eng yuqoridan)
+    std::sort(talabalar.begin(), talabalar.end(), [](Talaba& a, Talaba& b) {
+        qaytarish a.ball > b.ball;
+    });
+
+    yozish << "Reyting ro'yxati:" << qator_oxiri;
+    uchun (butun i = 0; i < talabalar.size(); i++) {
+        Talaba& t = talabalar[i];
+        yozish << (i + 1) << ". " << t.ism
+               << " — " << t.ball << " ball (" << t.daraja << ")" << qator_oxiri;
+    }
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    vektor_misol();
+    lugat_misol();
+    tuzilma_misol();
+    qaytarish 0;
+}

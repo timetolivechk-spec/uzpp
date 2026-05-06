@@ -1,0 +1,76 @@
+// uz++ — Moslash (Pattern Matching)
+// Rustdan ilhomlangan naqsh moslashtirish
+
+ulash "uzpp_runtime.hpp"
+
+// --- Kunlar bilan pattern matching ---
+
+matn kun_nomi(butun kun) {
+    moslash (kun) {
+        holat 1: qaytarish "Dushanba";
+        holat 2: qaytarish "Seshanba";
+        holat 3: qaytarish "Chorshanba";
+        holat 4: qaytarish "Payshanba";
+        holat 5: qaytarish "Juma";
+        holat 6: qaytarish "Shanba";
+        holat 7: qaytarish "Yakshanba";
+        boshqa:  qaytarish "Noto'g'ri kun raqami";
+    }
+}
+
+mantiqiy dam_kuni(butun kun) {
+    moslash (kun) {
+        holat 6: qaytarish rost;
+        holat 7: qaytarish rost;
+        boshqa:  qaytarish yolg'on;
+    }
+}
+
+// --- Matn bilan pattern matching ---
+
+matn til_tavsifi(matn til) {
+    moslash (til) {
+        holat "C++":    qaytarish "Tezkor, past darajali";
+        holat "Python": qaytarish "Oson, keng qo'llaniladi";
+        holat "Rust":   qaytarish "Xavfsiz va tezkor";
+        holat "uz++":   qaytarish "O'zbek tilidagi C++23!";
+        boshqa:         qaytarish "Noma'lum til";
+    }
+}
+
+// --- Ball va baho tizimi ---
+
+matn bahola(butun ball) {
+    moslash (ball / 10) {
+        holat 10: qaytarish "A+ (Mukammal)";
+        holat 9:  qaytarish "A  (A'lo)";
+        holat 8:  qaytarish "B  (Yaxshi)";
+        holat 7:  qaytarish "C  (Qoniqarli)";
+        holat 6:  qaytarish "D  (Minimal)";
+        boshqa:   qaytarish "F  (Qoniqarsiz)";
+    }
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    yozish << "=== Hafta kunlari ===" << qator_oxiri;
+    uchun (butun k = 1; k <= 7; k++) {
+        matn dam = dam_kuni(k) ? " [dam olish]" : "";
+        yozish << k << ". " << kun_nomi(k) << dam << qator_oxiri;
+    }
+
+    yozish << qator_oxiri << "=== Dasturlash tillari ===" << qator_oxiri;
+    vektor<matn> tillar = {"C++", "Python", "Rust", "uz++", "Java"};
+    uchun (matn til : tillar) {
+        yozish << til << ": " << til_tavsifi(til) << qator_oxiri;
+    }
+
+    yozish << qator_oxiri << "=== Baholash tizimi ===" << qator_oxiri;
+    vektor<butun> balllar = {100, 95, 82, 74, 65, 55, 42};
+    uchun (butun ball : balllar) {
+        yozish << "Ball " << ball << " -> " << bahola(ball) << qator_oxiri;
+    }
+
+    qaytarish 0;
+}

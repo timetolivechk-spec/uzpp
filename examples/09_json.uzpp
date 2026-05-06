@@ -1,0 +1,98 @@
+// uz++ — JSON: yaratish, tahlil qilish va so'rovlar
+// JSON: creation, parsing and queries
+
+ulash "uzpp_runtime.hpp"
+ulash "json.hpp"
+
+// --- JSON yaratish ---
+
+bosh json_yaratish_misol() {
+    yozish << "=== JSON yaratish ===" << qator_oxiri;
+
+    // Foydalanuvchi obyekti
+    ozgaruvchan foydalanuvchi = uzpp::Json::yaratObyekt();
+    foydalanuvchi->set("id",     uzpp::Json::yaratSon(1));
+    foydalanuvchi->set("ism",    uzpp::Json::yaratMatn("Akbar Yusupov"));
+    foydalanuvchi->set("yosh",   uzpp::Json::yaratSon(25));
+    foydalanuvchi->set("faol",   uzpp::Json::yaratMantiq(rost));
+
+    // Manzil ichki obyekti
+    ozgaruvchan manzil = uzpp::Json::yaratObyekt();
+    manzil->set("shahar",  uzpp::Json::yaratMatn("Toshkent"));
+    manzil->set("mamlakat", uzpp::Json::yaratMatn("O'zbekiston"));
+    foydalanuvchi->set("manzil", std::move(manzil));
+
+    // Ko'nikmalar massivi
+    ozgaruvchan konikma = uzpp::Json::yaratMassiv();
+    konikma->qosh(uzpp::Json::yaratMatn("uz++"));
+    konikma->qosh(uzpp::Json::yaratMatn("C++"));
+    konikma->qosh(uzpp::Json::yaratMatn("Python"));
+    foydalanuvchi->set("konikma", std::move(konikma));
+
+    // Chiroyli chiqarish (2 bo'sh joy bilan)
+    yozish << uzpp::Json::chiqarish(*foydalanuvchi, 2) << qator_oxiri;
+}
+
+// --- JSON tahlil qilish ---
+
+bosh json_tahlil_misol() {
+    yozish << "=== JSON tahlil ===" << qator_oxiri;
+
+    matn json_matni = "{\"xizmat\": \"uz++ API\", \"versiya\": \"1.0.0\", \"muvaffaqiyat\": true, \"natija\": {\"foydalanuvchi\": \"Dilnoza\", \"ball\": 98, \"daraja\": \"A+\"}}";
+
+    ozgaruvchan j = uzpp::Json::tahlil(json_matni);
+
+    agar (j->bor("xizmat")) {
+        yozish << "Xizmat: " << (*j)["xizmat"]->matn() << qator_oxiri;
+    }
+    agar (j->bor("versiya")) {
+        yozish << "Versiya: " << (*j)["versiya"]->matn() << qator_oxiri;
+    }
+    agar (j->bor("muvaffaqiyat")) {
+        yozish << "Muvaffaqiyat: " << (*j)["muvaffaqiyat"]->mantiq() << qator_oxiri;
+    }
+    agar (j->bor("natija")) {
+        ozgaruvchan natija = (*j)["natija"];
+        yozish << "Foydalanuvchi: " << (*natija)["foydalanuvchi"]->matn() << qator_oxiri;
+        yozish << "Ball: " << (*natija)["ball"]->butun() << qator_oxiri;
+        yozish << "Daraja: " << (*natija)["daraja"]->matn() << qator_oxiri;
+    }
+}
+
+// --- Talabalar ma'lumotlar bazasi ---
+
+bosh talabalar_bazasi() {
+    yozish << qator_oxiri << "=== Talabalar bazasi ===" << qator_oxiri;
+
+    vektor<std::tuple<matn, butun, haqiqiy>> talabalar = {
+        {"Akbar", 20, 92.5},
+        {"Barno", 19, 88.0},
+        {"Vohid", 21, 75.5},
+        {"Dilnoza", 20, 96.0},
+    };
+
+    ozgaruvchan massiv = uzpp::Json::yaratMassiv();
+    uchun (ozgaruvchan& t : talabalar) {
+        ozgaruvchan talaba = uzpp::Json::yaratObyekt();
+        talaba->set("ism",  uzpp::Json::yaratMatn(std::get<0>(t)));
+        talaba->set("yosh", uzpp::Json::yaratSon(std::get<1>(t)));
+        talaba->set("ball", uzpp::Json::yaratSon(std::get<2>(t)));
+        massiv->qosh(std::move(talaba));
+    }
+
+    ozgaruvchan baza = uzpp::Json::yaratObyekt();
+    baza->set("talabalar", std::move(massiv));
+    baza->set("soni", uzpp::Json::yaratSon(talabalar.size()));
+
+    yozish << uzpp::Json::chiqarish(*baza, 2) << qator_oxiri;
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    json_yaratish_misol();
+    yozish << qator_oxiri;
+    json_tahlil_misol();
+    talabalar_bazasi();
+    qaytarish 0;
+}

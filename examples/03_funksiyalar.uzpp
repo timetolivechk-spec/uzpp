@@ -1,0 +1,83 @@
+// uz++ — Funksiyalar, rekursiya va lambdalar
+// Functions, recursion, and lambdas
+
+ulash "uzpp_runtime.hpp"
+
+// --- Oddiy funksiyalar ---
+
+butun kvadrat(butun x) {
+    qaytarish x * x;
+}
+
+haqiqiy doira_yuzi(haqiqiy r) {
+    ozgarmas haqiqiy PI = 3.14159265;
+    qaytarish PI * r * r;
+}
+
+// Standart qiymatli parametrlar
+matn salomlash(matn ism, matn murojaat = "Siz") {
+    qaytarish "Assalomu alaykum, " + murojaat + " " + ism + "!";
+}
+
+// --- Rekursiya ---
+
+butun faktorial(butun n) {
+    agar (n <= 1) qaytarish 1;
+    qaytarish n * faktorial(n - 1);
+}
+
+butun fibonacci(butun n) {
+    agar (n <= 1) qaytarish n;
+    qaytarish fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+// --- Shablon (Generic) funksiya ---
+
+shablon <tur T>
+T eng_katta(T a, T b) {
+    qaytarish a > b ? a : b;
+}
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    // Oddiy funksiyalar
+    yozish << "5^2 = " << kvadrat(5) << qator_oxiri;
+    yozish << "r=3 doira yuzi: " << doira_yuzi(3.0) << qator_oxiri;
+    yozish << salomlash("Akbar") << qator_oxiri;
+    yozish << salomlash("Barno", "xonim") << qator_oxiri;
+
+    // Rekursiya
+    yozish << "7! = " << faktorial(7) << qator_oxiri;
+    yozish << "Fibonacci(10): ";
+    uchun (butun i = 0; i <= 10; i++) {
+        yozish << fibonacci(i) << " ";
+    }
+    yozish << qator_oxiri;
+
+    // Generik funksiya
+    yozish << "eng_katta(10, 20) = " << eng_katta(10, 20) << qator_oxiri;
+    yozish << "eng_katta(3.14, 2.72) = " << eng_katta(3.14, 2.72) << qator_oxiri;
+
+    // Lambda funksiyalar
+    ozgaruvchan qosh = [](butun a, butun b) -> butun {
+        qaytarish a + b;
+    };
+    yozish << "lambda: 7 + 8 = " << qosh(7, 8) << qator_oxiri;
+
+    // Yopiq o'zgaruvchi bilan lambda (closure)
+    butun asos = 100;
+    ozgaruvchan foiz = [asos](haqiqiy p) -> haqiqiy {
+        qaytarish asos * p / 100.0;
+    };
+    yozish << "100 ning 18% = " << foiz(18.0) << qator_oxiri;
+
+    // Lambda vektor bilan
+    vektor<butun> sonlar = {5, 3, 8, 1, 9, 2};
+    std::sort(sonlar.begin(), sonlar.end());
+    yozish << "Tartiblangan: ";
+    uchun (butun n : sonlar) yozish << n << " ";
+    yozish << qator_oxiri;
+
+    qaytarish 0;
+}

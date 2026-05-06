@@ -1,0 +1,141 @@
+// uz++ — Ilg'or xususiyatlar: shablonlar, enum, abstract va xatoliklar
+// Advanced features: templates, enums, abstract classes, error handling
+
+ulash "uzpp_runtime.hpp"
+ulash "matematika.hpp"
+
+// --- Enum (Sanab olish) ---
+
+sanab_olish Rang {
+    Qizil,
+    Yashil,
+    Ko_k,
+    Sariq,
+    Oq
+};
+
+matn rang_nomi(Rang r) {
+    moslash (butun(r)) {
+        holat 0: qaytarish "Qizil";
+        holat 1: qaytarish "Yashil";
+        holat 2: qaytarish "Ko'k";
+        holat 3: qaytarish "Sariq";
+        holat 4: qaytarish "Oq";
+        boshqa:  qaytarish "Noma'lum";
+    }
+}
+
+// --- Generic Stack (Umumiy stek) ---
+
+shablon <tur T>
+sinf Stek {
+yopiq:
+    vektor<T> ma_lumot;
+
+ochiq:
+    bosh qo_sh(T qiymat) {
+        ma_lumot.push_back(qiymat);
+    }
+
+    T olish() {
+        agar (bo_shMi()) {
+            irgitish std::runtime_error("Stek bo'sh!");
+        }
+        T yuqori = ma_lumot.back();
+        ma_lumot.pop_back();
+        qaytarish yuqori;
+    }
+
+    T qayt() sabit {
+        agar (bo_shMi()) {
+            irgitish std::runtime_error("Stek bo'sh!");
+        }
+        qaytarish ma_lumot.back();
+    }
+
+    mantiqiy bo_shMi() sabit { qaytarish ma_lumot.empty(); }
+    butun hajm() sabit { qaytarish ma_lumot.size(); }
+};
+
+// --- Abstract geometrik shakllar ---
+
+sinf Shakl {
+ochiq:
+    mavhum haqiqiy yuza() {
+        qaytarish 0.0;
+    }
+    mavhum haqiqiy perimetr() {
+        qaytarish 0.0;
+    }
+    mavhum matn nomi() {
+        qaytarish "";
+    }
+    bosh hisobot() {
+        yozish << nomi()
+               << " — Yuzi: " << yuza()
+               << ", Perimetri: " << perimetr()
+               << qator_oxiri;
+    }
+};
+
+sinf Doira : Shakl {
+yopiq:
+    haqiqiy r_;
+ochiq:
+    Doira(haqiqiy r) : r_(r) {}
+    haqiqiy yuza() ustidan_yozish     { qaytarish 3.14159 * r_ * r_; }
+    haqiqiy perimetr() ustidan_yozish { qaytarish 2.0 * 3.14159 * r_; }
+    matn nomi() ustidan_yozish        { qaytarish "Doira"; }
+};
+
+sinf Turtburchak : Shakl {
+yopiq:
+    haqiqiy k_;
+    haqiqiy b_;
+ochiq:
+    Turtburchak(haqiqiy k, haqiqiy b) : k_(k), b_(b) {}
+    haqiqiy yuza() ustidan_yozish     { qaytarish k_ * b_; }
+    haqiqiy perimetr() ustidan_yozish { qaytarish 2.0 * (k_ + b_); }
+    matn nomi() ustidan_yozish        { qaytarish "To'rtburchak"; }
+};
+
+// --- Asosiy dastur ---
+
+butun asosiy() {
+    // Enum
+    yozish << "=== Ranglar ===" << qator_oxiri;
+    vektor<Rang> ranglar = {Rang::Qizil, Rang::Yashil, Rang::Ko_k};
+    uchun (Rang r : ranglar) {
+        yozish << rang_nomi(r) << qator_oxiri;
+    }
+
+    // Generic stek
+    yozish << qator_oxiri << "=== Umumiy Stek ===" << qator_oxiri;
+    Stek<butun> stek;
+    uchun (butun i = 1; i <= 5; i++) {
+        stek.qo_sh(i * 10);
+    }
+    yozish << "Hajm: " << stek.hajm() << qator_oxiri;
+    toki (!stek.bo_shMi()) {
+        yozish << stek.olish() << " ";
+    }
+    yozish << qator_oxiri;
+
+    // Polimorfizm
+    yozish << qator_oxiri << "=== Geometrik shakllar ===" << qator_oxiri;
+    Doira d(5.0);
+    Turtburchak t(4.0, 6.0);
+    d.hisobot();
+    t.hisobot();
+
+    // Xatolik boshqaruvi
+    yozish << qator_oxiri << "=== Xatoliklar ===" << qator_oxiri;
+    urinish {
+        Stek<matn> bosh_stek;
+        bosh_stek.olish();
+    } ushlash (std::exception& e) {
+        yozish << "Ushlangan xatolik: " << e.what() << qator_oxiri;
+    }
+
+    qaytarish 0;
+}

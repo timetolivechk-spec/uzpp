@@ -1,48 +1,74 @@
 // uz++ — Sinflar va merosxo'rlik
+// Misol: Mavhum geometrik shakllar ierarxiyasi
+
+ulash "uzpp_runtime.hpp"
 
 sinf Shakl {
-    ochiq:
-        haqiqiy yuza() {
-            qaytarish 0.0;
-        }
-        matn nomi() {
-            qaytarish "Shakl";
-        }
+ochiq:
+    mavhum haqiqiy yuza() {
+        qaytarish 0.0;
+    }
+    mavhum matn nomi() {
+        qaytarish "Shakl";
+    }
+    bosh tavsiflash() {
+        yozish << nomi() << " yuzi: " << yuza() << qator_oxiri;
+    }
 };
 
 sinf Doira : Shakl {
-    shaxsiy:
-        haqiqiy radius_;
-    ochiq:
-        Doira(haqiqiy r) : radius_(r) {}
-        haqiqiy yuza() {
-            qaytarish 3.14159 * radius_ * radius_;
-        }
-        matn nomi() {
-            qaytarish "Doira";
-        }
+yopiq:
+    haqiqiy radius_;
+ochiq:
+    Doira(haqiqiy r) : radius_(r) {}
+
+    haqiqiy yuza() ustidan_yozish {
+        qaytarish 3.14159 * radius_ * radius_;
+    }
+    matn nomi() ustidan_yozish {
+        qaytarish "Doira";
+    }
 };
 
-sinf Toʻrtburchak : Shakl {
-    shaxsiy:
-        haqiqiy kenglik_;
-        haqiqiy balandlik_;
-    ochiq:
-        Toʻrtburchak(haqiqiy k, haqiqiy b) : kenglik_(k), balandlik_(b) {}
-        haqiqiy yuza() {
-            qaytarish kenglik_ * balandlik_;
-        }
-        matn nomi() {
-            qaytarish "Toʻrtburchak";
-        }
+sinf Turtburchak : Shakl {
+yopiq:
+    haqiqiy kenglik_;
+    haqiqiy balandlik_;
+ochiq:
+    Turtburchak(haqiqiy k, haqiqiy b) : kenglik_(k), balandlik_(b) {}
+
+    haqiqiy yuza() ustidan_yozish {
+        qaytarish kenglik_ * balandlik_;
+    }
+    matn nomi() ustidan_yozish {
+        qaytarish "Turtburchak";
+    }
+};
+
+sinf Uchburchak : Shakl {
+yopiq:
+    haqiqiy asos_;
+    haqiqiy balandlik_;
+ochiq:
+    Uchburchak(haqiqiy a, haqiqiy b) : asos_(a), balandlik_(b) {}
+
+    haqiqiy yuza() ustidan_yozish {
+        qaytarish 0.5 * asos_ * balandlik_;
+    }
+    matn nomi() ustidan_yozish {
+        qaytarish "Uchburchak";
+    }
 };
 
 butun asosiy() {
     Doira d(5.0);
-    Toʻrtburchak t(4.0, 6.0);
+    Turtburchak t(4.0, 6.0);
+    Uchburchak u(3.0, 8.0);
 
-    yozish << d.nomi() << " yuzi: " << d.yuza() << qator_oxiri;
-    yozish << t.nomi() << " yuzi: " << t.yuza() << qator_oxiri;
+    d.tavsiflash();
+    t.tavsiflash();
+    u.tavsiflash();
 
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
 }
