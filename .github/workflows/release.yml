@@ -1,0 +1,208 @@
+name: uz++ Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # Build binaries for all three platforms
+  # ──────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows binary
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build
+        run: |
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+          cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-windows-x64
+          path: build/uzpp.exe
+
+  build-linux:
+    name: Linux binary
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-14 g++-14 cmake ninja-build
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
+      - name: Build
+        run: |
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+          cmake --build build --config Release
+        env:
+          CC: gcc-14
+          CXX: g++-14
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-linux-x64
+          path: build/uzpp
+
+  build-macos:
+    name: macOS binary
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install cmake ninja
+
+      - name: Build
+        run: |
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+          cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-macos-arm64
+          path: build/uzpp
+
+  build-macos-x64:
+    name: macOS x64 binary
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install cmake ninja
+
+      - name: Build
+        run: |
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+          cmake --build build --config Release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-macos-x64
+          path: build/uzpp
+
+  # ──────────────────────────────────────────────────────────
+  # Create GitHub Release with all binaries
+  # ──────────────────────────────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: [build-windows, build-linux, build-macos, build-macos-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Rename binaries
+        run: |
+          mv dist/uzpp-windows-x64/uzpp.exe  dist/uzpp-windows-x64.exe
+          mv dist/uzpp-linux-x64/uzpp        dist/uzpp-linux-x64
+          mv dist/uzpp-macos-arm64/uzpp      dist/uzpp-macos-arm64
+          mv dist/uzpp-macos-x64/uzpp        dist/uzpp-macos-x64
+          chmod +x dist/uzpp-linux-x64 dist/uzpp-macos-arm64 dist/uzpp-macos-x64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "uz++ ${{ github.ref_name }}"
+          body: |
+            ## uz++ ${{ github.ref_name }}
+
+            ### O'rnatish
+
+            **Windows:**
+            ```
+            curl -L -o uzpp.exe https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-windows-x64.exe
+            ```
+
+            **Linux:**
+            ```
+            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-linux-x64
+            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
+            ```
+
+            **macOS (Apple Silicon):**
+            ```
+            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-arm64
+            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
+            ```
+
+            **macOS (Intel):**
+            ```
+            curl -L -o uzpp https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-x64
+            chmod +x uzpp && sudo mv uzpp /usr/local/bin/
+            ```
+          files: |
+            dist/uzpp-windows-x64.exe
+            dist/uzpp-linux-x64
+            dist/uzpp-macos-arm64
+            dist/uzpp-macos-x64
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # ──────────────────────────────────────────────────────────
+  # Publish VS Code extension to Marketplace
+  # ──────────────────────────────────────────────────────────
+  publish-extension:
+    name: Publish VS Code Extension
+    needs: [build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: uzpp-windows-x64
+          path: vscode-uzpp/bin/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: vscode-uzpp
+        run: npm install
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package and publish
+        working-directory: vscode-uzpp
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          vsce package
+          vsce publish --pat "$VSCE_PAT"

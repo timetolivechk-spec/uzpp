@@ -1,8 +1,8 @@
 {
     "name": "uzpp",
     "displayName": "uz++",
-    "description": "Full IDE support for uz++: syntax highlighting, real-time diagnostics, autocomplete and hover docs.",
-    "version": "2.0.0",
+    "description": "Full IDE support for uz++: syntax highlighting, real-time diagnostics, autocomplete, run/build commands.",
+    "version": "2.1.0",
     "publisher": "uzpp",
     "engines": {
         "vscode": "^1.75.0"
@@ -11,6 +11,18 @@
         "Programming Languages",
         "Linters"
     ],
+    "keywords": [
+        "uz++",
+        "uzbek",
+        "o'zbek",
+        "programming language",
+        "c++"
+    ],
+    "icon": "images/icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/timetolivechk-spec/uz-plus-plus"
+    },
     "activationEvents": [
         "onLanguage:uzpp"
     ],
@@ -19,13 +31,8 @@
         "languages": [
             {
                 "id": "uzpp",
-                "aliases": [
-                    "uz++",
-                    "uzpp"
-                ],
-                "extensions": [
-                    ".uzpp"
-                ],
+                "aliases": ["uz++", "uzpp"],
+                "extensions": [".uzpp"],
                 "configuration": "./language-configuration.json"
             }
         ],
@@ -36,13 +43,71 @@
                 "path": "./syntaxes/uzpp.tmLanguage.json"
             }
         ],
+        "commands": [
+            {
+                "command": "uzpp.runFile",
+                "title": "uz++: Faylni ishga tushirish",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.buildFile",
+                "title": "uz++: Faylni qurish (build)",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.formatFile",
+                "title": "uz++: Faylni formatlash",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.showGeneratedCpp",
+                "title": "uz++: C++ kodini ko'rish",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.newProject",
+                "title": "uz++: Yangi loyiha yaratish",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.updateCompiler",
+                "title": "uz++: Kompilyatorni yangilash",
+                "category": "uz++"
+            },
+            {
+                "command": "uzpp.restartServer",
+                "title": "uz++: LSP serverni qayta ishga tushirish",
+                "category": "uz++"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "uzpp.runFile",
+                "key": "F5",
+                "when": "editorLangId == uzpp"
+            },
+            {
+                "command": "uzpp.buildFile",
+                "key": "ctrl+F5",
+                "when": "editorLangId == uzpp"
+            }
+        ],
+        "menus": {
+            "editor/title/run": [
+                {
+                    "command": "uzpp.runFile",
+                    "when": "editorLangId == uzpp",
+                    "group": "navigation"
+                }
+            ]
+        },
         "configuration": {
             "title": "uz++",
             "properties": {
-                "uzpp.serverPath": {
+                "uzpp.compilerPath": {
                     "type": "string",
                     "default": "",
-                    "description": "uzpm.exe fayliga to'liq yo'l. Bo'sh bo'lsa, PATH'dan qidiradi."
+                    "description": "uzpp.exe fayliga to'liq yo'l. Bo'sh bo'lsa, avval kengaytma ichidagi bin/ papkasidan, so'ng PATH'dan qidiradi."
                 }
             }
         }
@@ -51,9 +116,10 @@
         "vscode-languageclient": "^9.0.1"
     },
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "vscode:prepublish": "echo ready",
+        "package": "vsce package",
+        "test": "echo \"no tests\""
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC"
+    "author": "UzAICoding",
+    "license": "MIT"
 }
