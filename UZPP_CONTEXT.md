@@ -134,7 +134,7 @@
 - [x] ~~Удаление или переименование `kripto.hpp` → `xesh.hpp`~~ — НЕ нужно: фактически содержит SHA1+SHA256+Base64+HMAC+JWT, аудит показал, что это REAL модуль.
 - [x] Удаление лишних папок (phase12_demo и др.) — сделано в `6626b5d`.
 - [x] Negative tests — 27 рабочих + 3 в [tests/negative/pending/](tests/negative/pending/) (трек-лист для багов компилятора). Runner: `bash tests/negative/run.sh` или `pwsh tests/negative/run.ps1`.
-- [ ] Unit тесты для lexer, parser, codegen.
+- [x] Unit тесты для lexer, parser, type_checker, codegen — 25 в [tests/frontend_smoke.cpp](tests/frontend_smoke.cpp): 6 лексер (тройные строки, escape, числа, комменты, compound операторы, пустой ввод), 5 парсер (классы, match, try/catch, lambda, enum), 5 type_checker (arg count, undef ident, unused var, line/col), 5 codegen (main, #line, range-for, virtual, static), плюс 7 исходных smoke-тестов. Запуск: `build/uzpp_frontend_tests.exe`.
 
 ### Фаза 3: Образовательная ценность (1-2 месяца)
 - [ ] TypeChecker improvements — полный inferType.
