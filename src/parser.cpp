@@ -1689,7 +1689,41 @@ std::unique_ptr<NamespaceDeclaration> Parser::parseNamespaceDeclaration() {
 std::unique_ptr<IncludeStatement> Parser::parseIncludeStatement() {
     const Token token = advance(); // past 'ulash' or '#include'
     std::string moduleName = advance().value;
-    
+
+    // Path-traversal va xavfsizlik tekshiruvi.
+    // moduleName lekserdan tirnoqlar bilan kelishi mumkin ("tarmoq.hpp"), shuning uchun
+    // tekshiruvdan oldin ularni olib tashlaymiz.
+    auto unquoted = moduleName;
+    if (unquoted.size() >= 2 && unquoted.front() == '"' && unquoted.back() == '"') {
+        unquoted = unquoted.substr(1, unquoted.size() - 2);
+    }
+    auto rejectInclude = [&](const std::string& reason) {
+        throw ParseError("Xavfsiz bo'lmagan ulash yo'li (" + reason + "): \"" + unquoted + "\" " + formatLocation(token));
+    };
+    if (unquoted.empty()) {
+        rejectInclude("bo'sh");
+    }
+    // <iostream> kabi tizimli sarlavhalar uchun istisno: ular `<...>` ichida bo'ladi
+    // va kompilyatorga to'g'ridan-to'g'ri uzatiladi, fayl tizimiga aralashmaydi.
+    const bool isAngleHeader = unquoted.front() == '<' && unquoted.back() == '>';
+    if (!isAngleHeader) {
+        if (unquoted.find("..") != std::string::npos) {
+            rejectInclude("yuqoriga chiqish (..) ruxsat etilmaydi");
+        }
+        if (!unquoted.empty() && (unquoted.front() == '/' || unquoted.front() == '\\')) {
+            rejectInclude("mutlaq yo'l ruxsat etilmaydi");
+        }
+        if (unquoted.size() >= 2 && unquoted[1] == ':') {
+            rejectInclude("disk harfi bilan boshlanadigan yo'l ruxsat etilmaydi");
+        }
+        for (char ch : unquoted) {
+            const auto uc = static_cast<unsigned char>(ch);
+            if (uc < 0x20 || uc == 0x7f) {
+                rejectInclude("boshqarish belgisi");
+            }
+        }
+    }
+
     // If it's something like ulash "tarmoq";
     if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
         advance();
