@@ -1,4 +1,6 @@
 #pragma once
+// status: EXPERIMENTAL — faqat data tuzilmalari (Nuqta, Rang, 3D Model), logika yo'q.
+// Data structures only — no logic. See docs/stdlib-status.md.
 
 #include <vector>
 

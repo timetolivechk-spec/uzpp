@@ -1,4 +1,6 @@
 #pragma once
+// status: EXPERIMENTAL — oddiy observer pattern, render bilan integratsiya yo'q.
+// Simple observer pattern; no rendering integration. See docs/stdlib-status.md.
 
 #include <vector>
 #include <functional>

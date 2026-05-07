@@ -1,4 +1,6 @@
 #pragma once
+// status: EXPERIMENTAL — faqat kiritish holati tuzilmalari, hodisalar tizimi to'liq emas.
+// Input state structs only. See docs/stdlib-status.md.
 
 namespace uzpp::Grafika {
     struct KlaviaturaHolati {
