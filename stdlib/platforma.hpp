@@ -1,6 +1,5 @@
 #pragma once
-// status: EXPERIMENTAL — faqat platformani aniqlash makroslari, funksionallik yo'q.
-// Macros only — platform detection. See docs/stdlib-status.md.
+// status: REAL — Platformani aniqlash makroslari va funksiyalari.
 
 // UZPP Kross-platforma Makroslari
 // Platformani aniqlash
@@ -86,5 +85,15 @@ namespace uzpp::Platforma {
     constexpr bool Mikrokontroller = false;
     constexpr bool OgirKutubxonalarMavjud = true;
 #endif
+
+    constexpr const char* nom() {
+        if (Windows) return "Windows";
+        if (Linux) return "Linux";
+        if (MacOS) return "MacOS";
+        if (Android) return "Android";
+        if (iOS) return "iOS";
+        if (Mikrokontroller) return "Embedded";
+        return "Noma'lum";
+    }
 
 } // namespace uzpp::Platforma

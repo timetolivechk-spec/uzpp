@@ -1,4 +1,5 @@
 #pragma once
+// status: REAL — Rust-uslubidagi xatoliklar va signal/backtrace ishlovchisi.
 
 #include "platforma.hpp"
 
@@ -8,6 +9,11 @@
 #include <csignal>
 #include <iostream>
 #include <cstdlib>
+
+#if defined(__unix__) || defined(__linux__) || defined(__APPLE__)
+#include <execinfo.h>
+#include <unistd.h>
+#endif
 #endif
 
 namespace uzpp::Xatoliklar {
@@ -94,6 +100,21 @@ inline void dastur_qulashi_xabari(int signal) {
     if (signal == SIGSEGV) std::cerr << " (Xotiraga ruxsatsiz murojaat / Segfault)";
     else if (signal == SIGFPE) std::cerr << " (Matematik xato / Nolga bo'lish)";
     else if (signal == SIGABRT) std::cerr << " (Dastur majburiy to'xtatildi / Abort)";
+    std::cerr << "\n";
+
+#if defined(__unix__) || defined(__linux__) || defined(__APPLE__)
+    std::cerr << "\n --- BACKTRACE (Chaqiruvlar ro'yxati) ---\n";
+    void* callstack[128];
+    int frames = backtrace(callstack, 128);
+    char** strs = backtrace_symbols(callstack, frames);
+    if (strs) {
+        for (int i = 0; i < frames; ++i) {
+            std::cerr << "  [" << i << "] " << strs[i] << "\n";
+        }
+        free(strs);
+    }
+#endif
+
     std::cerr << "\n Iltimos, dasturni '--debug' bayrog'i bilan qurib tekshiring.\n";
     std::cerr << "======================================================\n";
     std::exit(signal);

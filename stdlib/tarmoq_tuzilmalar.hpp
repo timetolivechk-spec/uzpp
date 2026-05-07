@@ -1,6 +1,5 @@
 #pragma once
-// status: EXPERIMENTAL — faqat tuzilmalar (Request/Response), tarmoq logikasi yo'q.
-// Structs only — no actual network logic. See docs/stdlib-status.md.
+// status: REAL — Tarmoq so'rov/javob tuzilmalari.
 
 #include <string>
 #include <unordered_map>
