@@ -584,6 +584,35 @@ private:
         return "\"" + value + "\"";
     }
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+namespace CompilerUtils {
+    fs::path getExecutableDir() {
+        fs::path exePath;
+#ifdef _WIN32
+        wchar_t path[MAX_PATH];
+        GetModuleFileNameW(NULL, path, MAX_PATH);
+        exePath = fs::path(path);
+#else
+        char path[1024];
+        ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
+        if (count != -1) {
+            exePath = fs::path(std::string(path, count));
+        } else {
+            // fallback
+            exePath = fs::canonical("/proc/self/exe");
+        }
+#endif
+        return exePath.parent_path();
+    }
+}
+
+class UzppCompiler {
+private:
     std::string buildCompileCommand(const fs::path& cppFile,
                                     const fs::path& binaryFile,
                                     BuildTarget target,
@@ -591,11 +620,27 @@ private:
                                     const std::optional<fs::path>& forcedIncludeHeader,
                                     bool debugMode) const {
         std::ostringstream command;
+        
+        fs::path exeDir = CompilerUtils::getExecutableDir();
+        fs::path bundledWindowsCompiler = exeDir / "compiler" / "bin" / "g++.exe";
+        fs::path bundledLinuxCompiler = exeDir / "compiler" / "bin" / "g++";
 
         switch (target) {
             case BuildTarget::Windows:
             case BuildTarget::Host:
-                command << "g++ ";
+#ifdef _WIN32
+                if (fs::exists(bundledWindowsCompiler)) {
+                    command << quote(bundledWindowsCompiler.string()) << " ";
+                } else {
+                    command << "g++ ";
+                }
+#else
+                if (fs::exists(bundledLinuxCompiler)) {
+                    command << quote(bundledLinuxCompiler.string()) << " ";
+                } else {
+                    command << "g++ ";
+                }
+#endif
                 break;
             case BuildTarget::Linux:
                 command << "x86_64-linux-gnu-g++ ";
