@@ -1,4 +1,6 @@
 #pragma once
+// status: EXPERIMENTAL — faqat platformani aniqlash makroslari, funksionallik yo'q.
+// Macros only — platform detection. See docs/stdlib-status.md.
 
 // UZPP Kross-platforma Makroslari
 // Platformani aniqlash

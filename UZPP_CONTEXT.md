@@ -61,9 +61,10 @@
 
 **Stdlib (stdlib/):** header-only C++23, 30+ модулей. Часть полностью реализована, часть — заглушки `// to be implemented`. Требует аудита.
 
-**Реально работающие модули:** `uzpp_runtime` (Natija/Tanlov), `matematika`, `matn`, `json` (через nlohmann), `asinxron` (OqimPool), `fayl_tizimi`, `vaqt`, `xotira`.
-
-**Частично/заглушки:** `oyna` (SDL2), `tarmoq`, `kripto` (только SHA256), `suniy_intellekt` (заглушка), `koinot`, `veb_ui`, `malumotlar_bazasi`, `apparat`.
+**Аудит stdlib (см. [docs/stdlib-status.md](docs/stdlib-status.md), 2026-05-07):**
+- **REAL (15):** `uzpp_runtime`, `matematika`, `matn`, `json`, `fayl_tizimi`, `kripto` (SHA1+SHA256+Base64+HMAC+JWT+XOR — больше чем считалось!), `malumotlar_bazasi` (SQLite ORM), `jurnal`, `tarmoq` (TCP/UDP/HTTP/WebSocket), `oyna` (OpenGL 2D/3D), `vaqt`, `xavfsizlik`, `xotira`, `tizim`, `fazo`, `grafika/vidjetlar`.
+- **PARTIAL (7):** `xatoliklar`, `asinxron`, `veb_ui`, `kesh`, `koinot`, `sinov`, `tarjima`.
+- **EXPERIMENTAL (7, помечены):** `suniy_intellekt`, `apparat`, `platforma`, `tarmoq_tuzilmalar`, `grafika/hodisalar`, `grafika/reaktiv`, `grafika/tuzilmalar`.
 
 **Пакетный менеджер uzpm:** реальный, с центральным реестром `uzpm-registry.uz`, SHA256 проверкой, локальным кешем `~/.uzpp/packages/`.
 
@@ -129,9 +130,9 @@
 - [ ] Фикс shell injection в вызове компилятора.
 
 ### Фаза 2: Качество и правдивость (3-4 недели)
-- [ ] Аудит stdlib: что работает, что заглушка. Пометить или доделать.
-- [ ] Удаление или переименование `kripto.hpp` → `xesh.hpp` (если только SHA256).
-- [ ] Удаление лишних папок (phase12_demo и др.).
+- [x] Аудит stdlib: классификация в [docs/stdlib-status.md](docs/stdlib-status.md), 7 STUB-модулей помечены `// status: EXPERIMENTAL`.
+- [x] ~~Удаление или переименование `kripto.hpp` → `xesh.hpp`~~ — НЕ нужно: фактически содержит SHA1+SHA256+Base64+HMAC+JWT, аудит показал, что это REAL модуль.
+- [x] Удаление лишних папок (phase12_demo и др.) — сделано в `6626b5d`.
 - [ ] Negative tests — минимум 30 штук.
 - [ ] Unit тесты для lexer, parser, codegen.
 
