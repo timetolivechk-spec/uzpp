@@ -529,6 +529,24 @@ public:
         return saveManifest(projectRoot, *manifest);
     }
 
+    static bool removeDependency(const fs::path& projectRoot, const std::string& dependencyName) {
+        auto manifest = loadManifest(projectRoot);
+        if (!manifest) return false;
+
+        auto it = std::remove_if(manifest->dependencies.begin(),
+                                 manifest->dependencies.end(),
+                                 [&](const DependencyInfo& dependency) {
+                                     return dependency.name == dependencyName;
+                                 });
+
+        if (it != manifest->dependencies.end()) {
+            manifest->dependencies.erase(it, manifest->dependencies.end());
+            return saveManifest(projectRoot, *manifest);
+        }
+        
+        return true; // already removed
+    }
+
     static std::optional<fs::path> findStdlibRoot(fs::path startDir) {
         if (startDir.empty()) {
             startDir = fs::current_path();

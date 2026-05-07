@@ -692,7 +692,39 @@ std::string LspServer::getWordAtPosition(const std::string& text, int line, int 
 }
 
 std::string LspServer::findDefinition(const std::string& uri, const std::string& word) {
-    // Stub implementation - return empty LSP response
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end()) return "[]";
+    try {
+        Lexer lexer(it->second);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+        
+        for (const auto& node : program->getChildren()) {
+            if (node->getType() == ASTNodeType::FunctionDeclaration) {
+                auto func = static_cast<const FunctionDeclaration*>(node.get());
+                if (func->getName() == word) {
+                    int line = std::max(0, func->getFunctionToken().line - 1);
+                    int col = std::max(0, func->getFunctionToken().column - 1);
+                    return "[{\"uri\":\"" + uri + "\",\"range\":{\"start\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "},\"end\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "}}}]";
+                }
+            } else if (node->getType() == ASTNodeType::ClassDeclaration) {
+                auto cls = static_cast<const ClassDeclaration*>(node.get());
+                if (cls->getName() == word) {
+                    int line = std::max(0, cls->getClassToken().line - 1);
+                    int col = std::max(0, cls->getClassToken().column - 1);
+                    return "[{\"uri\":\"" + uri + "\",\"range\":{\"start\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "},\"end\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "}}}]";
+                }
+            } else if (node->getType() == ASTNodeType::VariableDeclaration) {
+                auto varDecl = static_cast<const VariableDeclaration*>(node.get());
+                if (varDecl->getName() == word) {
+                    int line = std::max(0, varDecl->getDeclToken().line - 1);
+                    int col = std::max(0, varDecl->getDeclToken().column - 1);
+                    return "[{\"uri\":\"" + uri + "\",\"range\":{\"start\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "},\"end\":{\"line\":" + std::to_string(line) + ",\"character\":" + std::to_string(col) + "}}}]";
+                }
+            }
+        }
+    } catch (...) {}
     return "[]";
 }
 
@@ -702,8 +734,40 @@ std::string LspServer::buildSignatureHelp(const std::string& uri, int line, int 
 }
 
 std::string LspServer::buildDocumentSymbols(const Program* program) {
-    // Stub implementation - return empty symbols
-    return "[]";
+    if (!program) return "[]";
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+    
+    auto addSymbol = [&](const std::string& name, int kind, int line, int col) {
+        if (!first) ss << ",";
+        line = std::max(0, line - 1);
+        col = std::max(0, col - 1);
+        ss << "{\"name\":\"" << name << "\",\"kind\":" << kind 
+           << ",\"range\":{\"start\":{\"line\":" << line << ",\"character\":" << col 
+           << "},\"end\":{\"line\":" << line << ",\"character\":" << col 
+           << "}},\"selectionRange\":{\"start\":{\"line\":" << line << ",\"character\":" << col 
+           << "},\"end\":{\"line\":" << line << ",\"character\":" << col << "}}}";
+        first = false;
+    };
+
+    for (const auto& node : program->getChildren()) {
+        if (node->getType() == ASTNodeType::FunctionDeclaration) {
+            auto func = static_cast<const FunctionDeclaration*>(node.get());
+            addSymbol(func->getName(), 12, func->getFunctionToken().line, func->getFunctionToken().column);
+        } else if (node->getType() == ASTNodeType::ClassDeclaration) {
+            auto cls = static_cast<const ClassDeclaration*>(node.get());
+            addSymbol(cls->getName(), 5, cls->getClassToken().line, cls->getClassToken().column);
+        } else if (node->getType() == ASTNodeType::VariableDeclaration) {
+            auto varDecl = static_cast<const VariableDeclaration*>(node.get());
+            addSymbol(varDecl->getName(), 13, varDecl->getDeclToken().line, varDecl->getDeclToken().column);
+        } else if (node->getType() == ASTNodeType::EnumDeclaration) {
+            auto enumDecl = static_cast<const EnumDeclaration*>(node.get());
+            addSymbol(enumDecl->getName(), 10, enumDecl->getToken().line, enumDecl->getToken().column);
+        }
+    }
+    ss << "]";
+    return ss.str();
 }
 
 void LspServer::applyContentChanges(std::string& document, const std::string& contentChangesJson) {

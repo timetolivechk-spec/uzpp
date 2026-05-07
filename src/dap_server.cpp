@@ -289,22 +289,112 @@ void DapServer::handleMessage(const std::string& content) {
 
 // Implementation of missing DAP methods
 std::string DapServer::waitForGdbResponse() {
-    // Stub: return empty response
-    return "";
+    std::unique_lock<std::mutex> lock(gdbResponseMutex_);
+    gdbResponseCv_.wait(lock, [this]{ return gdbResponseReady_; });
+    gdbResponseReady_ = false;
+    return lastGdbResponse_;
 }
 
 std::string DapServer::parseGdbFrames(const std::string& gdbOutput) {
-    // Stub: return empty frames JSON
-    return "[]";
+    if (gdbOutput.empty() || gdbOutput.find("^error") != std::string::npos) return "[]";
+    
+    std::string json = "[";
+    size_t pos = 0;
+    bool first = true;
+    while ((pos = gdbOutput.find("frame={", pos)) != std::string::npos) {
+        if (!first) json += ",";
+        first = false;
+        
+        auto extractStr = [&](const std::string& key) {
+            size_t kPos = gdbOutput.find(key + "=\"", pos);
+            if (kPos == std::string::npos) return std::string("");
+            size_t endScope = gdbOutput.find("}", pos);
+            if (kPos > endScope) return std::string("");
+            kPos += key.length() + 2;
+            size_t end = gdbOutput.find("\"", kPos);
+            return gdbOutput.substr(kPos, end - kPos);
+        };
+        
+        std::string level = extractStr("level");
+        std::string func = extractStr("func");
+        std::string file = extractStr("file");
+        std::string fullname = extractStr("fullname");
+        std::string lineStr = extractStr("line");
+        
+        // Windows/MinGW paths in GDB can have double backslashes
+        std::string escapedPath;
+        for (char c : fullname) {
+            if (c == '\\') escapedPath += "\\\\";
+            else escapedPath += c;
+        }
+        
+        int line = lineStr.empty() ? 0 : std::stoi(lineStr);
+        int id = level.empty() ? 0 : std::stoi(level);
+        
+        json += "{\"id\":" + std::to_string(id) + ",\"name\":\"" + func + "\",\"line\":" + std::to_string(line) + ",\"column\":0,\"source\":{\"name\":\"" + file + "\",\"path\":\"" + escapedPath + "\"}}";
+        
+        pos += 7;
+    }
+    json += "]";
+    return json;
 }
 
 std::string DapServer::parseGdbVariables(const std::string& gdbOutput) {
-    // Stub: return empty variables JSON
-    return "[]";
+    if (gdbOutput.empty() || gdbOutput.find("^error") != std::string::npos) return "[]";
+    
+    std::string json = "[";
+    size_t pos = 0;
+    bool first = true;
+    while ((pos = gdbOutput.find("{name=\"", pos)) != std::string::npos) {
+        if (!first) json += ",";
+        first = false;
+        
+        auto extractStr = [&](const std::string& key) {
+            size_t kPos = gdbOutput.find(key + "=\"", pos);
+            if (kPos == std::string::npos) return std::string("");
+            size_t endScope = gdbOutput.find("}", pos);
+            if (kPos > endScope) return std::string("");
+            kPos += key.length() + 2;
+            size_t end = gdbOutput.find("\"", kPos);
+            return gdbOutput.substr(kPos, end - kPos);
+        };
+        
+        std::string name = extractStr("name");
+        std::string type = extractStr("type");
+        std::string value = extractStr("value");
+        if (value.empty()) value = "{...}";
+        
+        std::string escapedValue;
+        for (char c : value) {
+            if (c == '"') escapedValue += "\\\"";
+            else if (c == '\\') escapedValue += "\\\\";
+            else escapedValue += c;
+        }
+        
+        json += "{\"name\":\"" + name + "\",\"value\":\"" + escapedValue + "\",\"type\":\"" + type + "\",\"variablesReference\":0}";
+        
+        pos += 6;
+    }
+    json += "]";
+    return json;
 }
 
 std::string DapServer::parseGdbEvaluation(const std::string& gdbOutput) {
-    // Stub: return empty value
+    if (gdbOutput.empty() || gdbOutput.find("^error") != std::string::npos) return "null";
+    
+    size_t pos = gdbOutput.find("value=\"");
+    if (pos != std::string::npos) {
+        pos += 7;
+        size_t end = gdbOutput.find("\"", pos);
+        std::string value = gdbOutput.substr(pos, end - pos);
+        std::string escaped;
+        for (char c : value) {
+            if (c == '"') escaped += "\\\"";
+            else if (c == '\\') escaped += "\\\\";
+            else escaped += c;
+        }
+        return escaped;
+    }
     return "null";
 }
 

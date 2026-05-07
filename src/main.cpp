@@ -267,6 +267,57 @@ public:
         }
 
         std::cout << "MUVAFFAQIYAT: Kutubxona o'rnatildi -> " << packageFile.string() << "\n";
+        
+        std::ifstream inFile(packageFile);
+        std::string line;
+        while (std::getline(inFile, line)) {
+            if (line.starts_with("#include \"")) {
+                size_t start = line.find('"');
+                size_t end = line.rfind(".hpp\"");
+                if (start != std::string::npos && end != std::string::npos && end > start) {
+                    std::string depName = line.substr(start + 1, end - start - 1);
+                    if (depName != "uzpp_runtime" && depName != processedPackageName) {
+                        fs::path depPath = stdlibRoot / (depName + ".hpp");
+                        if (!fs::exists(depPath)) {
+                            std::cout << "-> Qaramlik topildi: " << depName << " (yuklab olinmoqda...)\n";
+                            installPackage(depName);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    bool removePackage(const std::string& packageName) const {
+        if (packageName.empty()) {
+            std::cerr << "XATO: `uzpp uchirish` uchun modul nomi kiritilmadi.\n";
+            return false;
+        }
+
+        const auto project = ProjectManager::loadProject(fs::current_path());
+        if (!project) {
+            std::cerr << "XATO: `uzpp uchirish` uchun joriy katalogda `uzpp.toml` topilmadi.\n";
+            return false;
+        }
+        
+        std::string processedPackageName = packageName;
+        if (processedPackageName.ends_with(".hpp")) processedPackageName = processedPackageName.substr(0, processedPackageName.length() - 4);
+
+        if (!ProjectManager::removeDependency(project->root, processedPackageName)) {
+            std::cerr << "XATO: `uzpp.toml` dan kutubxona o'chirilmadi.\n";
+            return false;
+        }
+
+        fs::path packageFile = project->root / "stdlib" / (processedPackageName + ".hpp");
+        if (fs::exists(packageFile)) {
+            fs::remove(packageFile);
+            std::cout << "MUVAFFAQIYAT: Kutubxona o'chirildi -> " << packageFile.string() << "\n";
+        } else {
+            std::cout << "MUVAFFAQIYAT: Kutubxona `uzpp.toml` dan o'chirildi, lekin fayl topilmadi.\n";
+        }
+
         return true;
     }
 
