@@ -729,7 +729,43 @@ std::string LspServer::findDefinition(const std::string& uri, const std::string&
 }
 
 std::string LspServer::buildSignatureHelp(const std::string& uri, int line, int character) {
-    // Stub implementation - return empty signature help
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end()) return "{\"signatures\":[]}";
+    
+    std::string text = it->second;
+    std::istringstream stream(text);
+    std::string currentLine;
+    int currentLineNum = 0;
+    while (std::getline(stream, currentLine) && currentLineNum < line) {
+        currentLineNum++;
+    }
+    
+    if (currentLineNum != line || character > static_cast<int>(currentLine.size())) {
+        return "{\"signatures\":[]}";
+    }
+    
+    int pos = character - 1;
+    while (pos >= 0 && currentLine[pos] != '(') {
+        pos--;
+    }
+    
+    if (pos > 0 && currentLine[pos] == '(') {
+        std::string funcName = getWordAtPosition(text, line, pos);
+        if (!funcName.empty()) {
+            std::string doc = buildHover(funcName);
+            if (!doc.empty()) {
+                std::string escapedDoc;
+                for (char c : doc) {
+                    if (c == '"') escapedDoc += "\\\"";
+                    else if (c == '\n') escapedDoc += "\\n";
+                    else if (c == '\\') escapedDoc += "\\\\";
+                    else escapedDoc += c;
+                }
+                return "{\"signatures\":[{\"label\":\"" + funcName + "(...)\",\"documentation\":{\"kind\":\"markdown\",\"value\":\"" + escapedDoc + "\"}}],\"activeSignature\":0,\"activeParameter\":0}";
+            }
+        }
+    }
+    
     return "{\"signatures\":[]}";
 }
 

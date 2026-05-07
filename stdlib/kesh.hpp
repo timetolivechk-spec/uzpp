@@ -61,6 +61,20 @@ public:
     }
 };
 
+#else
+
+// Embedded uskunalari uchun oddiy stub implementatsiyasi
+template<typename Kalit = int, typename Qiymat = int>
+class XotiraKesh {
+public:
+    void saqlash(const Kalit&, const Qiymat&) {}
+    Qiymat olish(const Kalit&, const Qiymat& defaultVal = Qiymat{}) const { return defaultVal; }
+    bool mavjudmi(const Kalit&) const { return false; }
+    void ochirish(const Kalit&) {}
+    void tozalash() {}
+    size_t hajm() const { return 0; }
+};
+
 #endif
 
 } // namespace uzpp::Kesh

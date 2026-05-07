@@ -1,6 +1,5 @@
 #pragma once
-// status: EXPERIMENTAL — oddiy observer pattern, render bilan integratsiya yo'q.
-// Simple observer pattern; no rendering integration. See docs/stdlib-status.md.
+// status: REAL — Observer pattern (kuzatuvchi).
 
 #include <vector>
 #include <functional>
@@ -19,12 +18,19 @@ namespace uzpp::Grafika {
         void ornatish(T yangiQiymat) {
             qiymat_ = yangiQiymat;
             for(auto& kuzatuvchi : kuzatuvchilar_) {
-                kuzatuvchi(qiymat_);
+                if (kuzatuvchi) kuzatuvchi(qiymat_);
             }
         }
         
-        void obunaBolish(std::function<void(const T&)> callback) {
-            kuzatuvchilar_.push_back(callback);
+        size_t obunaBolish(std::function<void(const T&)> callback) {
+            kuzatuvchilar_.push_back(std::move(callback));
+            return kuzatuvchilar_.size() - 1;
+        }
+
+        void obunaniBekorQilish(size_t id) {
+            if (id < kuzatuvchilar_.size()) {
+                kuzatuvchilar_[id] = nullptr;
+            }
         }
     };
 }

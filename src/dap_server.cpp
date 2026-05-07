@@ -263,7 +263,7 @@ void DapServer::handleMessage(const std::string& content) {
             std::string response = "{\"seq\":" + std::to_string(seq + 1) + ",\"type\":\"response\",\"request_seq\":" + std::to_string(seq) + ",\"success\":true,\"command\":\"scopes\",\"body\":{\"scopes\":[{\"name\":\"Mahalliy (Local)\",\"variablesReference\":1,\"expensive\":false}]}}";
             sendMessage(response);
         } else if (command == "variables") {
-            sendGdbCommand("-stack-list-variables --simple-values");
+            sendGdbCommand("-stack-list-variables --all-values");
             std::string mi = waitForGdbResponse();
             std::string vars = parseGdbVariables(mi);
             std::string response = "{\"seq\":" + std::to_string(seq + 1) + ",\"type\":\"response\",\"request_seq\":" + std::to_string(seq) + ",\"success\":true,\"command\":\"variables\",\"body\":{\"variables\":" + vars + "}}";

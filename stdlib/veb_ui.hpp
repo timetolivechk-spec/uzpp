@@ -102,11 +102,20 @@ namespace uzpp::VebUI {
 
         void yuborish(const A& amal) {
             holat_ = redyuser_(holat_, amal);
-            for (auto& kuzatuvchi : obunachilar_) kuzatuvchi(holat_);
+            for (auto& kuzatuvchi : obunachilar_) {
+                if (kuzatuvchi) kuzatuvchi(holat_);
+            }
         }
 
-        void obuna(std::function<void(const T&)> callback) {
-            obunachilar_.push_back(callback);
+        size_t obuna(std::function<void(const T&)> callback) {
+            obunachilar_.push_back(std::move(callback));
+            return obunachilar_.size() - 1;
+        }
+
+        void bekorQilish(size_t indeks) {
+            if (indeks < obunachilar_.size()) {
+                obunachilar_[indeks] = nullptr;
+            }
         }
     };
 

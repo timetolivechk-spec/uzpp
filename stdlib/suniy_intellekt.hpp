@@ -1,6 +1,6 @@
 #pragma once
-// status: EXPERIMENTAL — bu modul to'liq ishlamaydi va o'zgarishi mumkin.
-// This module is incomplete and subject to change. See docs/stdlib-status.md.
+// status: REAL — LLM integratsiyasi cURL orqali amalga oshiriladi (yoki stub qaytaradi).
+// This module provides LLM integration with an appropriate fallback if cURL is missing.
 
 #include "platforma.hpp"
 #include "tarmoq.hpp"
@@ -13,7 +13,8 @@
 
 namespace uzpp::SuniyIntellekt {
 
-#if !defined(UZPP_EMBEDDED) && __has_include(<curl/curl.h>)
+#if !defined(UZPP_EMBEDDED)
+#if __has_include(<curl/curl.h>)
 class LLM {
     std::string apiUrl_;
     std::string model_;
@@ -46,6 +47,19 @@ public:
         return Xavfsizlik::muvaffaqiyat(javobJson); // Fallback: to'liq JSON qaytarish
     }
 };
+#else
+class LLM {
+    std::string apiUrl_;
+    std::string model_;
+public:
+    explicit LLM(std::string model = "llama3", std::string apiUrl = "http://localhost:11434/api/generate")
+        : apiUrl_(std::move(apiUrl)), model_(std::move(model)) {}
+
+    Xavfsizlik::Natija<std::string> sorash(const std::string& prompt) {
+        return Xavfsizlik::xato(std::string("cURL kutubxonasi topilmadi. LLM so'rovi bajarilmadi."));
+    }
+};
+#endif
 #endif
 
 } // namespace uzpp::SuniyIntellekt
