@@ -1,5 +1,0 @@
-butun asosiy() {
-    satr salomlashish_xabari = "Assalomu alaikum, test_project_uzpm!"; // Salomlashish xabarini o'zgaruvchiga saqlash
-    yozish << salomlashish_xabari << qator_oxiri;
-    qaytarish 0;
-}

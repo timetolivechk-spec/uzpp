@@ -1,4 +1,6 @@
 #pragma once
+// status: EXPERIMENTAL — bu modul to'liq ishlamaydi va o'zgarishi mumkin.
+// This module is incomplete and subject to change. See docs/stdlib-status.md.
 
 #include "platforma.hpp"
 #include "tarmoq.hpp"

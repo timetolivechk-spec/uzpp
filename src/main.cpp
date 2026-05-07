@@ -73,6 +73,59 @@ struct BuildLayout {
     std::optional<fs::path> stdlibRoot;
 };
 
+// Qobiq (shell) buyrug'iga uzatishdan oldin yo'lda xavfli belgilar borligini tekshiradi.
+// `system`/`popen` faylga yo'lni qobiqqa beradi, shu sababli yo'lda `;`, `|`, `&`, `$`
+// va shunga o'xshash metabelgilar bo'lsa, foydalanuvchi nomi orqali buyruq quyish
+// (command injection) hujumi mumkin bo'ladi. Yo'l ajratuvchilari (`/`, `\`) va probel
+// ruxsat etiladi — ular buyruq qatorida tirnoq bilan o'raladi.
+inline bool isShellSafePath(const std::string& path) {
+    for (char ch : path) {
+        const auto uc = static_cast<unsigned char>(ch);
+        if (uc < 0x20 || uc == 0x7f) return false; // boshqarish belgilari
+        switch (ch) {
+            case ';': case '|': case '&': case '<': case '>':
+            case '^': case '$': case '`': case '"': case '*':
+            case '?': case '\n': case '\r':
+                return false;
+            default: break;
+        }
+    }
+    return true;
+}
+
+inline void requireShellSafePath(const fs::path& p, const char* whatFor) {
+    if (!isShellSafePath(p.string())) {
+        throw std::runtime_error(
+            std::string("XATO: yo'l xavfli belgilarni o'z ichiga oladi (") + whatFor + "): " + p.string());
+    }
+}
+
+// uzpm paketi nomini tekshiradi: `..` (yuqoriga chiqish) va qobiq metabelgilarini rad etadi.
+// `github:user/repo/file.hpp` kabi nomlar uchun `/`, `:`, `.`, `_`, `-` ruxsat etiladi.
+inline bool isValidPackageName(const std::string& name) {
+    if (name.empty() || name.size() > 256) return false;
+    if (name.find("..") != std::string::npos) return false;
+    if (name.front() == '/' || name.front() == '\\') return false;
+    for (char ch : name) {
+        const auto uc = static_cast<unsigned char>(ch);
+        if (uc < 0x20 || uc == 0x7f) return false;
+        const bool ok = (uc >= 'a' && uc <= 'z') || (uc >= 'A' && uc <= 'Z')
+                     || (uc >= '0' && uc <= '9')
+                     || ch == '_' || ch == '-' || ch == '.'
+                     || ch == '/' || ch == ':';
+        if (!ok) return false;
+    }
+    return true;
+}
+
+// uzpm URL'ini tekshiradi: faqat `https://` sxemasini qabul qiladi va qobiq
+// metabelgilarini rad etadi (URL `system("curl ... <URL>")` ga uzatiladi).
+inline bool isValidPackageUrl(const std::string& url) {
+    if (url.size() < 9 || url.size() > 2048) return false;
+    if (url.rfind("https://", 0) != 0) return false;
+    return isShellSafePath(url);
+}
+
 class UzppCompiler {
 public:
     bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false) const {
@@ -167,6 +220,16 @@ public:
         std::cout << "[1/2] uz++ kodi C++23 ga transpilatsiya qilindi.\n";
         std::cout << "[2/2] Ikkilik fayl yig'ilmoqda...\n";
 
+        try {
+            requireShellSafePath(cppFile, "C++ fayl");
+            requireShellSafePath(binaryFile, "ikkilik fayl");
+            for (const auto& dir : includeDirs) requireShellSafePath(dir, "include katalogi");
+            if (forcedIncludeHeader) requireShellSafePath(*forcedIncludeHeader, "forced include");
+        } catch (const std::exception& e) {
+            std::cerr << e.what() << '\n';
+            return false;
+        }
+
         const std::string command =
             buildCompileCommand(cppFile, binaryFile, resolveTarget(target), includeDirs, forcedIncludeHeader, debugMode);
 
@@ -202,6 +265,11 @@ public:
             std::cerr << "XATO: `uzpp ornatish` uchun modul nomi kiritilmadi.\n";
             return false;
         }
+        if (!isValidPackageName(packageName)) {
+            std::cerr << "XATO: paket nomi xavfsiz emas yoki noto'g'ri belgilarni o'z ichiga oladi: "
+                      << packageName << '\n';
+            return false;
+        }
 
         const auto project = ProjectManager::loadProject(fs::current_path());
         if (!project) {
@@ -212,8 +280,13 @@ public:
         std::string processedPackageName = packageName;
         std::string url;
         std::string source = "uzpm-registry";
-        
-        if (packageName.starts_with("http://") || packageName.starts_with("https://")) {
+
+        if (packageName.starts_with("http://")) {
+            std::cerr << "XATO: faqat `https://` URL'lari qabul qilinadi (HTTP himoyalanmagan).\n";
+            return false;
+        }
+
+        if (packageName.starts_with("https://")) {
             url = packageName;
             source = "url";
             size_t lastSlash = packageName.find_last_of('/');
@@ -232,6 +305,11 @@ public:
             } else processedPackageName = path;
         } else {
             url = "https://raw.githubusercontent.com/uzlang/uzpm-registry/main/packages/" + packageName + ".hpp";
+        }
+
+        if (!isValidPackageUrl(url) || !isValidPackageName(processedPackageName)) {
+            std::cerr << "XATO: paket URL yoki nomida xavfsiz bo'lmagan belgilar bor.\n";
+            return false;
         }
 
         if (!ProjectManager::addDependency(project->root, processedPackageName, "1.0.0")) {
@@ -928,6 +1006,12 @@ std::optional<fs::path> writeDependencyBridge(const BuildLayout& layout) {
 int runBinary(const fs::path& binaryPath) {
     fs::path launchPath = binaryPath;
     std::string command = launchPath.string();
+
+    if (!isShellSafePath(command)) {
+        std::cerr << "XATO: ikkilik fayl yo'lida xavfsiz bo'lmagan belgilar bor: "
+                  << command << '\n';
+        return 1;
+    }
 
 #ifdef _WIN32
     for (char& value : command) {

@@ -22,8 +22,8 @@ uz++ loyihasiga xush kelibsiz! Har qanday hissa — xato tuzatish, yangi xususiy
 
 ```bash
 # 1. Nusxa olish
-git clone https://github.com/YOUR_USERNAME/uz-plus-plus
-cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
+cd uzpp
 
 # 2. Qurish
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
@@ -115,7 +115,7 @@ EOF
 
 ### Xato topildi?
 
-[GitHub Issues](https://github.com/YOUR_USERNAME/uz-plus-plus/issues) orqali xabarlang. Bug report shablonini to'ldiring.
+[GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) orqali xabarlang. Bug report shablonini to'ldiring.
 
 ---
 
@@ -133,8 +133,8 @@ Welcome to uz++! All contributions — bug fixes, features, documentation, or tr
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/uz-plus-plus
-cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
+cd uzpp
 
 # Build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
