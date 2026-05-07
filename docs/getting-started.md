@@ -15,21 +15,21 @@
 pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
 
 # 3. uz++ ni klonlang va quring
-git clone https://github.com/YOUR_USERNAME/uz-plus-plus
-cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
+cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 
 # 4. PATH ga qo'shing (ixtiyoriy)
-export PATH="$PATH:/path/to/uz-plus-plus/build"
+export PATH="$PATH:/path/to/uzpp/build"
 ```
 
 ### Linux (Ubuntu 24.04)
 
 ```bash
 sudo apt-get install gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
-git clone https://github.com/YOUR_USERNAME/uz-plus-plus
-cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
+cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build -DCMAKE_CXX_COMPILER=g++-14
 cmake --build build
 ```
@@ -39,8 +39,8 @@ cmake --build build
 ```bash
 xcode-select --install  # AppleClang (Xcode 16+)
 brew install cmake ninja
-git clone https://github.com/YOUR_USERNAME/uz-plus-plus
-cd uz-plus-plus
+git clone https://github.com/timetolivechk-spec/uzpp
+cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ```
@@ -462,4 +462,4 @@ butun asosiy() {
 - `misollar/` papkasidagi 10 ta misolni ko'ring
 - `tests/` papkasidagi testlarni o'rganing
 - [CONTRIBUTING.md](../CONTRIBUTING.md) orqali hissa qo'shing
-- [GitHub Issues](https://github.com/YOUR_USERNAME/uz-plus-plus/issues) da savol bering
+- [GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) da savol bering
