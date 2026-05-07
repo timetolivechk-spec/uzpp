@@ -133,7 +133,7 @@
 - [x] Аудит stdlib: классификация в [docs/stdlib-status.md](docs/stdlib-status.md), 7 STUB-модулей помечены `// status: EXPERIMENTAL`.
 - [x] ~~Удаление или переименование `kripto.hpp` → `xesh.hpp`~~ — НЕ нужно: фактически содержит SHA1+SHA256+Base64+HMAC+JWT, аудит показал, что это REAL модуль.
 - [x] Удаление лишних папок (phase12_demo и др.) — сделано в `6626b5d`.
-- [ ] Negative tests — минимум 30 штук.
+- [x] Negative tests — 27 рабочих + 3 в [tests/negative/pending/](tests/negative/pending/) (трек-лист для багов компилятора). Runner: `bash tests/negative/run.sh` или `pwsh tests/negative/run.ps1`.
 - [ ] Unit тесты для lexer, parser, codegen.
 
 ### Фаза 3: Образовательная ценность (1-2 месяца)

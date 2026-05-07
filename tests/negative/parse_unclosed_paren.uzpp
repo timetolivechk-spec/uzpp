@@ -1,0 +1,5 @@
+// XATOLIK_KUTILMOQDA: parse: yopilmagan qavs funksiya parametrlarida
+ulash "uzpp_runtime.hpp"
+butun asosiy(
+    qaytarish 0;
+}

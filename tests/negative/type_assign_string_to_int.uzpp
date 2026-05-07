@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: cpp_level: butun o'zgaruvchiga matn berib bo'lmaydi
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x = "matn";
+    yozish << x << qator_oxiri;
+    qaytarish 0;
+}

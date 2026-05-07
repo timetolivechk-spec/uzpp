@@ -1,0 +1,4 @@
+// XATOLIK_KUTILMOQDA: cpp_level: bir xil nom takroriy e'lon qilingan
+ulash "uzpp_runtime.hpp"
+butun asosiy() { qaytarish 0; }
+butun asosiy() { qaytarish 1; }

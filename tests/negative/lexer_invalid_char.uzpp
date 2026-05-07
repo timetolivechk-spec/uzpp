@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: lexer: tanilmagan operator (yagona @)
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun a = 1 @@@ 2;
+    qaytarish 0;
+}

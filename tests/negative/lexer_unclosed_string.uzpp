@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: lexer: yopilmagan satr litterali
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    matn s = "yopilmagan;
+    qaytarish 0;
+}

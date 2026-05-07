@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: arg_count: argumentlar yetishmaydi
+ulash "uzpp_runtime.hpp"
+butun qosh(butun a, butun b) { qaytarish a + b; }
+butun asosiy() {
+    butun s = qosh(1);
+    qaytarish 0;
+}

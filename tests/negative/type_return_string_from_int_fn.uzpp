@@ -1,0 +1,9 @@
+// XATOLIK_KUTILMOQDA: cpp_level: butun qaytaradigan funksiya matn qaytaradi
+ulash "uzpp_runtime.hpp"
+butun raqam() {
+    qaytarish "salom";
+}
+butun asosiy() {
+    yozish << raqam() << qator_oxiri;
+    qaytarish 0;
+}

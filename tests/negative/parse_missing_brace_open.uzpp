@@ -1,0 +1,5 @@
+// XATOLIK_KUTILMOQDA: parse: ochuvchi { yo'q
+ulash "uzpp_runtime.hpp"
+butun asosiy()
+    qaytarish 0;
+}

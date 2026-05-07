@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: type: sikl tashqarisida sikldan
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    sikldan;
+    qaytarish 0;
+}

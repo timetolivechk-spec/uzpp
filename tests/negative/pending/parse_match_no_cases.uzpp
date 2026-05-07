@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: parse: moslash (switch) bo'sh
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x = 5;
+    moslash (x) {
+    }
+    qaytarish 0;
+}

@@ -1,0 +1,4 @@
+// XATOLIK_KUTILMOQDA: parse: yopilmagan blok
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    yozish << "salom" << qator_oxiri;

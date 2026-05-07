@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: cpp_level: kompilyatsiya vaqtida nolga bo'lish
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x = 10 / 0;
+    yozish << x << qator_oxiri;
+    qaytarish 0;
+}
