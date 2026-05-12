@@ -36,15 +36,103 @@
 
 ---
 
-## 🚀 Eng tez yo'l — VS Code orqali
+## 👋 Sizning birinchi dasturingiz | Your first program | Ваша первая программа
 
-> **1 daqiqada ishga tushirish:** hech qanday sozlama kerak emas.
+### 🇺🇿 O'zbekcha — 30 sekundda
 
-1. **VS Code** → Extensions → `uz++` → **Install**
-2. Welcome ekranida **"Hammasini o'rnatish"** tugmasini bosing
-3. `asosiy.uzpp` fayl oching → **F5** → dastur ishlaydi
+1. [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe) ni yuklab oling va ishga tushiring.
+2. Yangi PowerShell oynasini oching va loyiha katalogi yarating:
+   ```powershell
+   mkdir uzpp-test ; cd uzpp-test
+   ```
+3. `salom.uzpp` faylini yarating (Notepad, VS Code yoki istalgan muharrir bilan):
+   ```uzpp
+   ulash "uzpp_runtime.hpp"
+
+   butun asosiy() {
+       yozish << "Salom, Dunyo!" << qator_oxiri;
+       qaytarish 0;
+   }
+   ```
+4. Ishga tushiring:
+   ```powershell
+   uzpp ishga-tushirish salom.uzpp
+   ```
+   Natijada `Salom, Dunyo!` chiqadi.
+
+**Faqat kompilyatsiya** (binary yaratish, ishga tushirmaslik):
+```powershell
+uzpp qurish salom.uzpp                 # build/salom.exe yaratiladi
+.\build\salom.exe                      # qo'lda ishga tushirish
+```
+
+**C++ ga tarjima qilingan kodni ko'rish** (debug uchun foydali):
+```powershell
+uzpp transpile salom.uzpp --show-cpp
+```
+
+### 🇷🇺 Русский — 30 секунд
+
+1. Скачайте [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe) и запустите (без админ-прав).
+2. Откройте новый PowerShell:
+   ```powershell
+   mkdir uzpp-test ; cd uzpp-test
+   ```
+3. Создайте `salom.uzpp`:
+   ```uzpp
+   ulash "uzpp_runtime.hpp"
+
+   butun asosiy() {
+       yozish << "Salom, Dunyo!" << qator_oxiri;
+       qaytarish 0;
+   }
+   ```
+4. Скомпилируйте и запустите:
+   ```powershell
+   uzpp ishga-tushirish salom.uzpp
+   ```
+
+**Только компилировать**: `uzpp qurish salom.uzpp` → `build\salom.exe`.
+**Посмотреть сгенерированный C++**: `uzpp transpile salom.uzpp --show-cpp`.
+
+### 🇬🇧 English — 30 seconds
+
+1. Download [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe) (~115 MB, bundles MinGW GCC 14.2 — no admin required) and run it.
+2. Open a fresh PowerShell terminal:
+   ```powershell
+   mkdir uzpp-test ; cd uzpp-test
+   ```
+3. Create `salom.uzpp`:
+   ```uzpp
+   ulash "uzpp_runtime.hpp"
+
+   butun asosiy() {
+       yozish << "Salom, Dunyo!" << qator_oxiri;
+       qaytarish 0;
+   }
+   ```
+4. Build + run:
+   ```powershell
+   uzpp ishga-tushirish salom.uzpp
+   ```
+   You'll see `Salom, Dunyo!`.
+
+**Build only** (no execution): `uzpp qurish salom.uzpp` → produces `build\salom.exe`.
+**Show generated C++**: `uzpp transpile salom.uzpp --show-cpp`.
+
+### 🧩 With VS Code (any OS)
+
+1. VS Code → Extensions → search `uz++` → Install.
+2. Status bar shows `⬇ uz++ install` — click it (or run the **Install** button on the welcome screen). The extension downloads the same `uzpp-setup.exe` automatically on Windows.
+3. Open any `.uzpp` file → press **F5** to run, **Ctrl+F5** to build only.
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/uzpp.uzpp?label=VS%20Code%20Extension&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
+
+### 📚 More examples
+
+- `examples/` — 10 introductory programs (types, classes, lambdas, Result type, pattern matching).
+- `misollar/` — 10 problem-style programs (FizzBuzz, recursion, threads, JSON, etc.).
+- [docs/getting-started.md](docs/getting-started.md) — 15-minute tutorial covering everything.
 
 ---
 
@@ -203,7 +291,10 @@ butun asosiy() {
 | `va`          | `&&`          | Va (AND)        |
 | `yoki`        | `\|\|`        | Yoki (OR)       |
 
-### O'rnatish
+### Manba koddan qurish | Building from source
+
+Yuqoridagi *Quick Install* tavsiya etiladi — quyidagi ko'rsatma faqat hissa
+qo'shuvchilar uchun (kompilyatorni o'zini o'zgartirayotgan bo'lsangiz).
 
 ```bash
 # Talablar: CMake 3.20+, GCC 14+ yoki Clang 18+, Ninja
@@ -211,18 +302,25 @@ git clone https://github.com/timetolivechk-spec/uzpp
 cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
+
 ./build/uzpp --version
+./build/uzpp ishga-tushirish examples/01_salom_dunyo.uzpp
+./build/uzpp_frontend_tests                       # 25 unit-test
+bash tests/negative/run.sh                        # 27 salbiy test
 ```
 
-**Windows (MSYS2):**
+**Windows (MSYS2 UCRT64):**
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
 ```
 
 **Linux (Ubuntu 24.04):**
 ```bash
-sudo apt-get install gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
+sudo apt-get install gcc-14 g++-14 cmake ninja-build
 ```
+
+To'liq qo'llanma: [docs/getting-started.md](docs/getting-started.md). Hissa
+qo'shish bo'yicha ko'rsatmalar: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Buyruqlar
 
@@ -257,19 +355,27 @@ sudo apt-get install gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
 
 ```
 uz++/
-├── src/               # Kompilyator manba kodi (C++)
-│   ├── lexer.cpp      # Tokenizator
-│   ├── parser.cpp     # AST quruvchi
-│   ├── codegen.cpp    # C++23 kod generatori
-│   ├── type_checker.hpp # Semantik tahlil
-│   ├── lsp_server.cpp # Language Server Protocol
-│   └── main.cpp       # CLI kirish nuqtasi
-├── stdlib/            # uz++ standart kutubxonasi (header-only C++)
-├── examples/          # 10 ta misol dastur
-├── misollar/          # Qo'shimcha misollar
-├── tests/             # Integratsiya testlari (23+ ta)
-├── vscode-uzpp/       # VSCode kengaytmasi
-└── installer/         # Windows installer (Inno Setup)
+├── src/                         # Kompilyator manba kodi (C++)
+│   ├── lexer.cpp/h              # Tokenizator
+│   ├── parser.cpp/h             # AST quruvchi
+│   ├── ast.h                    # AST tugun turlari
+│   ├── codegen.cpp/h            # C++23 kod generatori
+│   ├── type_checker.hpp         # Semantik tahlil
+│   ├── formatter.cpp/h          # Avto-formatlash
+│   ├── lsp_server.cpp/h         # Language Server Protocol
+│   ├── dap_server.cpp/h         # Debug Adapter Protocol
+│   ├── package_manager.h        # uzpm paket menejeri
+│   └── main.cpp                 # CLI kirish nuqtasi
+├── stdlib/                      # uz++ standart kutubxonasi (header-only)
+├── examples/                    # 10 ta o'rganuvchi misol
+├── misollar/                    # 10 ta amaliy misol (FizzBuzz va h.k.)
+├── tests/                       # 23 integratsiya, 25 frontend unit, 27 salbiy test
+│   ├── frontend_smoke.cpp       # lexer/parser/type_checker/codegen unit-test
+│   └── negative/                # qabul qilinmasligi kerak bo'lgan kodlar
+├── docs/                        # Hujjatlar (getting-started, stdlib-status)
+├── installer/windows/           # Inno Setup skripti → uzpp-setup.exe
+├── vscode-uzpp/                 # Marketplace kengaytmasi
+└── packages/                    # uzpm uchun namuna paketlar
 ```
 
 ### Hissa qo'shish
@@ -486,26 +592,34 @@ CMake 3.20+ and Ninja (recommended)
 
 ```
 uz++/
-├── src/                    # Compiler source (C++)
-│   ├── lexer.cpp           # Tokenizer — Uzbek keywords
-│   ├── parser.cpp          # AST builder — full semantic parser
-│   ├── ast.h               # Abstract syntax tree types
-│   ├── codegen.cpp         # C++23 code generator
-│   ├── type_checker.hpp    # Semantic analysis + type inference
-│   ├── formatter.cpp       # Auto-formatter
-│   ├── lsp_server.cpp      # Language Server Protocol
-│   └── main.cpp            # CLI entry point
-├── stdlib/                 # uz++ standard library (header-only C++)
-│   ├── uzpp_runtime.hpp    # Core: Natija, Tanlov, OqimPool
-│   ├── matematika.hpp      # Math
-│   ├── matn.hpp            # String utilities
-│   ├── json.hpp            # JSON
-│   └── ...                 # 25+ modules
-├── examples/               # 10 runnable example programs
-├── misollar/               # Additional example programs
-├── tests/                  # Integration tests (23+ passing)
-├── vscode-uzpp/            # VSCode extension
-└── installer/              # Windows installer (Inno Setup)
+├── src/                         # Compiler source (C++)
+│   ├── lexer.{cpp,h}            # Tokenizer
+│   ├── parser.{cpp,h}           # Semantic parser
+│   ├── ast.h                    # AST node types
+│   ├── codegen.{cpp,h}          # C++23 code generator
+│   ├── type_checker.hpp         # Semantic analysis + type inference
+│   ├── formatter.{cpp,h}        # Auto-formatter
+│   ├── lsp_server.{cpp,h}       # Language Server Protocol
+│   ├── dap_server.{cpp,h}       # Debug Adapter Protocol
+│   ├── package_manager.h        # uzpm package manager
+│   └── main.cpp                 # CLI entry point
+├── stdlib/                      # uz++ standard library (header-only)
+│   ├── uzpp_runtime.hpp         # Result/Option, OqimPool, coroutines
+│   ├── matematika.hpp           # Math
+│   ├── matn.hpp                 # String utilities
+│   ├── json.hpp                 # JSON
+│   └── ...                      # see docs/stdlib-status.md for full table
+├── examples/                    # 10 tutorial-style example programs
+├── misollar/                    # 10 problem-style example programs
+├── tests/                       # 23 integration + 25 frontend + 27 negative
+│   ├── frontend_smoke.cpp       # Unit tests for lexer/parser/checker/codegen
+│   └── negative/                # Programs that must fail to compile
+├── docs/                        # Documentation
+│   ├── getting-started.md       # 15-min walkthrough
+│   └── stdlib-status.md         # Per-module REAL/PARTIAL/EXPERIMENTAL status
+├── installer/windows/           # Inno Setup script → uzpp-setup.exe
+├── vscode-uzpp/                 # VS Code extension (Marketplace: uzpp.uzpp)
+└── packages/                    # Sample uzpm packages
 ```
 
 ### Contributing
