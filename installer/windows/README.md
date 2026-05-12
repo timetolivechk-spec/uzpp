@@ -9,14 +9,15 @@ Builds **`uzpp-setup.exe`** — the official Windows installer for uz++.
 | `uzpp.exe` | `build/uzpp.exe` | Compiler frontend (statically linked against MSYS2 UCRT64). |
 | `stdlib/` | `stdlib/` | Header-only standard library (~30 modules). |
 | `misollar/` | `misollar/` | 10 canonical example programs. |
+| `compiler/` | WinLibs MinGW-w64 | **Bundled GCC 14.2 + UCRT runtime** (~520 MB on disk, ~150 MB in installer). |
 | `LICENSE.txt` | `LICENSE` | MIT license, shown on the wizard's first page. |
 | `README.txt` | generated | Plain-text quick-start, shown after install. |
 
-**MinGW is NOT bundled.** The VSCode extension downloads MinGW from
-[WinLibs](https://winlibs.com/) on first run. Pure-CLI users follow the build
-instructions in [docs/getting-started.md](../../docs/getting-started.md).
-Bundling MinGW would inflate the installer to ~200 MB; the current setup
-stays under 5 MB.
+**MinGW IS bundled** as of the v2.1.1 hot-fix. `uzpp.exe` looks for
+`<install_dir>\compiler\bin\g++.exe` first, so users get a working
+"download → install → build" flow without touching PATH or downloading
+anything else. Bundle source: WinLibs
+[GCC 14.2.0 + MinGW-w64 UCRT 12.0.0](https://github.com/brechtsanders/winlibs_mingw/releases/tag/14.2.0posix-19.1.1-12.0.0-ucrt-r2).
 
 ## Default install location
 
@@ -66,6 +67,14 @@ Copy-Item build\uzpp.exe   $dist\
 Copy-Item -Recurse stdlib  $dist\stdlib
 Copy-Item -Recurse misollar $dist\misollar
 Copy-Item LICENSE          $dist\LICENSE.txt
+
+# 2. Download + extract WinLibs MinGW into dist\compiler\
+$mingwUrl = 'https://github.com/brechtsanders/winlibs_mingw/releases/download/14.2.0posix-19.1.1-12.0.0-ucrt-r2/winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2.zip'
+Invoke-WebRequest -Uri $mingwUrl -OutFile $dist\winlibs.zip
+Expand-Archive -Force -Path $dist\winlibs.zip -DestinationPath $dist\winlibs-extracted
+Move-Item $dist\winlibs-extracted\mingw64 $dist\compiler
+Remove-Item -Recurse -Force $dist\winlibs.zip, $dist\winlibs-extracted
+
 @"
 uz++ - O'zbek Dasturlash Tili
 =============================
@@ -73,17 +82,18 @@ uz++ - O'zbek Dasturlash Tili
 Tezda ishga tushirish | Quick start:
   uzpp ishga-tushirish misollar\01_salom_dunyo.uzpp
 
+Bundled C++ compiler: compiler\bin\g++.exe (MinGW-w64 GCC 14.2 UCRT)
 VS Code kengaytmasi: Marketplace -> uzpp.uzpp
 GitHub: https://github.com/timetolivechk-spec/uzpp
 "@ | Set-Content -Path $dist\README.txt -Encoding utf8
 
-# 2. Compile the installer
+# 3. Compile the installer
 &"C:\Program Files (x86)\Inno Setup 6\iscc.exe" `
    /DAppVersion=2.1.1 `
    installer\windows\installer.iss
 
 # Output:
-#   installer\windows\Output\uzpp-setup.exe
+#   installer\windows\Output\uzpp-setup.exe   (~150 MB compressed)
 ```
 
 To override the version: `iscc /DAppVersion=2.2.0 installer.iss`.

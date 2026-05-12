@@ -5,10 +5,12 @@
 ;    * uzpp.exe (compiler frontend)
 ;    * stdlib\ (header-only standard library)
 ;    * misollar\ (canonical examples)
+;    * compiler\ (bundled MinGW-w64 GCC 14.2 UCRT — WinLibs distribution)
 ;
 ;  Notes:
-;    * MinGW is NOT bundled. The VS Code extension downloads MinGW from
-;      WinLibs on first run; CLI users follow docs/getting-started.md.
+;    * MinGW IS bundled (since v2.1.1 hot-fix). uzpp.exe locates it at
+;      <install_dir>\compiler\bin\g++.exe — no PATH setup or extra
+;      downloads required for fresh users.
 ;    * Default install dir: %LOCALAPPDATA%\Programs\uzpp\ (no admin required).
 ;      Power users can re-target to Program Files via the Browse dialog —
 ;      Inno Setup will then prompt for elevation automatically.
@@ -87,6 +89,7 @@ Source: "{#SourceRoot}\uzpp.exe";   DestDir: "{app}";          Flags: ignorevers
 Source: "{#SourceRoot}\LICENSE.txt"; DestDir: "{app}";         Flags: ignoreversion
 Source: "{#SourceRoot}\stdlib\*";   DestDir: "{app}\stdlib";   Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\misollar\*"; DestDir: "{app}\misollar"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\compiler\*"; DestDir: "{app}\compiler"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\README.txt"; DestDir: "{app}";          Flags: ignoreversion isreadme
 
 [Icons]

@@ -82,7 +82,7 @@
 - VSCode v2.1.3 (Marketplace): PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии. Опубликовано через vsce 2.32.0 (vsce 3.9.1 имеет регрессию TF400813 — задокументировал).
 - Inno Setup скрипт для Windows: [installer/windows/installer.iss](installer/windows/installer.iss) — собирает `uzpp-setup.exe` (2.9 MB), HKCU PATH + .uzpp ассоциация без админ-прав.
 - One-click install через welcome screen работает на Windows.
-- **GitHub Release v2.1.1** опубликован: https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1 — `uzpp-setup.exe` (2.9 MB) + `uzpp-windows-x64.zip` (1.2 MB) + trilingual release notes.
+- **GitHub Release v2.1.1** опубликован: https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1 — `uzpp-setup.exe` **(113 MB, с bundled MinGW GCC 14.2 UCRT)** + `uzpp-windows-x64.zip` (1.1 MB, без компилятора) + trilingual release notes. Установщик закрывает дыру «g++ not found»: пользователь устанавливает только `uzpp-setup.exe`, ничего больше — `compiler/bin/g++.exe` лежит рядом с `uzpp.exe`.
 - GitHub About panel заполнен: description (uz/en), website → Marketplace, 13 topics.
 - MinGW скачивается с WinLibs автоматически.
 - SPEC.md существует (572 строки, версия 0.1).
