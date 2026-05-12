@@ -14,7 +14,7 @@
 
 **Репозиторий:** https://github.com/timetolivechk-spec/uzpp
 
-**VSCode Marketplace:** `uzpp.uzpp` v2.1.1 — опубликовано.
+**VSCode Marketplace:** `uzpp.uzpp` v2.1.3 — опубликовано (2026-05-12, vsce 2.32.0).
 
 ---
 
@@ -79,7 +79,7 @@
 - 25 frontend unit-тестов в [tests/frontend_smoke.cpp](tests/frontend_smoke.cpp).
 - 27 negative-тестов в [tests/negative/](tests/negative/) с runner'ом.
 - VSCode расширение опубликовано: подсветка, LSP, DAP-клиент, status bar, F5 запуск.
-- VSCode v2.1.2: PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии. Опубликован код в репо; **Marketplace publish** требует нового PAT с правильным scope (см. ниже).
+- VSCode v2.1.3 (Marketplace): PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии. Опубликовано через vsce 2.32.0 (vsce 3.9.1 имеет регрессию TF400813 — задокументировал).
 - Inno Setup скрипт для Windows: [installer/windows/installer.iss](installer/windows/installer.iss) — собирает `uzpp-setup.exe` (2.9 MB), HKCU PATH + .uzpp ассоциация без админ-прав.
 - One-click install через welcome screen работает на Windows.
 - **GitHub Release v2.1.1** опубликован: https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1 — `uzpp-setup.exe` (2.9 MB) + `uzpp-windows-x64.zip` (1.2 MB) + trilingual release notes.

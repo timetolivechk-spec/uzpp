@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.1.2] — 2026-05-12
+## [2.1.3] — 2026-05-12
 
 ### Yangi imkoniyatlar
 - **Tizim PATH dan kompilyatorni topish** — `uzpp-setup.exe` (Windows) yoki
@@ -16,6 +16,10 @@
 - `findCompilerPath` zanjiriga `where`/`which` orqali PATH qidiruvi qo'shildi
   (eski tartib: globalStorage > embedded > settings > workspace > PATH;
   yangi tartib: globalStorage > embedded > settings > **PATH** > workspace).
+
+## [2.1.2] — 2026-05-07
+
+- Marketplace'da chop etildi (oraliq versiya, hujjatsiz).
 
 ## [2.1.1] — 2026-05-06
 
