@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.5] — 2026-05-12
+
+Marketplace v2.1.4 slotini muvaffaqiyatsiz upload bloklab qo'ydi
+(MS API "version exists and cannot be modified" deydi). 2.1.4 ning
+to'liq tarkibi 2.1.5 da chiqariladi — quyidagi 2.1.4 yozuvini ko'ring.
+
 ## [2.1.4] — 2026-05-12
 
 ### Yangi imkoniyatlar
