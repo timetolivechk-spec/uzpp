@@ -1,0 +1,6 @@
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    yozish << "Salom, Dunyo! Bu uz++ dasturlash tilida tuzilgan birinchi dastur." << qator_oxiri;
+    qaytarish 0;
+}
