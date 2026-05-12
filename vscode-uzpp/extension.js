@@ -15,12 +15,33 @@ let statusBarItem;
 // ─── Compiler Resolution ──────────────────────────────────────────────────────
 
 /**
+ * Looks up `uzpp` on the system PATH using `where` (Windows) / `which` (POSIX).
+ * Returns the first absolute path found, or null. Used so users who installed
+ * uz++ via the Windows installer or apt/brew don't need a per-extension copy
+ * downloaded into globalStorage.
+ */
+function findCompilerOnPath() {
+    try {
+        const cmd = process.platform === 'win32' ? 'where uzpp' : 'which uzpp';
+        const out = execSync(cmd, { timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] })
+            .toString().trim();
+        if (!out) return null;
+        // `where` may return multiple matches (one per line); pick the first.
+        const first = out.split(/\r?\n/)[0].trim();
+        return first.length > 0 && fs.existsSync(first) ? first : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Returns the path to run uzpp. Priority:
- * 1. Wrapper script in globalStorage (handles CWD + MinGW PATH)
+ * 1. Wrapper script in globalStorage (handles CWD + MinGW PATH on Windows)
  * 2. Embedded bin/ inside extension
  * 3. User settings compilerPath
- * 4. Workspace folder
- * 5. PATH fallback
+ * 4. uzpp on the system PATH (e.g. installed via uzpp-setup.exe)
+ * 5. Workspace folder
+ * 6. Bare exe name as last-resort PATH fallback
  */
 function findCompilerPath(context) {
     const p = cm.getPaths(context);
@@ -40,6 +61,11 @@ function findCompilerPath(context) {
     const configured = vscode.workspace.getConfiguration('uzpp').get('compilerPath');
     if (configured && configured.length > 0) return configured;
 
+    // System install: look on PATH so users of uzpp-setup.exe / Homebrew /
+    // apt don't need a duplicate in globalStorage.
+    const onPath = findCompilerOnPath();
+    if (onPath) return onPath;
+
     // Workspace folder
     const folders = vscode.workspace.workspaceFolders;
     if (folders && folders.length > 0) {
@@ -49,6 +75,68 @@ function findCompilerPath(context) {
     }
 
     return process.platform === 'win32' ? 'uzpp.exe' : 'uzpp';
+}
+
+const RELEASES_LATEST_URL = 'https://github.com/timetolivechk-spec/uzpp/releases/latest';
+const WIN_SETUP_URL = 'https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe';
+
+/**
+ * Show a notification offering install paths when uzpp is not found anywhere.
+ * Three actions:
+ *   - "Avtomatik o'rnatish" — Windows: open the uzpp-setup.exe download URL
+ *     in the browser. Linux/macOS: open the releases page.
+ *   - "Komponentlar (eski usul)" — fall back to the existing globalStorage
+ *     install flow (downloads MinGW + uzpp directly).
+ *   - "Yo'lni ko'rsatish" — let the user point to an existing uzpp binary
+ *     and persist that into the `uzpp.compilerPath` setting.
+ */
+async function offerCompilerInstall(context) {
+    const winInstall  = "Avtomatik o'rnatish";
+    const fallback    = 'Komponentlar (eski usul)';
+    const manual      = "Yo'lni ko'rsatish";
+    const dismiss     = "Keyinroq";
+
+    const buttons = process.platform === 'win32'
+        ? [winInstall, fallback, manual, dismiss]
+        : [fallback, manual, dismiss];
+
+    const choice = await vscode.window.showInformationMessage(
+        "uz++ kompilyator topilmadi. Tezkor o'rnatishni tanlang yoki mavjud yo'lni ko'rsating.",
+        ...buttons
+    );
+
+    if (!choice || choice === dismiss) return;
+
+    if (choice === winInstall) {
+        // Open the download in the user's browser. Once they run uzpp-setup.exe
+        // and reload VS Code, findCompilerOnPath() will pick it up.
+        await vscode.env.openExternal(vscode.Uri.parse(WIN_SETUP_URL));
+        vscode.window.showInformationMessage(
+            "uzpp-setup.exe yuklab olinmoqda. Yuklab olish tugagach ishga tushiring, "
+          + "so'ng VS Code ni qayta ishga tushiring."
+        );
+        return;
+    }
+
+    if (choice === fallback) {
+        await cmdInstallComponents(context);
+        return;
+    }
+
+    if (choice === manual) {
+        const picked = await vscode.window.showOpenDialog({
+            canSelectFolders: false, canSelectFiles: true, canSelectMany: false,
+            openLabel: "uzpp.exe ni tanlang",
+            filters: process.platform === 'win32' ? { 'uzpp executable': ['exe'] } : undefined,
+        });
+        if (!picked || picked.length === 0) return;
+        const chosenPath = picked[0].fsPath;
+        await vscode.workspace.getConfiguration('uzpp')
+            .update('compilerPath', chosenPath, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(
+            `Saqlandi: ${chosenPath}. VS Code ni qayta ishga tushiring.`
+        );
+    }
 }
 
 function getCompilerVersion(compilerPath) {
@@ -643,10 +731,21 @@ function activate(context) {
         outputChannelName: 'uz++ Language Server'
     };
 
-    // Only start LSP if compiler is available
-    if (cm.checkComponents(context).compilerOk || fs.existsSync(compilerPath)) {
+    // Resolve "is compiler usable?" beyond the legacy globalStorage check.
+    // We're happy if it's in globalStorage, OR on PATH, OR a hard-coded
+    // setting points at a real file.
+    const compilerUsable =
+        cm.checkComponents(context).compilerOk ||
+        fs.existsSync(compilerPath) ||
+        findCompilerOnPath() !== null;
+
+    if (compilerUsable) {
         client = new LanguageClient('uzpp-lsp', 'uz++ Language Server', serverOptions, clientOptions);
         client.start().catch(() => {/* LSP optional */});
+    } else {
+        // Compiler is genuinely missing. Don't fail silently — surface the
+        // installer flow as a dismissible notification.
+        offerCompilerInstall(context).catch(() => {});
     }
 
     // Status bar
