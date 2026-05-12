@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: parse: kalit so'zni o'zgaruvchi nomi sifatida ishlatish
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun agar = 5;
+    qaytarish 0;
+}

@@ -1,0 +1,11 @@
+// XATOLIK_KUTILMOQDA: cpp_level: yopiq maydonga tashqaridan kirish
+ulash "uzpp_runtime.hpp"
+sinf Hisob {
+yopiq:
+    butun balans = 100;
+};
+butun asosiy() {
+    Hisob h;
+    yozish << h.balans << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: cpp_level: o'zgaruvchida bu metod yo'q
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    matn s = "salom";
+    s.yoq_bunday_metod();
+    qaytarish 0;
+}

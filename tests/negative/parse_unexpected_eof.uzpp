@@ -1,0 +1,4 @@
+// XATOLIK_KUTILMOQDA: parse: kutilmagan fayl oxiri
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x =

@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: cpp_level: shablon argumenti yetishmaydi
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    vektor v;
+    qaytarish 0;
+}

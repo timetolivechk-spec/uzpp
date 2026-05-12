@@ -4,10 +4,10 @@
 
 **Ona tilingizda yozing. C++23 tezligida ishlating.**
 
-[![CI](https://github.com/timetolivechk-spec/uzpp/actions/workflows/ci.yml/badge.svg)](https://github.com/timetolivechk-spec/uzpp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](.github/workflows/ci.yml)
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#-quick-install)
+[![VS Code](https://img.shields.io/visual-studio-marketplace/v/uzpp.uzpp?label=VS%20Code&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
 
 <br>
 
@@ -20,6 +20,19 @@
 [O'zbekcha](#-uzbekcha) &nbsp;|&nbsp; [Русский](#-russian) &nbsp;|&nbsp; [English](#-english)
 
 </div>
+
+---
+
+## ⚡ Quick Install | Tezkor o'rnatish | Быстрая установка
+
+| Platform | One-line install | Status |
+|---|---|---|
+| 🪟 **Windows** | Download [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest) and run it | ✅ Released |
+| 🐧 **Linux** | _AppImage coming soon_ — for now build from source | 🔄 In progress |
+| 🍎 **macOS** | _Homebrew tap coming soon_ — for now build from source | 🔄 In progress |
+| 🧩 **VS Code** | Open Extensions → install `uzpp.uzpp` → it auto-installs the compiler | ✅ Marketplace |
+
+> ⏱️ **Time to first program: under 2 minutes.** Install Windows → open VS Code → write `salom.uzpp` → F5.
 
 ---
 
@@ -232,7 +245,7 @@ sudo apt-get install gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
 | ✅ Pattern matching | Tayyor |
 | ✅ Enum va mavhum sinflar | Tayyor |
 | ✅ LSP + VSCode kengaytmasi | Tayyor |
-| ✅ GitHub Actions CI | Tayyor |
+| 🔄 GitHub Actions CI | Sozlanmoqda (billing) |
 | 🔄 Paket menejeri (uzpm) | Ishlanmoqda |
 | 🔄 Hujjatlar generatori | Ishlanmoqda |
 | 📋 `uz++` standart kutubxona kengaytmasi | Rejalashtirilgan |
@@ -256,7 +269,7 @@ uz++/
 ├── misollar/          # Qo'shimcha misollar
 ├── tests/             # Integratsiya testlari (23+ ta)
 ├── vscode-uzpp/       # VSCode kengaytmasi
-└── .github/workflows/ # CI (Windows + Linux)
+└── installer/         # Windows installer (Inno Setup)
 ```
 
 ### Hissa qo'shish
@@ -402,8 +415,7 @@ butun asosiy() {
 - **Enum types** — `sanab_olish` with auto-generated name helpers
 - **Abstract classes** — `mavhum`, `ustidan_yozish` (virtual/override)
 - **VSCode extension** — syntax highlighting, LSP, hover docs
-- **GitHub Actions CI** — Windows (MSYS2/GCC) + Linux (GCC 14)
-- **25+ stdlib modules** — math, strings, JSON, async, networking, graphics
+- **25+ stdlib modules** — math, strings, JSON, async, networking, graphics (see [docs/stdlib-status.md](docs/stdlib-status.md) for honest status)
 
 ### Keyword reference
 
@@ -493,7 +505,7 @@ uz++/
 ├── misollar/               # Additional example programs
 ├── tests/                  # Integration tests (23+ passing)
 ├── vscode-uzpp/            # VSCode extension
-└── .github/workflows/      # CI: Windows + Linux
+└── installer/              # Windows installer (Inno Setup)
 ```
 
 ### Contributing

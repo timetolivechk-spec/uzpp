@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: cpp_level: const o'zgaruvchini qayta o'zgartirish
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    ozgarmas butun PI = 3;
+    PI = 4;
+    yozish << PI << qator_oxiri;
+    qaytarish 0;
+}

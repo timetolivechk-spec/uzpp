@@ -35,6 +35,8 @@ release-pkg/
 uzpp-windows-x64.zip
 uzpp-linux-x64.tar.gz
 uzpp-macos-*.tar.gz
+dist/
+installer/windows/Output/
 
 # CMake кэш
 CMakeCache.txt

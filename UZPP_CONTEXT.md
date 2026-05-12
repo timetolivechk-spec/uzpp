@@ -76,11 +76,16 @@
 - Полный pipeline `.uzpp` → бинарник.
 - Все 10 примеров из `misollar/` компилируются и запускаются.
 - 23 теста `.test.uzpp` проходят (формат `// OUT: "..."`).
+- 25 frontend unit-тестов в [tests/frontend_smoke.cpp](tests/frontend_smoke.cpp).
+- 27 negative-тестов в [tests/negative/](tests/negative/) с runner'ом.
 - VSCode расширение опубликовано: подсветка, LSP, DAP-клиент, status bar, F5 запуск.
+- VSCode v2.1.2: PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии (опубликовать через `vsce publish` — нужен PAT).
+- Inno Setup скрипт для Windows: [installer/windows/installer.iss](installer/windows/installer.iss) — собирает `uzpp-setup.exe` (~5 MB), HKCU PATH + .uzpp ассоциация без админ-прав.
 - One-click install через welcome screen работает на Windows.
 - GitHub Release v2.1.0 с `uzpp-windows-x64.zip` (uzpp.exe + stdlib).
 - MinGW скачивается с WinLibs автоматически.
 - SPEC.md существует (572 строки, версия 0.1).
+- SECURITY.md trilingual с координатами Security Advisory channel.
 
 **Что не работает:**
 - GitHub Actions CI — billing issue, не разрешено.
@@ -121,20 +126,20 @@
 ## План разработки (приоритезированный)
 
 ### Фаза 1: Очистка и безопасность (срочно, 1-2 недели)
-- [ ] Очистка корня репозитория от мусорных файлов.
-- [ ] Перенос markdown отчётов в `docs/`.
-- [ ] Исправление ссылок `YOUR_USERNAME` → `timetolivechk-spec`.
-- [ ] Заполнение About panel на GitHub (description, topics, website).
-- [ ] Создание CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md.
-- [ ] Фикс path traversal в `ulash`.
-- [ ] Фикс shell injection в вызове компилятора.
+- [x] Очистка корня репозитория от мусорных файлов (commit `6626b5d`).
+- [x] Перенос markdown отчётов в `docs/` (отчётов в корне нет).
+- [x] Исправление ссылок `YOUR_USERNAME` → `timetolivechk-spec`.
+- [ ] Заполнение About panel на GitHub (description, topics, website) — нужен `gh auth login`.
+- [x] Создание CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md, SECURITY.md (commit `317d643`).
+- [x] Фикс path traversal в `ulash` (commit `a12a84a`, negative tests).
+- [x] Фикс shell injection в вызове компилятора (commit `a12a84a`).
 
 ### Фаза 2: Качество и правдивость (3-4 недели)
 - [x] Аудит stdlib: классификация в [docs/stdlib-status.md](docs/stdlib-status.md), 7 STUB-модулей помечены `// status: EXPERIMENTAL`.
 - [x] ~~Удаление или переименование `kripto.hpp` → `xesh.hpp`~~ — НЕ нужно: фактически содержит SHA1+SHA256+Base64+HMAC+JWT, аудит показал, что это REAL модуль.
 - [x] Удаление лишних папок (phase12_demo и др.) — сделано в `6626b5d`.
-- [ ] Negative tests — минимум 30 штук.
-- [ ] Unit тесты для lexer, parser, codegen.
+- [x] Negative tests — 27 рабочих + 3 в [tests/negative/pending/](tests/negative/pending/) (трек-лист для багов компилятора). Runner: `bash tests/negative/run.sh` или `pwsh tests/negative/run.ps1`.
+- [x] Unit тесты для lexer, parser, type_checker, codegen — 25 в [tests/frontend_smoke.cpp](tests/frontend_smoke.cpp): 6 лексер (тройные строки, escape, числа, комменты, compound операторы, пустой ввод), 5 парсер (классы, match, try/catch, lambda, enum), 5 type_checker (arg count, undef ident, unused var, line/col), 5 codegen (main, #line, range-for, virtual, static), плюс 7 исходных smoke-тестов. Запуск: `build/uzpp_frontend_tests.exe`.
 
 ### Фаза 3: Образовательная ценность (1-2 месяца)
 - [ ] TypeChecker improvements — полный inferType.

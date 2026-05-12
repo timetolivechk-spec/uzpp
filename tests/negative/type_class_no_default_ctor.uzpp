@@ -1,0 +1,10 @@
+// XATOLIK_KUTILMOQDA: cpp_level: standart konstruktor yo'q
+ulash "uzpp_runtime.hpp"
+sinf Mashina {
+ochiq:
+    Mashina(matn nom) {}
+};
+butun asosiy() {
+    Mashina m;
+    qaytarish 0;
+}

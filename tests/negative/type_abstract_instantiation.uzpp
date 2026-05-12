@@ -1,0 +1,10 @@
+// XATOLIK_KUTILMOQDA: cpp_level: mavhum sinfdan misol yaratib bo'lmaydi
+ulash "uzpp_runtime.hpp"
+sinf Hayvon {
+ochiq:
+    mavhum bosh ovoz();
+};
+butun asosiy() {
+    Hayvon h;
+    qaytarish 0;
+}

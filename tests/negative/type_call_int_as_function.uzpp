@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: cpp_level: butun qiymat funksiya sifatida chaqirilyapti
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x = 5;
+    butun y = x(10);
+    yozish << y << qator_oxiri;
+    qaytarish 0;
+}

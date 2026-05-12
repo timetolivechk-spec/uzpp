@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.2] — 2026-05-12
+
+### Yangi imkoniyatlar
+- **Tizim PATH dan kompilyatorni topish** — `uzpp-setup.exe` (Windows) yoki
+  Homebrew/apt orqali o'rnatilgan `uzpp` endi avtomatik aniqlanadi.
+  Globalstorage'ga ikkinchi nusxa yuklab olish shart emas.
+- **Kompilyator topilmaganda yo'l-yo'riq xabari** — kengaytma faollashganda
+  `uzpp` topilmasa, foydalanuvchiga uchta variant ko'rsatiladi:
+  «Avtomatik o'rnatish» (Windows uchun `uzpp-setup.exe` ni yuklab oladi),
+  «Komponentlar (eski usul)» (eski globalstorage flow) yoki
+  «Yo'lni ko'rsatish» (mavjud `uzpp.exe` ga qo'lda yo'naltirish).
+
+### Tuzatishlar
+- `findCompilerPath` zanjiriga `where`/`which` orqali PATH qidiruvi qo'shildi
+  (eski tartib: globalStorage > embedded > settings > workspace > PATH;
+  yangi tartib: globalStorage > embedded > settings > **PATH** > workspace).
+
 ## [2.1.1] — 2026-05-06
 
 ### O'zgarishlar

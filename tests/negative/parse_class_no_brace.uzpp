@@ -1,0 +1,5 @@
+// XATOLIK_KUTILMOQDA: parse: sinf tanasiz
+ulash "uzpp_runtime.hpp"
+sinf Mashina
+
+butun asosiy() { qaytarish 0; }

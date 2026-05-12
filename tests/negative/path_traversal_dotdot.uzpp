@@ -1,0 +1,3 @@
+// XATOLIK_KUTILMOQDA: path_traversal: parent traversal (..) yo'l
+ulash "../../../etc/passwd"
+butun asosiy() { qaytarish 0; }

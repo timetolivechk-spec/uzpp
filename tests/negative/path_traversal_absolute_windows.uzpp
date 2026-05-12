@@ -1,0 +1,3 @@
+// XATOLIK_KUTILMOQDA: path_traversal: Windows disk harfi
+ulash "C:/Windows/System32/cmd.exe"
+butun asosiy() { qaytarish 0; }
