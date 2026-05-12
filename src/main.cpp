@@ -22,11 +22,35 @@
 #ifdef _WIN32
 #define popen _popen
 #define pclose _pclose
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 namespace fs = std::filesystem;
 
 namespace uzpp {
+
+namespace CompilerUtils {
+    inline fs::path getExecutableDir() {
+        fs::path exePath;
+#ifdef _WIN32
+        wchar_t path[MAX_PATH];
+        GetModuleFileNameW(NULL, path, MAX_PATH);
+        exePath = fs::path(path);
+#else
+        char path[1024];
+        ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
+        if (count != -1) {
+            exePath = fs::path(std::string(path, count));
+        } else {
+            exePath = fs::canonical("/proc/self/exe");
+        }
+#endif
+        return exePath.parent_path();
+    }
+}
+
 
 enum class CommandMode {
     Help,
@@ -584,35 +608,11 @@ private:
         return "\"" + value + "\"";
     }
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
+    // (`namespace CompilerUtils` used to live here, inside the class body,
+    // alongside system-header `#include`s — illegal C++ that GCC accepted as
+    // an extension but newer toolchains reject. The block has been moved out
+    // to file scope above `class UzppCompiler` so the file builds cleanly.)
 
-namespace CompilerUtils {
-    fs::path getExecutableDir() {
-        fs::path exePath;
-#ifdef _WIN32
-        wchar_t path[MAX_PATH];
-        GetModuleFileNameW(NULL, path, MAX_PATH);
-        exePath = fs::path(path);
-#else
-        char path[1024];
-        ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
-        if (count != -1) {
-            exePath = fs::path(std::string(path, count));
-        } else {
-            // fallback
-            exePath = fs::canonical("/proc/self/exe");
-        }
-#endif
-        return exePath.parent_path();
-    }
-}
-
-class UzppCompiler {
-private:
     std::string buildCompileCommand(const fs::path& cppFile,
                                     const fs::path& binaryFile,
                                     BuildTarget target,
@@ -1002,6 +1002,30 @@ BuildLayout resolveBuildLayout(const CliOptions& options) {
     BuildLayout layout;
     layout.project = ProjectManager::loadProject(fs::current_path());
     layout.stdlibRoot = ProjectManager::findStdlibRoot(fs::current_path());
+
+    // Fallback for installer / standalone / dev-build users: when nothing on
+    // the path from CWD upward looks like a uz++ checkout, look near the
+    // running uzpp.exe instead. Three layouts are accepted, in this order:
+    //   <exe-dir>/stdlib              (Inno Setup installer layout)
+    //   <exe-dir>/../stdlib           (dev `build/uzpp.exe` next to repo `stdlib/`)
+    //   walking up from <exe-dir>     (any other layout that puts stdlib above)
+    // Without this fallback, `uzpp ishga-tushirish C:\anywhere\foo.uzpp` from
+    // a random CWD failed with "Bunday fayl yoki katalog topilmadi" on the
+    // very first `ulash "uzpp_runtime.hpp"`.
+    if (!layout.stdlibRoot) {
+        std::error_code ec;
+        fs::path probe = CompilerUtils::getExecutableDir();
+        for (int depth = 0; depth < 8 && !probe.empty(); ++depth) {
+            const fs::path candidate = probe / "stdlib";
+            if (fs::exists(candidate / "uzpp_runtime.hpp", ec)) {
+                layout.stdlibRoot = candidate;
+                break;
+            }
+            const fs::path parent = probe.parent_path();
+            if (parent == probe) break;
+            probe = parent;
+        }
+    }
 
     if (!options.inputFile.empty()) {
         layout.inputFile = fs::path(options.inputFile);

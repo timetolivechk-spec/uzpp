@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.6] — 2026-05-12
+
+### Marketplace ko'rinishi
+- **README to'liq qayta yozildi** — endi to'g'ridan-to'g'ri Marketplace sahifasida
+  `uzpp-setup.exe` linki ko'rinadi va katta sarlavha bilan ko'rsatiladi. Avval
+  "Xush kelibsiz ekranida tugma bosing" deyilardi — bu chalkash edi, chunki
+  ekrandan tashqari hech qanday tugma `Marketplace` sahifasida ko'rinmaydi.
+  Endi ham toza Marketplace o'qish, ham VS Code ichidagi tugma bir xil
+  yo'lni ko'rsatadi.
+
+### Foydalanuvchi tajribasi (parallel kompilyator fixi)
+- `uzpp-setup.exe` ham yangilandi: ichidagi `uzpp.exe` endi
+  `#include "uzpp_runtime.hpp"` ni har qanday CWD'dan to'g'ri topadi
+  (`stdlib/` katalogi `uzpp.exe` yonida yoki bittasi yuqorida bo'lsa). Avval
+  `cd <repo-root>` qilmasdan ishga tushirib bo'lmasdi.
+
 ## [2.1.5] — 2026-05-12
 
 Marketplace v2.1.4 slotini muvaffaqiyatsiz upload bloklab qo'ydi

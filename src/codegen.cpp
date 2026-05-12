@@ -141,7 +141,12 @@ void CodeGen::writePreamble(const std::string& sourceName) {
     output_ << "#include <future>\n";
     output_ << "#include <unordered_map>\n";
     output_ << "#include <utility>\n";
-    output_ << "#include \"../stdlib/uzpp_runtime.hpp\"\n\n";
+    // Stdlib headers are resolved via -I<stdlib_dir> passed to g++ from
+    // main.cpp::collectIncludeDirs(), so emitting just the bare name lets the
+    // generated .cpp live anywhere on disk (random CWD, %TEMP%, network share).
+    // The previous "../stdlib/" prefix only worked when the .cpp ended up in
+    // <repo>/build/ next to a sibling stdlib/ folder.
+    output_ << "#include \"uzpp_runtime.hpp\"\n\n";
     output_ << "using namespace std;\n\n";
     output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
     lineStart_ = true;
@@ -1640,13 +1645,12 @@ void CodeGen::visitIncludeStatement(const IncludeStatement* stmt) {
         return;
     }
     if (mod.find(".hpp") != std::string::npos || mod.find(".h") != std::string::npos) {
-        // Relative stdlib headers get prefixed with ../stdlib/
-        // unless they already contain a path separator
-        if (mod.find('/') == std::string::npos && mod.find('\\') == std::string::npos) {
-            output_ << "#include \"../stdlib/" << mod << "\"\n";
-        } else {
-            output_ << "#include \"" << mod << "\"\n";
-        }
+        // Emit just the bare name. g++ resolves it via the -I<stdlib_dir>
+        // and -I<input.parent_path> flags that main.cpp::collectIncludeDirs()
+        // hands the compiler, so this works no matter where the generated
+        // .cpp ends up. (Previously we hard-coded "../stdlib/", which broke
+        // every time CWD wasn't the repo root.)
+        output_ << "#include \"" << mod << "\"\n";
     } else if (!mod.empty() && mod.front() == '<') {
         output_ << "#include " << mod << "\n";
     } else {

@@ -7,27 +7,41 @@
 
 ---
 
-## O'rnatish — 2 qadam
+## ⚡ O'rnatish — Windows uchun bitta qadam
 
-**1.** VS Code → Extensions → "uz++" → **Install**
+### 👉 [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe) ni yuklab oling va ishga tushiring (~115 MB).
 
-**2.** Xush kelibsiz ekranida **"Hammasini o'rnatish"** tugmasini bosing
-
-Shundan so'ng F5 bilan dastur ishga tushadi. Boshqa hech narsa kerak emas.
-
-### Nima yuklanadi?
+Bitta o'rnatuvchi ichida bor:
 
 | Komponent | Hajm | Tavsif |
-|-----------|------|--------|
-| uz++ kompilyatori | ~10 MB | Transpayler: `.uzpp` → C++ → binary |
-| Standart kutubxona | ~2 MB | `stdlib/uzpp_runtime.hpp` va boshqa modullar |
-| MinGW (faqat Windows) | ~150 MB | Portable C++ kompilyatori (g++), bir marta yuklanadi |
+|---|---|---|
+| **uz++ kompilyatori** | ~4 MB | Transpayler: `.uzpp` → C++ → binary |
+| **Standart kutubxona** | ~2 MB | `stdlib/uzpp_runtime.hpp` va boshqa modullar |
+| **MinGW GCC 14.2** | ~700 MB (113 MB zip) | C++ kompilyatori — boshqa hech narsa o'rnatish kerak emas |
 
-Barcha komponentlar `~/.vscode/extensions-storage/uzpp.uzpp/` papkasida saqlanadi va kengaytma yangilanishlarida saqlanib qoladi.
+Default joy: `%LOCALAPPDATA%\Programs\uzpp\` — admin huquqlari shart emas.
+PATH ga avtomatik qo'shiladi.
 
-### Internet yo'q? (Offline o'rnatish)
+O'rnatish tugagach VS Code'ni qayta ishga tushiring → har qanday `.uzpp` faylda **F5** bossangiz, dastur ishlaydi.
 
-Arxivlarni oldindan yuklab, `Ctrl+Shift+P` → **"uz++: Fayldan o'rnatish"** orqali o'rnating.
+---
+
+### Ko'p marta bosib turgan bo'lsangiz...
+
+VS Code Extensions panelida shu kengaytma sahifasida **Install** bosgandan keyin:
+
+- **Status bar pastida `⬇ uz++ install` tugmasi har doim turadi** — bosing, "Xush kelibsiz" ekrani ochiladi.
+- "Xush kelibsiz" ekranida **"Hammasini o'rnatish — uzpp-setup.exe (~115 MB)"** primary tugma har doim ko'rinib turadi (siz uz++ ni allaqachon o'rnatgan bo'lsangiz ham, qayta o'rnatish uchun).
+- Tugma `uzpp-setup.exe` ni avtomatik yuklab oladi va ishga tushiradi.
+
+Yoki to'g'ridan-to'g'ri brauzerdan yuklab oling: [GitHub Release v2.1.1](https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1).
+
+---
+
+### Linux / macOS
+
+Hozircha rasmiy paket yo'q — manba koddan quring:
+[Boshlash qo'llanmasi](https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md).
 
 ---
 
