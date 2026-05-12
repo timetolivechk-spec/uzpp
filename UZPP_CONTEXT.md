@@ -79,10 +79,11 @@
 - 25 frontend unit-тестов в [tests/frontend_smoke.cpp](tests/frontend_smoke.cpp).
 - 27 negative-тестов в [tests/negative/](tests/negative/) с runner'ом.
 - VSCode расширение опубликовано: подсветка, LSP, DAP-клиент, status bar, F5 запуск.
-- VSCode v2.1.2: PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии (опубликовать через `vsce publish` — нужен PAT).
-- Inno Setup скрипт для Windows: [installer/windows/installer.iss](installer/windows/installer.iss) — собирает `uzpp-setup.exe` (~5 MB), HKCU PATH + .uzpp ассоциация без админ-прав.
+- VSCode v2.1.2: PATH-детекция компилятора через `where`/`which` + улучшенный fallback flow при отсутствии. Опубликован код в репо; **Marketplace publish** требует нового PAT с правильным scope (см. ниже).
+- Inno Setup скрипт для Windows: [installer/windows/installer.iss](installer/windows/installer.iss) — собирает `uzpp-setup.exe` (2.9 MB), HKCU PATH + .uzpp ассоциация без админ-прав.
 - One-click install через welcome screen работает на Windows.
-- GitHub Release v2.1.0 с `uzpp-windows-x64.zip` (uzpp.exe + stdlib).
+- **GitHub Release v2.1.1** опубликован: https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1 — `uzpp-setup.exe` (2.9 MB) + `uzpp-windows-x64.zip` (1.2 MB) + trilingual release notes.
+- GitHub About panel заполнен: description (uz/en), website → Marketplace, 13 topics.
 - MinGW скачивается с WinLibs автоматически.
 - SPEC.md существует (572 строки, версия 0.1).
 - SECURITY.md trilingual с координатами Security Advisory channel.
@@ -129,7 +130,7 @@
 - [x] Очистка корня репозитория от мусорных файлов (commit `6626b5d`).
 - [x] Перенос markdown отчётов в `docs/` (отчётов в корне нет).
 - [x] Исправление ссылок `YOUR_USERNAME` → `timetolivechk-spec`.
-- [ ] Заполнение About panel на GitHub (description, topics, website) — нужен `gh auth login`.
+- [x] Заполнение About panel на GitHub (description, topics, website) — сделано через `gh repo edit` 2026-05-12.
 - [x] Создание CONTRIBUTING.md, CODE_OF_CONDUCT.md, CHANGELOG.md, SECURITY.md (commit `317d643`).
 - [x] Фикс path traversal в `ulash` (commit `a12a84a`, negative tests).
 - [x] Фикс shell injection в вызове компилятора (commit `a12a84a`).
