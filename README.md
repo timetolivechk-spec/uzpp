@@ -27,7 +27,7 @@
 
 | Platform | One-line install | Status |
 |---|---|---|
-| 🪟 **Windows** | Download [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest) and run it | ✅ Released |
+| 🪟 **Windows** | Download [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest) (~115 MB, **bundles MinGW GCC 14.2 — nothing else to install**) and run it | ✅ Released |
 | 🐧 **Linux** | _AppImage coming soon_ — for now build from source | 🔄 In progress |
 | 🍎 **macOS** | _Homebrew tap coming soon_ — for now build from source | 🔄 In progress |
 | 🧩 **VS Code** | Open Extensions → install `uzpp.uzpp` → it auto-installs the compiler | ✅ Marketplace |
