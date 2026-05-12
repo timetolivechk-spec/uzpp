@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.1.4] — 2026-05-12
+
+### Yangi imkoniyatlar
+
+- **«O'rnatish» tugmasi har doim ko'rinadi.** Welcome ekranida endi tugma
+  hech qachon yashirilmaydi: agar uz++ topilmagan bo'lsa — «Hammasini
+  o'rnatish», topilgan bo'lsa — «Qayta o'rnatish / yangilash».
+- **Status bar'da doimiy `$(cloud-download) uz++ install` tugmasi** —
+  istalgan paytda welcome ekranini bir bosish bilan ochadi.
+- **Welcome'da holat blok** — uz++ versiyasi va aniq yo'lini ko'rsatadi.
+- **Welcome'dagi tugma rasmiy `uzpp-setup.exe` ni yuklab oladi va ishga
+  tushiradi** — ichida MinGW GCC 14.2 bor, qo'shimcha hech narsa kerak emas.
+
+### Tuzatishlar (kritik)
+
+- **HTTP 404 hatosi olib tashlandi.** Eski welcome `releases/download/
+  14.2.0posix-18.1.8...` (WinLibs o'chirgan release) ga murojaat qilardi —
+  foydalanuvchi xato xabarini ko'rardi va o'rnatish ishlamasdi. Endi
+  rasmiy releasedan `uzpp-setup.exe` ishlatiladi.
+- **Welcome endi PATH'dagi uz++ ni hisobga oladi** — `uzpp-setup.exe` orqali
+  o'rnatgan foydalanuvchi «✓ Tayyor» holatini ko'radi va ortiqcha 150 MB
+  qayta yuklamaydi.
+- **Status bar va `requireComponents` (F5 oldi tekshiruvi)** ham PATH'ni
+  hisobga oladi.
+
 ## [2.1.3] — 2026-05-12
 
 ### Yangi imkoniyatlar

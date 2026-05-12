@@ -179,10 +179,14 @@ function buildRunCommand(context, verb, filePath) {
 /**
  * Checks components are ready. If not, offers to install.
  * Returns true if safe to proceed, false if user must install first.
+ *
+ * "Ready" means EITHER the per-extension globalStorage payload is present
+ * OR `uzpp` is reachable on the system PATH (installer / package manager).
  */
 async function requireComponents(context) {
     const status = cm.checkComponents(context);
     if (status.allOk) return true;
+    if (findCompilerOnPath() !== null) return true;
 
     const missing = [];
     if (!status.compilerOk) missing.push('uz++ kompilyatori');
@@ -477,12 +481,31 @@ async function cmdUpdateCompiler(context) {
 
 // ─── Status Bar ───────────────────────────────────────────────────────────────
 
+/**
+ * Determines if a usable uz++ compiler is reachable.
+ * Looks first at the per-extension globalStorage payload, then at the system
+ * PATH (so users who installed via uzpp-setup.exe / Homebrew / apt are
+ * recognized as already set up — no second download needed).
+ */
+function isCompilerReady(context) {
+    if (cm.checkComponents(context).allOk) return true;
+    return findCompilerOnPath() !== null;
+}
+
 function updateStatusBar(context) {
     const status = cm.checkComponents(context);
+    const onPath = findCompilerOnPath();
+
     if (status.allOk) {
         const version = getCompilerVersion(status.paths.compilerExe);
         statusBarItem.text    = version ? `$(bracket) uz++ v${version}` : '$(bracket) uz++';
         statusBarItem.tooltip = `uz++ tayyor. F5 → ishga tushirish.`;
+        statusBarItem.color   = undefined;
+        statusBarItem.command = 'uzpp.runFile';
+    } else if (onPath) {
+        const version = getCompilerVersion(onPath);
+        statusBarItem.text    = version ? `$(bracket) uz++ v${version}` : '$(bracket) uz++';
+        statusBarItem.tooltip = `uz++ PATH'da topildi: ${onPath}`;
         statusBarItem.color   = undefined;
         statusBarItem.command = 'uzpp.runFile';
     } else {
@@ -504,21 +527,19 @@ function showWelcome(context) {
         { enableScripts: true, retainContextWhenHidden: true }
     );
 
-    const status = cm.checkComponents(context);
+    // Compute compiler info for the welcome screen. If reachable via PATH or
+    // via globalStorage, show its version + path so the user knows uz++ is set
+    // up — but the "Install / reinstall" button is ALWAYS visible regardless.
+    const status   = cm.checkComponents(context);
+    const onPath   = findCompilerOnPath();
+    const exePath  = status.allOk ? status.paths.compilerExe : (onPath || null);
+    const version  = exePath ? getCompilerVersion(exePath) : null;
+    const compilerInfo = exePath ? { ready: true, exe: exePath, version } : { ready: false };
 
     panel.webview.onDidReceiveMessage(async (msg) => {
         switch (msg.command) {
-            case 'installAll':
-                try {
-                    await cm.installAll(context, (text, fraction) => {
-                        panel.webview.postMessage({ type: 'progress', text, fraction: fraction ?? 0 });
-                    });
-                    cm.ensureWrapperScript(context);
-                    updateStatusBar(context);
-                    panel.webview.postMessage({ type: 'done' });
-                } catch (e) {
-                    panel.webview.postMessage({ type: 'error', text: e.message });
-                }
+            case 'runInstaller':
+                await runOfficialInstaller(panel);
                 break;
             case 'newProject':
                 await cmdNewProject(context);
@@ -531,11 +552,74 @@ function showWelcome(context) {
                     vscode.Uri.parse('https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md')
                 );
                 break;
+            case 'openReleases':
+                vscode.env.openExternal(vscode.Uri.parse(RELEASES_LATEST_URL));
+                break;
         }
     }, undefined, context.subscriptions);
 
-    panel.webview.html = buildWelcomeHtml(status.allOk);
+    panel.webview.html = buildWelcomeHtml(compilerInfo);
     return panel;
+}
+
+/**
+ * Downloads the official uzpp-setup.exe from the latest GitHub release and
+ * launches it via the system shell. After the user finishes the installer
+ * and reloads VS Code, findCompilerOnPath() will discover uz++ automatically.
+ *
+ * Linux/macOS users get the releases page in their browser instead — Inno
+ * Setup is Windows-only and bundling AppImage / pkg installers is on the
+ * roadmap (see README Quick Install table).
+ */
+async function runOfficialInstaller(panel) {
+    if (process.platform !== 'win32') {
+        await vscode.env.openExternal(vscode.Uri.parse(RELEASES_LATEST_URL));
+        panel?.webview.postMessage({
+            type: 'info',
+            text: 'Linux/macOS uchun rasmiy o\'rnatuvchi hali tayyor emas. ' +
+                  'Manba koddan qurish bo\'yicha ko\'rsatma brauzerda ochildi.'
+        });
+        return;
+    }
+
+    panel?.webview.postMessage({ type: 'progress', text: 'O\'rnatuvchi yuklanmoqda...', fraction: 0 });
+    try {
+        const tmpDir   = require('os').tmpdir();
+        const dest     = path.join(tmpDir, 'uzpp-setup.exe');
+        const setupUrl = `${RELEASES_LATEST_URL}/download/uzpp-setup.exe`;
+
+        await cm.downloadFile(setupUrl, dest, (dl, total) => {
+            const dlMB    = (dl    / 1048576).toFixed(1);
+            const totalMB = total > 0 ? (total / 1048576).toFixed(1) : '?';
+            panel?.webview.postMessage({
+                type: 'progress',
+                text: `O'rnatuvchi yuklanmoqda: ${dlMB}/${totalMB} MB`,
+                fraction: total > 0 ? dl / total : 0,
+            });
+        });
+
+        panel?.webview.postMessage({
+            type: 'info',
+            text: "O'rnatuvchi ishga tushdi. Qadamlar bo'yicha o'rnatishni yakunlang, " +
+                  "so'ng VS Code'ni qayta ishga tushiring (Reload Window)."
+        });
+
+        // Detached so the installer survives the VS Code window restart that
+        // typically follows. UAC will appear if user picks Program Files.
+        const child = require('child_process').spawn(dest, [], {
+            detached: true, stdio: 'ignore', windowsHide: false,
+        });
+        child.unref();
+    } catch (e) {
+        panel?.webview.postMessage({ type: 'error', text: e.message });
+        const action = await vscode.window.showErrorMessage(
+            `Avtomatik yuklash xatosi: ${e.message}`,
+            'Brauzerda ochish'
+        );
+        if (action === 'Brauzerda ochish') {
+            vscode.env.openExternal(vscode.Uri.parse(RELEASES_LATEST_URL));
+        }
+    }
 }
 
 async function showWelcomeIfFirstRun(context) {
@@ -545,29 +629,59 @@ async function showWelcomeIfFirstRun(context) {
     showWelcome(context);
 }
 
-function buildWelcomeHtml(alreadyInstalled) {
-    const installSection = alreadyInstalled
-        ? `<div class="ready-box">
-             <div class="ready-icon">✓</div>
-             <div class="ready-text">Barcha komponentlar o'rnatilgan! F5 tugmasini bosing.</div>
-           </div>`
-        : `<div class="install-box">
-             <p>Birinchi ishlatishda uz++ uchta komponent o'rnatadi:</p>
-             <ul>
-               <li><strong>uz++ kompilyatori</strong> (~10 MB) — transpayler</li>
-               <li><strong>Standart kutubxona</strong> (~2 MB) — stdlib/</li>
-               ${process.platform === 'win32' ? '<li><strong>C++ kompilyatori MinGW</strong> (~150 MB) — g++</li>' : ''}
-             </ul>
-             <p class="note">Internet kerak. Bir marta yuklanadi va keyingi yangilanishlarda saqlanib qoladi.</p>
-             <button id="btn-install" class="btn-primary" onclick="startInstall()">
-               Hammasini o'rnatish — One-Click Install
-             </button>
-             <div id="progress-area" style="display:none">
-               <div class="progress-bar-bg"><div id="progress-bar" class="progress-bar-fill"></div></div>
-               <div id="progress-text" class="progress-text">Tayyorlanmoqda...</div>
+function buildWelcomeHtml(compilerInfo) {
+    const isWin = process.platform === 'win32';
+    const ready = compilerInfo && compilerInfo.ready;
+
+    // Status banner: green if compiler is reachable, yellow otherwise.
+    const statusBanner = ready
+        ? `<div class="status-box ready">
+             <div class="status-icon">✓</div>
+             <div class="status-text">
+               <strong>uz++ tayyor.</strong>
+               ${compilerInfo.version ? ` Versiya <code>${compilerInfo.version}</code>.` : ''}
+               <div class="status-path"><code>${compilerInfo.exe}</code></div>
              </div>
-             <div id="error-area" style="display:none" class="error-box"></div>
+           </div>`
+        : `<div class="status-box not-ready">
+             <div class="status-icon">⚠</div>
+             <div class="status-text">
+               <strong>uz++ kompilyatori topilmadi.</strong>
+               Pastdagi tugma orqali o'rnating yoki PATH'dagi mavjud nusxani ko'rsating.
+             </div>
            </div>`;
+
+    // Install button is ALWAYS visible. Label adapts to current state so users
+    // who already have uz++ can still re-install / upgrade from this screen.
+    const installLabel = isWin
+        ? (ready ? "uz++ ni qayta o'rnatish / yangilash (~115 MB)"
+                 : "Hammasini o'rnatish — uzpp-setup.exe (~115 MB)")
+        : (ready ? "Releases sahifasini ochish (yangilash uchun)"
+                 : "Releases sahifasini ochish");
+
+    const installDescription = isWin
+        ? `<p>Bu rasmiy <code>uzpp-setup.exe</code> ni yuklab oladi va ishga tushiradi.
+            Ichida MinGW GCC 14.2 ham bor — boshqa hech narsa o'rnatish kerak emas.
+            O'rnatuvchi <code>%LOCALAPPDATA%\\Programs\\uzpp\\</code> ga o'rnatadi
+            (admin huquqsiz).</p>`
+        : `<p>Linux/macOS uchun rasmiy paket hali yo'q. Brauzerda releases
+            sahifasi ochiladi — manba koddan qurish bo'yicha
+            <a href="#" onclick="vscode.postMessage({command:'openDocs'})">qo'llanma</a>
+            bilan davom eting.</p>`;
+
+    const installSection = `<div class="install-box">
+        ${statusBanner}
+        <button id="btn-install" class="btn-primary" onclick="startInstall()">
+          ${installLabel}
+        </button>
+        ${installDescription}
+        <div id="progress-area" style="display:none">
+          <div class="progress-bar-bg"><div id="progress-bar" class="progress-bar-fill"></div></div>
+          <div id="progress-text" class="progress-text">Tayyorlanmoqda...</div>
+        </div>
+        <div id="info-area"  style="display:none" class="info-box"></div>
+        <div id="error-area" style="display:none" class="error-box"></div>
+      </div>`;
 
     return `<!DOCTYPE html>
 <html lang="uz">
@@ -608,6 +722,20 @@ function buildWelcomeHtml(alreadyInstalled) {
     background: var(--vscode-editorWidget-background); }
   .ready-box { display: flex; align-items: center; gap: 16px; }
   .ready-icon { font-size: 2em; color: var(--vscode-testing-iconPassed); }
+  .status-box { display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 6px; margin-bottom: 18px;
+    border: 1px solid var(--vscode-editorGroup-border); }
+  .status-box.ready     { border-color: var(--vscode-testing-iconPassed); }
+  .status-box.not-ready { border-color: var(--vscode-inputValidation-warningBorder); }
+  .status-icon { font-size: 1.6em; flex-shrink: 0; }
+  .status-box.ready     .status-icon { color: var(--vscode-testing-iconPassed); }
+  .status-box.not-ready .status-icon { color: var(--vscode-inputValidation-warningForeground); }
+  .status-text { font-size: 0.95em; }
+  .status-path { font-size: 0.82em; color: var(--vscode-descriptionForeground); margin-top: 2px;
+    word-break: break-all; }
+  .info-box { background: var(--vscode-textBlockQuote-background);
+    border: 1px solid var(--vscode-editorGroup-border);
+    border-radius: 4px; padding: 10px 14px; margin-top: 12px; font-size: 0.9em; }
   .btn-primary { display: inline-block; margin: 14px 0 8px;
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
@@ -673,7 +801,7 @@ butun asosiy() {
 <div class="actions">
   <button class="btn-secondary" onclick="vscode.postMessage({command:'newProject'})">Yangi loyiha yaratish</button>
   <button class="btn-secondary" onclick="vscode.postMessage({command:'openDocs'})">Qo'llanma (Docs)</button>
-  ${!alreadyInstalled ? '<button class="btn-secondary" onclick="vscode.postMessage({command:\'installFromFile\'})">Fayldan o\'rnatish (offline)</button>' : ''}
+  <button class="btn-secondary" onclick="vscode.postMessage({command:'openReleases'})">Releases sahifasi</button>
 </div>
 
 <script>
@@ -682,31 +810,32 @@ butun asosiy() {
   function startInstall() {
     const btn = document.getElementById('btn-install');
     btn.disabled = true;
-    btn.textContent = "O'rnatilmoqda...";
+    btn.textContent = "Yuklanmoqda...";
     document.getElementById('progress-area').style.display = 'block';
     document.getElementById('error-area').style.display = 'none';
-    vscode.postMessage({ command: 'installAll' });
+    document.getElementById('info-area').style.display = 'none';
+    vscode.postMessage({ command: 'runInstaller' });
+  }
+
+  function showText(id, text) {
+    const el = document.getElementById(id);
+    el.style.display = 'block';
+    el.textContent = text;
   }
 
   window.addEventListener('message', (event) => {
     const msg = event.data;
+    const btn = document.getElementById('btn-install');
     if (msg.type === 'progress') {
       document.getElementById('progress-text').textContent = msg.text;
       document.getElementById('progress-bar').style.width = Math.round((msg.fraction ?? 0) * 100) + '%';
-    } else if (msg.type === 'done') {
+    } else if (msg.type === 'info') {
+      showText('info-area', msg.text);
       document.getElementById('progress-bar').style.width = '100%';
-      document.getElementById('progress-text').textContent = "Tayyor! F5 tugmasini bosing.";
-      const btn = document.getElementById('btn-install');
-      if (btn) {
-        btn.textContent = "Yangi loyiha yaratish";
-        btn.disabled = false;
-        btn.onclick = () => vscode.postMessage({ command: 'newProject' });
-      }
+      document.getElementById('progress-text').textContent = 'Tayyor.';
+      if (btn) { btn.disabled = false; btn.textContent = "Qayta yuklab olish"; }
     } else if (msg.type === 'error') {
-      document.getElementById('error-area').style.display = 'block';
-      document.getElementById('error-area').textContent = "Xato: " + msg.text +
-        " — Internetni tekshiring yoki 'Fayldan o'rnatish' ni sinab ko'ring.";
-      const btn = document.getElementById('btn-install');
+      showText('error-area', "Xato: " + msg.text);
       if (btn) { btn.disabled = false; btn.textContent = "Qayta urinish"; }
     }
   });
@@ -716,6 +845,18 @@ butun asosiy() {
 }
 
 // ─── Activate / Deactivate ────────────────────────────────────────────────────
+
+/** Persistent status-bar entry that always offers "Install / Reinstall uz++". */
+let installStatusBarItem;
+function ensureInstallStatusBarItem(context) {
+    if (installStatusBarItem) return;
+    installStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+    installStatusBarItem.text    = '$(cloud-download) uz++ install';
+    installStatusBarItem.tooltip = "uz++ ni o'rnatish yoki qayta o'rnatish";
+    installStatusBarItem.command = 'uzpp.openWelcome';
+    installStatusBarItem.show();
+    context.subscriptions.push(installStatusBarItem);
+}
 
 function activate(context) {
     const compilerPath = findCompilerPath(context);
@@ -747,6 +888,11 @@ function activate(context) {
         // installer flow as a dismissible notification.
         offerCompilerInstall(context).catch(() => {});
     }
+
+    // Always-visible install entrypoint in the status bar — independent of
+    // whether the compiler is currently detected, so users can re-install /
+    // upgrade at any moment.
+    ensureInstallStatusBarItem(context);
 
     // Status bar
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
