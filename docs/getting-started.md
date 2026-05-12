@@ -1,5 +1,4 @@
-# uz++ — Boshlang'ich qo'llanma
-# Getting Started with uz++
+# uz++ — Boshlang'ich qo'llanma | Getting Started with uz++
 
 **O'qish vaqti: ~15 daqiqa | Reading time: ~15 minutes**
 
@@ -7,43 +6,59 @@
 
 ## 1. O'rnatish | Installation
 
-### Windows (MSYS2)
+### 🪟 Windows — tavsiya etiladi | Recommended
 
-```bash
-# 1. MSYS2 o'rnating: https://www.msys2.org/
-# 2. UCRT64 terminalini oching va:
-pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+**Eng oson yo'l:** [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe)
+ni yuklab oling va ishga tushiring (~115 MB).
 
-# 3. uz++ ni klonlang va quring
-git clone https://github.com/timetolivechk-spec/uzpp
-cd uzpp
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
-cmake --build build
+Ichida MinGW GCC 14.2 ham bor — boshqa hech narsa o'rnatish kerak emas. Admin
+huquqlari talab qilinmaydi. Default joy:
+`%LOCALAPPDATA%\Programs\uzpp\`. PATH ga avtomatik qo'shiladi.
 
-# 4. PATH ga qo'shing (ixtiyoriy)
-export PATH="$PATH:/path/to/uzpp/build"
+O'rnatish tugagach yangi PowerShell oynasini oching va tekshiring:
+
+```powershell
+uzpp --version
 ```
 
-### Linux (Ubuntu 24.04)
+### 🐧 Linux / 🍎 macOS — manba koddan qurish | Build from source
 
+Hozircha rasmiy paket yo'q, manba koddan qurish kerak (~3 daqiqa):
+
+**Ubuntu 24.04:**
 ```bash
-sudo apt-get install gcc-14 g++-14 cmake ninja-build libx11-dev libgl1-mesa-dev
-git clone https://github.com/timetolivechk-spec/uzpp
-cd uzpp
+sudo apt-get install gcc-14 g++-14 cmake ninja-build
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build -DCMAKE_CXX_COMPILER=g++-14
 cmake --build build
+export PATH="$PWD/build:$PATH"   # PATH ga qo'shing (.bashrc ga ko'chiring)
 ```
 
-### macOS
-
+**macOS (AppleClang Xcode 16+):**
 ```bash
-xcode-select --install  # AppleClang (Xcode 16+)
+xcode-select --install
 brew install cmake ninja
-git clone https://github.com/timetolivechk-spec/uzpp
-cd uzpp
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+cmake --build build
+export PATH="$PWD/build:$PATH"
+```
+
+**Windows (MSYS2 UCRT64) — agar `uzpp-setup.exe` ishlatmasangiz:**
+```bash
+pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ```
+
+### 🧩 VS Code — har qanday OS
+
+1. Extensions panelida `uz++` ni qidiring (publisher `uzpp`).
+2. **Install** bossangiz, status bar pastida `⬇ uz++ install` tugmasi paydo
+   bo'ladi — bosing, kengaytma `uzpp-setup.exe` ni avtomatik yuklab oladi va
+   ishga tushiradi (Windows uchun).
+3. Har qanday `.uzpp` faylida **F5** → ishga tushirish, **Ctrl+F5** → qurish.
 
 ---
 
@@ -63,12 +78,27 @@ butun asosiy() {
 Ishga tushiring:
 
 ```bash
+# uzpp-setup.exe orqali o'rnatgan bo'lsangiz (PATH'da bor):
+uzpp ishga-tushirish salom.uzpp
+
+# Manba koddan qurgan bo'lsangiz:
 ./build/uzpp ishga-tushirish salom.uzpp
 ```
 
 Natija:
 ```
 Salom, Dunyo!
+```
+
+**Faqat kompilyatsiya** (binary yaratish, ishga tushirmaslik):
+```bash
+uzpp qurish salom.uzpp                 # build/salom.exe yaratiladi
+./build/salom.exe                      # qo'lda ishga tushirish
+```
+
+**C++ ga tarjima qilingan kodni ko'rish** (debug uchun foydali):
+```bash
+uzpp transpile salom.uzpp --show-cpp
 ```
 
 ---

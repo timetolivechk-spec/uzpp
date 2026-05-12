@@ -85,7 +85,7 @@
 - **GitHub Release v2.1.1** опубликован: https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1 — `uzpp-setup.exe` **(113 MB, с bundled MinGW GCC 14.2 UCRT)** + `uzpp-windows-x64.zip` (1.1 MB, без компилятора) + trilingual release notes. Установщик закрывает дыру «g++ not found»: пользователь устанавливает только `uzpp-setup.exe`, ничего больше — `compiler/bin/g++.exe` лежит рядом с `uzpp.exe`.
 - GitHub About panel заполнен: description (uz/en), website → Marketplace, 13 topics.
 - MinGW скачивается с WinLibs автоматически.
-- SPEC.md существует (572 строки, версия 0.1).
+- Стартовое руководство в [docs/getting-started.md](docs/getting-started.md).
 - SECURITY.md trilingual с координатами Security Advisory channel.
 
 **Что не работает:**
@@ -217,5 +217,5 @@
 
 - Репо: https://github.com/timetolivechk-spec/uzpp
 - Marketplace: https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp
-- SPEC: SPEC.md в репо
+- Стартовое руководство: [docs/getting-started.md](docs/getting-started.md)
 - Лицензия: MIT

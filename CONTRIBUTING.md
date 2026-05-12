@@ -29,9 +29,11 @@ cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 
-# 3. Tekshirish
+# 3. To'liq test to'plamini ishga tushirish (PR yuborishdan oldin)
 ./build/uzpp --version
-./build/uzpp_frontend_tests   # birlik testlar
+./build/uzpp_frontend_tests                     # 25 frontend unit-test
+for f in tests/*.uzpp; do ./build/uzpp.exe qurish "$f"; done   # 23 integratsiya
+bash tests/negative/run.sh                       # 27 salbiy test
 
 # 4. Misol dasturni ishga tushirish
 ./build/uzpp ishga-tushirish misollar/01_salom_dunyo.uzpp
@@ -42,18 +44,27 @@ cmake --build build
 ```
 uz++/
 ├── src/
-│   ├── lexer.h / lexer.cpp          # Tokenizator — kalit so'zlarni aniqlaydi
-│   ├── parser.h / parser.cpp        # AST quruvchi — sintaksisni tahlil qiladi
+│   ├── lexer.{h,cpp}                # Tokenizator — kalit so'zlarni aniqlaydi
+│   ├── parser.{h,cpp}               # AST quruvchi — semantik tahlil
 │   ├── ast.h                        # Abstrakt sintaksis daraxti turlari
-│   ├── codegen.h / codegen.cpp      # C++23 kod generatori
+│   ├── codegen.{h,cpp}              # C++23 kod generatori
 │   ├── type_checker.hpp             # Semantik tahlil va tur tekshiruvi
-│   ├── formatter.h / formatter.cpp  # Kod formatlash
-│   ├── lsp_server.h / lsp_server.cpp# Language Server Protocol
+│   ├── formatter.{h,cpp}            # Kod formatlash
+│   ├── lsp_server.{h,cpp}           # Language Server Protocol
+│   ├── dap_server.{h,cpp}           # Debug Adapter Protocol
+│   ├── package_manager.h            # uzpm paket menejeri
 │   └── main.cpp                     # CLI kirish nuqtasi
 ├── stdlib/                          # uz++ standart kutubxonasi (header-only)
-├── tests/                           # Integratsiya testlari (*.uzpp)
-├── misollar/                        # 10 ta kanon misol
-└── vscode-uzpp/                     # VSCode kengaytmasi
+├── tests/
+│   ├── *.uzpp                       # 23 integratsiya testi
+│   ├── frontend_smoke.cpp           # 25 frontend unit-test
+│   └── negative/*.uzpp              # 27 salbiy test (kompilyator rad etishi kerak)
+├── examples/                        # 10 ta o'rganuvchi misol
+├── misollar/                        # 10 ta amaliy misol (FizzBuzz va h.k.)
+├── docs/                            # Hujjatlar (getting-started, stdlib-status)
+├── installer/windows/               # Inno Setup → uzpp-setup.exe
+├── vscode-uzpp/                     # VS Code kengaytmasi
+└── packages/                        # uzpm uchun namuna paketlar
 ```
 
 ### Kompilyator arxitekturasi
@@ -72,25 +83,36 @@ Tekshirilgan AST
 Ikkilik fayl
 ```
 
-### Test yozish
+### Test yozish | Writing tests
 
-Har bir yangi xususiyat uchun `tests/` papkasida test fayli yarating:
+uz++ uchta darajadagi testlardan foydalanadi:
+
+**1. Integratsiya test (`tests/*.uzpp`)** — yangi til xususiyati uchun ham
+ishlash kerakligini ko'rsatadi:
 
 ```bash
-# Yangi test yaratish
 cat > tests/test_mening_xususiyatim.uzpp << 'EOF'
 ulash "uzpp_runtime.hpp"
 
 butun asosiy() {
-    // Xususiyatingizni bu yerda sinab ko'ring
     yozish << "Test muvaffaqiyatli!" << qator_oxiri;
     qaytarish 0;
 }
 EOF
-
-# Testni ishga tushirish
 ./build/uzpp qurish tests/test_mening_xususiyatim.uzpp
 ```
+
+**2. Salbiy test (`tests/negative/*.uzpp`)** — kompilyator yomon kodni rad
+etishini tasdiqlaydi. Birinchi qatorda `// XATOLIK_KUTILMOQDA: <kategoriya>`
+qoldiring. Hozir 27 ta salbiy test bor. `bash tests/negative/run.sh` ularni
+yugurtirib, har biri `exit != 0` qaytarishini tekshiradi.
+
+**3. Frontend unit-test (`tests/frontend_smoke.cpp`)** — lexer/parser/
+type_checker/codegen ichki invariantlari. Yangi unit-test qo'shish uchun
+faylga yangi `{ ... }` blok qo'shing va `cmake --build` ni qayta yuriting.
+25 ta unit-test bor.
+
+PR yuborishdan oldin barcha 3 darajadagi testlar yashil bo'lishi kerak.
 
 ### Kod uslubi
 
@@ -132,18 +154,33 @@ Welcome to uz++! All contributions — bug fixes, features, documentation, or tr
 - Windows: MSYS2/UCRT64 environment
 
 ```bash
-# Clone
+# 1. Clone
 git clone https://github.com/timetolivechk-spec/uzpp
 cd uzpp
 
-# Build
+# 2. Build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 
-# Test
-./build/uzpp_frontend_tests
+# 3. Run the full test suite (before opening a PR)
+./build/uzpp --version
+./build/uzpp_frontend_tests                       # 25 frontend unit tests
+for f in tests/*.uzpp; do ./build/uzpp.exe qurish "$f"; done    # 23 integration
+bash tests/negative/run.sh                        # 27 negative tests
+
+# 4. Try a sample program
 ./build/uzpp ishga-tushirish misollar/01_salom_dunyo.uzpp
 ```
+
+### Testing
+
+Three test tiers, all expected to pass before merge:
+
+- **`tests/*.uzpp`** — integration tests. Add one per new language feature.
+- **`tests/negative/*.uzpp`** — programs that *must* fail to compile.
+  Runner: `bash tests/negative/run.sh` (also `tests/negative/run.ps1`).
+- **`tests/frontend_smoke.cpp`** — unit tests for lexer/parser/type_checker/
+  codegen internals. Add a new `{ ... }` block and re-run `cmake --build`.
 
 ### Code style
 

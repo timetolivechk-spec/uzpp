@@ -42,6 +42,7 @@ installer/windows/Output/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
+Testing/                            # CTest artifacts
 
 # IDE
 .vscode/settings.json
