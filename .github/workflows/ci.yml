@@ -194,20 +194,28 @@ jobs:
       - name: Run tests/ regression suite (all *.uzpp)
         run: |
           set +e  # don't abort on first failing test; we count failures ourselves
-          PASS=0; FAIL=0; FAILED_LIST=""
+          # Read Linux-specific skip list (one filename per line, # for comments)
+          SKIP=$(grep -vE '^\s*(#|$)' tests/.ci_skip_linux 2>/dev/null | tr '\n' '|' | sed 's/|$//')
+          PASS=0; FAIL=0; SKIPPED=0; FAILED_LIST=""
           for f in tests/*.uzpp; do
+            bn=$(basename "$f")
+            if [ -n "$SKIP" ] && echo "$bn" | grep -qE "^($SKIP)$"; then
+              SKIPPED=$((SKIPPED+1))
+              echo "SKIP $bn (in tests/.ci_skip_linux)"
+              continue
+            fi
             OUT=$(./build/uzpp qurish "$f" 2>&1)
             if echo "$OUT" | grep -q "MUVAFFAQIYAT: Dastur tayyor"; then
               PASS=$((PASS+1))
             else
               FAIL=$((FAIL+1))
-              FAILED_LIST="$FAILED_LIST $(basename $f)"
-              echo "::group::FAIL $(basename $f)"
+              FAILED_LIST="$FAILED_LIST $bn"
+              echo "::group::FAIL $bn"
               echo "$OUT" | tail -60
               echo "::endgroup::"
             fi
           done
-          echo "tests/ regression: $PASS passed, $FAIL failed"
+          echo "tests/ regression: $PASS passed, $FAIL failed, $SKIPPED skipped"
           if [ $FAIL -ne 0 ]; then
             echo "FAILED tests:$FAILED_LIST"
             exit 1

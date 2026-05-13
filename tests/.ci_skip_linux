@@ -1,0 +1,10 @@
+# Tests skipped on Linux CI (one filename per line, # for comments).
+#
+# test_deducing_this.uzpp — C++23 explicit object parameter
+# (P0847R7, "deducing this"). Codegen is correct (Windows MSYS2 g++ 15.2
+# compiles and runs it). The Ubuntu 24.04 toolchain-r/test PPA gcc-15
+# build rejects the `void f(this Self& self)` syntax with
+# "expected identifier before 'this'". This is a Linux-specific
+# packaging/regression issue, not an uz++ bug. Revisit when Ubuntu's
+# default gcc supports the full feature.
+test_deducing_this.uzpp
