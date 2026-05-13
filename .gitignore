@@ -52,3 +52,4 @@ Testing/                            # CTest artifacts
 
 # Claude AI настройки
 .claude/
+build_release/

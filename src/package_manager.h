@@ -10,6 +10,14 @@
 #include <string>
 #include <vector>
 
+// GCC on Linux predefines `linux` as a macro expanding to `1`. We want it as a
+// plain identifier (PlatformSupport::linux). Undefining is the canonical fix —
+// other predefined identifiers `unix` / `i386` would have the same risk, but
+// we do not use those names anywhere.
+#ifdef linux
+#  undef linux
+#endif
+
 namespace fs = std::filesystem;
 
 namespace uzpp {

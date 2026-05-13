@@ -83,6 +83,23 @@ jobs:
           echo "Results: $PASS passed, $FAIL failed"
           [ $FAIL -eq 0 ]
 
+      - name: Run tests/ regression suite (all *.uzpp)
+        run: |
+          PASS=0; FAIL=0; FAILED_LIST=""
+          for f in tests/*.uzpp; do
+            if ./build/uzpp.exe qurish "$f" 2>&1 | grep -q "MUVAFFAQIYAT: Dastur tayyor"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              FAILED_LIST="$FAILED_LIST $(basename $f)"
+            fi
+          done
+          echo "tests/ regression: $PASS passed, $FAIL failed"
+          if [ $FAIL -ne 0 ]; then
+            echo "FAILED tests:$FAILED_LIST"
+            exit 1
+          fi
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
@@ -163,6 +180,23 @@ jobs:
           done
           echo "Results: $PASS passed, $FAIL failed"
           [ $FAIL -eq 0 ]
+
+      - name: Run tests/ regression suite (all *.uzpp)
+        run: |
+          PASS=0; FAIL=0; FAILED_LIST=""
+          for f in tests/*.uzpp; do
+            if ./build/uzpp qurish "$f" 2>&1 | grep -q "MUVAFFAQIYAT: Dastur tayyor"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1))
+              FAILED_LIST="$FAILED_LIST $(basename $f)"
+            fi
+          done
+          echo "tests/ regression: $PASS passed, $FAIL failed"
+          if [ $FAIL -ne 0 ]; then
+            echo "FAILED tests:$FAILED_LIST"
+            exit 1
+          fi
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
