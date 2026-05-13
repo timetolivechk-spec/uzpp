@@ -85,6 +85,7 @@ jobs:
 
       - name: Run tests/ regression suite (all *.uzpp)
         run: |
+          set +e  # don't abort on first failing test; we count failures ourselves
           PASS=0; FAIL=0; FAILED_LIST=""
           for f in tests/*.uzpp; do
             OUT=$(./build/uzpp.exe qurish "$f" 2>&1)
@@ -94,7 +95,7 @@ jobs:
               FAIL=$((FAIL+1))
               FAILED_LIST="$FAILED_LIST $(basename $f)"
               echo "::group::FAIL $(basename $f)"
-              echo "$OUT" | tail -40
+              echo "$OUT" | tail -60
               echo "::endgroup::"
             fi
           done
@@ -187,6 +188,7 @@ jobs:
 
       - name: Run tests/ regression suite (all *.uzpp)
         run: |
+          set +e  # don't abort on first failing test; we count failures ourselves
           PASS=0; FAIL=0; FAILED_LIST=""
           for f in tests/*.uzpp; do
             OUT=$(./build/uzpp qurish "$f" 2>&1)
@@ -196,7 +198,7 @@ jobs:
               FAIL=$((FAIL+1))
               FAILED_LIST="$FAILED_LIST $(basename $f)"
               echo "::group::FAIL $(basename $f)"
-              echo "$OUT" | tail -40
+              echo "$OUT" | tail -60
               echo "::endgroup::"
             fi
           done
