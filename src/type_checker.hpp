@@ -243,7 +243,8 @@ private:
 
     void declareVar(const std::string& name, const std::string& type, const Token& token) {
         if (scopes_.empty()) enterScope();
-        if (scopes_.back().contains(name)) {
+        // Allow function overloading: skip duplicate check for "funktsiya" type
+        if (scopes_.back().contains(name) && type != "funktsiya") {
             reportError("O'zgaruvchi '" + name + "' ushbu qamrovda allaqachon e'lon qilingan.", token);
         }
         scopes_.back()[name] = VarInfo{type, token, false};
@@ -370,7 +371,22 @@ private:
                 if (var->isConst() && !var->getInitializer()) {
                     reportError("O'zgarmas (const) o'zgaruvchi '" + var->getName() + "' e'lon qilinganda qiymatga ega bo'lishi shart.", var->getDeclToken());
                 }
-                declareVar(var->getName(), declaredType, var->getDeclToken());
+                // Structured binding: name like "[a, b]" -> declare each binding individually
+                const std::string& vname = var->getName();
+                if (!vname.empty() && vname.front() == '[' && vname.back() == ']') {
+                    std::string inner = vname.substr(1, vname.size() - 2);
+                    std::string cur;
+                    for (char c : inner) {
+                        if (c == ',' || c == ' ' || c == '\t') {
+                            if (!cur.empty()) { declareVar(cur, "noma'lum", var->getDeclToken()); cur.clear(); }
+                        } else {
+                            cur += c;
+                        }
+                    }
+                    if (!cur.empty()) declareVar(cur, "noma'lum", var->getDeclToken());
+                } else {
+                    declareVar(vname, declaredType, var->getDeclToken());
+                }
                 break;
             }
             case ASTNodeType::FunctionDeclaration: {
@@ -380,6 +396,8 @@ private:
                 std::vector<std::string> pTypes;
                 std::size_t minArgs = 0;
                 for (const auto& p : func->getParameters()) {
+                    // Skip explicit object parameters (C++23 deducing this)
+                    if (p.isExplicitObject) continue;
                     pTypes.push_back(p.type);
                     if (p.defaultValue.empty()) minArgs++;
                 }
@@ -423,7 +441,11 @@ private:
                 }
                 for (const auto& method : cls->getMethods()) {
                     std::vector<std::string> pTypes;
-                    for (const auto& p : method->params) pTypes.push_back(p.type);
+                    for (const auto& p : method->params) {
+                        // Skip explicit object parameters (C++23 deducing this)
+                        if (p.isExplicitObject) continue;
+                        pTypes.push_back(p.type);
+                    }
                     info.methodParams[method->name] = pTypes;
                     info.methodReturns[method->name] = method->returnType.empty() ? cls->getName() : method->returnType;
 
@@ -706,6 +728,8 @@ private:
                 std::string name = id->getName();
                 // Shablon argumenti bo'lgan nomlar (<...> ichida) — standart funksiyalar
                 if (name.find('<') != std::string::npos) break;
+                // Pack-expansion / fold-expression ellipsis — kompilyator C++ ga so'zma-so'z chiqaradi
+                if (name == "...") break;
                 // Ogohlantirish faqat kichik harf bilan boshlangan va "::" qatnashmagan noma'lum o'zgaruvchilarga
                 if (!name.empty() && std::islower(name[0]) && name.find("::") == std::string::npos && !isDeclared(name)) {
                     reportWarning("Noma'lum o'zgaruvchi ishlatilmoqda -> " + name, id->getSourceToken());
@@ -759,6 +783,10 @@ private:
                 // Allow butun (int) and matn (string) — matn is valid for map/JSON subscript
                 if (indexType != "noma'lum" && indexType != "butun" && indexType != "matn") {
                     reportWarning("Massiv indeksi 'butun' (int) yoki 'matn' (string) bo'lishi kerak, lekin '" + indexType + "' berildi.", sub->getBracketToken());
+                }
+                // C++23 multidim: also check extra indices
+                for (const auto& extra : sub->getExtraIndices()) {
+                    checkExpr(extra.get());
                 }
                 break;
             }

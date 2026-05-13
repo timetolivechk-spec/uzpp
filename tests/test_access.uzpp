@@ -24,11 +24,11 @@ ochiq:
         qaytarish yolg'on;
     }
 
-    haqiqiy balansOlish() sabit {
+    haqiqiy balansOlish() o'zgarmas {
         qaytarish balans;
     }
 
-    matn egasiniOlish() sabit {
+    matn egasiniOlish() o'zgarmas {
         qaytarish egasi;
     }
 }

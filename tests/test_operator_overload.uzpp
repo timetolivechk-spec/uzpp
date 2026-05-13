@@ -9,26 +9,26 @@ sinf Vektor2D {
     Vektor2D(haqiqiy x_, haqiqiy y_) : x(x_), y(y_) {}
 
     // Qo'shish operatori
-    Vektor2D operator+(Vektor2D boshqa) sabit {
+    Vektor2D operator+(Vektor2D boshqa) o'zgarmas {
         qaytarish Vektor2D(x + boshqa.x, y + boshqa.y);
     }
 
     // Ayirish operatori
-    Vektor2D operator-(Vektor2D boshqa) sabit {
+    Vektor2D operator-(Vektor2D boshqa) o'zgarmas {
         qaytarish Vektor2D(x - boshqa.x, y - boshqa.y);
     }
 
     // Skalyar ko'paytirish
-    Vektor2D operator*(haqiqiy k) sabit {
+    Vektor2D operator*(haqiqiy k) o'zgarmas {
         qaytarish Vektor2D(x * k, y * k);
     }
 
     // Tenglik tekshiruvi
-    mantiqiy operator==(Vektor2D boshqa) sabit {
+    mantiqiy operator==(Vektor2D boshqa) o'zgarmas {
         qaytarish x == boshqa.x && y == boshqa.y;
     }
 
-    bosh chiqar() sabit {
+    bosh chiqar() o'zgarmas {
         yozish << "(" << x << ", " << y << ")" << qator_oxiri;
     }
 }

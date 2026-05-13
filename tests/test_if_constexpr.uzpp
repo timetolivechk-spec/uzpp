@@ -1,0 +1,16 @@
+ulash "uzpp_runtime.hpp"
+
+shablon <tur T>
+butun hajmiOlish() {
+    agar sobit_ifoda (sizeof(T) > 4) {
+        qaytarish 1;
+    } aks {
+        qaytarish 0;
+    }
+}
+
+butun asosiy() {
+    butun h1 = hajmiOlish<butun>();
+    butun h2 = hajmiOlish<haqiqiy>();
+    qaytarish 0;
+}

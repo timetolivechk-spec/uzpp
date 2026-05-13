@@ -1,0 +1,40 @@
+// uz++ — Explicit object parameter (C++23 deducing this)
+// oz = "this" (O'zbekcha), bosh = "this" (O'zbekcha)
+
+ulash "uzpp_runtime.hpp"
+
+sinf Hisoblagich {
+    butun qiymat;
+    
+    Hisoblagich(butun boshlang) : qiymat(boshlang) {
+    }
+    
+    // Explicit object parameter yordamida chaqirish
+    // oz self = explicit object parameter
+    bosh chop(oz Hisoblagich& self) {
+        yozish << "Qiymat: " << self.qiymat << qator_oxiri;
+    }
+    
+    butun ol(oz Hisoblagich& self) {
+        qaytarish self.qiymat;
+    }
+    
+    bosh orttirib_chop(oz Hisoblagich& self) {
+        self.qiymat = self.qiymat + 1;
+        yozish << "Orttirilgan qiymat: " << self.qiymat << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    Hisoblagich h(10);
+    
+    h.chop();
+    yozish << "Olingan: " << h.ol() << qator_oxiri;
+    
+    h.orttirib_chop();
+    h.chop();
+    
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
+

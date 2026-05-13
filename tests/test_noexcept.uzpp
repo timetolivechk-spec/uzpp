@@ -1,0 +1,24 @@
+ulash "uzpp_runtime.hpp"
+
+bosh ozgartirish(butun& x) xato_tashlamaydi {
+    x = 0;
+}
+
+sinf TestSinf {
+ochiq:
+    butun qiymat;
+
+    TestSinf(butun q) : qiymat(q) {}
+
+    TestSinf(TestSinf&& boshqa) xato_tashlamaydi : qiymat(boshqa.qiymat) {
+        boshqa.qiymat = 0;
+    }
+}
+
+butun asosiy() {
+    butun a = 5;
+    ozgartirish(a);
+    TestSinf t1(10);
+    TestSinf t2(std::move(t1));
+    qaytarish 0;
+}

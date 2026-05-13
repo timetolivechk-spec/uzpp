@@ -12,6 +12,8 @@
 
 # Директория сборки CMake
 build/
+build_wt/
+build2/
 
 # Node.js зависимости (vscode-uzpp расширение)
 node_modules/
@@ -21,14 +23,15 @@ vscode-uzpp/node_modules/
 vscode-uzpp/bin/
 vscode-uzpp/*.vsix
 
-# Временные тестовые файлы в корне
-test_fayl.txt
-test_out.txt
-test.txt
-test_*.uzpp
-test_*.cpp
-test*.uzpp
-demo_*.uzpp
+# Временные тестовые файлы в корне (NOT в tests/)
+/test_fayl.txt
+/test_out.txt
+/test.txt
+/test_*.uzpp
+/test_*.cpp
+/test*.uzpp
+/demo_*.uzpp
+/temp.uzpp
 
 # Release packaging artifacts
 release-pkg/

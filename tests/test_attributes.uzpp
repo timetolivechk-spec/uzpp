@@ -1,0 +1,33 @@
+// uz++ — Function attributes (Stage 6)
+// @tashlab_yuborilmas -> [[nodiscard]]
+// @eskirgan           -> [[deprecated]]
+
+ulash "uzpp_runtime.hpp"
+
+@tashlab_yuborilmas
+butun muhim_natija() {
+    qaytarish 42;
+}
+
+@eskirgan
+bosh eski_usul() {
+    yozish << "eski usul" << qator_oxiri;
+}
+
+@tashlab_yuborilmas @eskirgan
+butun ikkita_atribut() {
+    qaytarish 7;
+}
+
+butun asosiy() {
+    butun n = muhim_natija();
+    yozish << "muhim_natija = " << n << qator_oxiri;
+
+    eski_usul();
+
+    butun m = ikkita_atribut();
+    yozish << "ikkita_atribut = " << m << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

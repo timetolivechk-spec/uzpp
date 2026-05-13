@@ -1,0 +1,57 @@
+// uz++ — C-style massivlar sinfning a'zolari sifatida (C-style arrays in class members)
+
+ulash "uzpp_runtime.hpp"
+
+sinf Bufer {
+    butun data[10];
+    butun hajmi;
+    
+    Bufer() : hajmi(0) {
+    }
+    
+    bosh qosh(butun qiymat) {
+        agar (hajmi < 10) {
+            data[hajmi] = qiymat;
+            hajmi = hajmi + 1;
+        }
+    }
+    
+    butun ol(butun indeks) {
+        agar (indeks >= 0 && indeks < hajmi) {
+            qaytarish data[indeks];
+        }
+        qaytarish 0;
+    }
+    
+    bosh chop() {
+        yozish << "[";
+        butun i = 0;
+        while (i < hajmi) {
+            yozish << data[i];
+            i = i + 1;
+            agar (i < hajmi) {
+                yozish << ", ";
+            }
+        }
+        yozish << "]" << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    Bufer b;
+    b.qosh(1);
+    b.qosh(2);
+    b.qosh(3);
+    b.qosh(4);
+    b.qosh(5);
+    
+    yozish << "Bufer: ";
+    b.chop();
+    
+    yozish << "Birinchi element: " << b.ol(0) << qator_oxiri;
+    yozish << "Uchinchi element: " << b.ol(2) << qator_oxiri;
+    yozish << "Bufer hajmi: " << b.hajmi << qator_oxiri;
+    
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

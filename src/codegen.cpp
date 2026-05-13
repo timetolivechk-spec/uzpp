@@ -387,12 +387,14 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         // Casting operators
         {"statik_otkazish",   "static_cast"},
         {"dinamik_otkazish",  "dynamic_cast"},
-        {"sabit_otkazish",    "const_cast"},
+        {"o'zgarmas_otkazish",    "const_cast"},
         {"qayta_otkazish",    "reinterpret_cast"},
         // Memory management
         {"yangi",             "new"},
         {"o'chirish",         "delete"},
         {"ochirish",          "delete"},
+        // Compile-time assertion
+        {"statik_tasdiqlash", "static_assert"},
     };
 
     if (token.type == TokenType::Identifier) {
@@ -538,13 +540,16 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         if (!result.empty()) return result;
     }
 
-    // Strip trailing reference/pointer qualifiers, translate base, reattach
+    // Strip trailing reference/pointer/ellipsis qualifiers, translate base, reattach
     {
         std::string suffix;
         std::string base = uzppType;
-        // Handle &&, &, * suffixes
+        // Handle ..., &&, &, * suffixes
         while (!base.empty()) {
-            if (base.size() >= 2 && base.substr(base.size() - 2) == "&&") {
+            if (base.size() >= 3 && base.substr(base.size() - 3) == "...") {
+                suffix = "..." + suffix;
+                base = base.substr(0, base.size() - 3);
+            } else if (base.size() >= 2 && base.substr(base.size() - 2) == "&&") {
                 suffix = "&&" + suffix;
                 base = base.substr(0, base.size() - 2);
             } else if (base.back() == '&' || base.back() == '*') {
@@ -708,6 +713,9 @@ void CodeGen::visitExpression(const Expression* expr) {
         case ASTNodeType::TernaryExpression:
             visitTernaryExpression(static_cast<const TernaryExpression*>(expr));
             break;
+        case ASTNodeType::ThrowExpression:
+            visitThrowExpression(static_cast<const ThrowExpression*>(expr));
+            break;
         default:
             break;
     }
@@ -728,7 +736,14 @@ void CodeGen::visitBinaryExpression(const BinaryExpression* expr) {
         emitRawToken("}()");
         return;
     }
-    
+
+    // Pack expansion: <expr> ...   (used by variadic template forwarding)
+    if (expr->getOperator() == "...") {
+        visitExpression(expr->getLeft());
+        emitRawToken("...");
+        return;
+    }
+
     emitRawToken("(");
     visitExpression(expr->getLeft());
     emitRawToken(getOperatorSymbol(expr->getOperator()));
@@ -935,7 +950,7 @@ void CodeGen::visitFunctionCall(const FunctionCall* expr) {
             static const std::unordered_map<std::string, std::string> castMap = {
                 {"statik_otkazish",  "static_cast"},
                 {"dinamik_otkazish", "dynamic_cast"},
-                {"sabit_otkazish",   "const_cast"},
+                {"o'zgarmas_otkazish",   "const_cast"},
                 {"qayta_otkazish",   "reinterpret_cast"},
             };
             const std::string& fullName = idExpr->getName();
@@ -1013,6 +1028,11 @@ void CodeGen::visitSubscriptAccess(const SubscriptAccess* expr) {
     if (needParens) emitRawToken(")");
     emitRawToken("[");
     visitExpression(expr->getIndex());
+    // C++23 multidim subscript: emit additional comma-separated indices
+    for (const auto& extra : expr->getExtraIndices()) {
+        emitRawToken(",");
+        visitExpression(extra.get());
+    }
     emitRawToken("]");
 }
 
@@ -1050,6 +1070,9 @@ void CodeGen::visitStatement(const Statement* stmt) {
     switch (stmt->getType()) {
         case ASTNodeType::IfStatement:
             visitIfStatement(static_cast<const IfStatement*>(stmt));
+            break;
+        case ASTNodeType::TryStatement:
+            visitTryStatement(static_cast<const TryStatement*>(stmt));
             break;
         case ASTNodeType::WhileStatement:
             visitWhileStatement(static_cast<const WhileStatement*>(stmt));
@@ -1091,6 +1114,10 @@ void CodeGen::visitStatement(const Statement* stmt) {
         case ASTNodeType::ExportModuleStatement:
             visitExportModuleStatement(static_cast<const ExportModuleStatement*>(stmt));
             break;
+        case ASTNodeType::TokenStatement:
+            writeIndentIfNeeded();
+            emitRawToken(static_cast<const TokenStatement*>(stmt)->getToken().value);
+            break;
         default:
             break;
     }
@@ -1131,7 +1158,11 @@ void CodeGen::visitIfStatement(const IfStatement* stmt) {
     }
 
     writeIndentIfNeeded();
-    emitRawToken("if");
+    if (stmt->isConstExpr()) {
+        emitRawToken("if constexpr");
+    } else {
+        emitRawToken("if");
+    }
     emitRawToken("(");
     visitExpression(stmt->getCondition());
     emitRawToken(")");
@@ -1147,6 +1178,31 @@ void CodeGen::visitIfStatement(const IfStatement* stmt) {
         emitNewline();
         indentMore();
         visitStatement(stmt->getElseBranch());
+        indentLess();
+    }
+}
+
+void CodeGen::visitTryStatement(const TryStatement* stmt) {
+    if (stmt == nullptr) return;
+    
+    writeIndentIfNeeded();
+    emitRawToken("try");
+    emitNewline();
+    
+    indentMore();
+    visitBlock(stmt->getTryBlock());
+    indentLess();
+    
+    for (const auto& catchClause : stmt->getCatchClauses()) {
+        writeIndentIfNeeded();
+        emitRawToken("catch");
+        emitRawToken("(");
+        emitRawToken(getCppType(catchClause->exceptionDecl));
+        emitRawToken(")");
+        emitNewline();
+        
+        indentMore();
+        visitBlock(catchClause->block.get());
         indentLess();
     }
 }
@@ -1352,13 +1408,17 @@ void CodeGen::visitExpressionStatement(const ExpressionStatement* stmt) {
 void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt == nullptr) return;
     writeIndentIfNeeded();
-    
+
     if (indentLevel_ == namespaceDepth_) {
         emitRawToken("inline");
     }
-    
+
+    // Stage 1: compile-time storage modifiers
+    if (stmt->isConstExpr()) emitRawToken("constexpr");
+    if (stmt->isConstInit()) emitRawToken("constinit");
+
     if (stmt->isConst()) emitRawToken("const");
-    
+
     emitRawToken(getCppType(stmt->getTypeName()));
     emitRawToken(safeIdent(stmt->getName()));
     
@@ -1373,10 +1433,19 @@ void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
 void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
     if (decl == nullptr) return;
     writeIndentIfNeeded();
-    
+
+    // Stage 6: standard attributes go BEFORE storage-class and constexpr.
+    if (decl->isNoDiscard()) emitRawToken("[[nodiscard]]");
+    if (decl->isDeprecated()) emitRawToken("[[deprecated]]");
+
     if (!testMode_ && decl->getName() != "asosiy" && decl->getName() != "main") {
-        emitRawToken("inline");
+        if (!decl->isConstExpr() && !decl->isConstEval()) {
+            emitRawToken("inline");
+        }
     }
+
+    if (decl->isConstEval()) emitRawToken("consteval");
+    else if (decl->isConstExpr()) emitRawToken("constexpr");
     
     std::string retType = getCppType(decl->getReturnType());
     if (decl->isAsync()) {
@@ -1417,8 +1486,16 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
     const auto& params = decl->getParameters();
     for (std::size_t i = 0; i < params.size(); ++i) {
         if (i > 0) emitRawToken(",");
-        if (params[i].isConst) emitRawToken("const");
-        emitRawToken(getCppType(params[i].type));
+        
+        // Handle explicit object parameter (C++23 deducing this)
+        if (params[i].isExplicitObject) {
+            emitRawToken("this");
+            emitRawToken(getCppType(params[i].type));
+        } else {
+            if (params[i].isConst) emitRawToken("const");
+            emitRawToken(getCppType(params[i].type));
+        }
+        
         emitRawToken(safeIdent(params[i].name));
         if (!params[i].defaultValue.empty()) {
             emitRawToken("=");
@@ -1427,6 +1504,7 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
     }
 
     emitRawToken(")");
+    if (decl->isNoExcept()) emitRawToken("noexcept");
     emitNewline();
 
     bool oldAsyncState = currentFunctionIsAsync_;
@@ -1487,12 +1565,18 @@ void CodeGen::visitInterfaceDeclaration(const InterfaceDeclaration* decl) {
 
 void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
     if (decl == nullptr) return;
-    
+
     writeIndentIfNeeded();
-    emitRawToken("class");
+    // Emit class/struct/union depending on source keyword
+    const std::string& kind = decl->getKind();
+    if (kind == "struct") emitRawToken("struct");
+    else if (kind == "union") emitRawToken("union");
+    else emitRawToken("class");
     emitRawToken(safeIdent(decl->getName()));
-    
-    bool hasBaseOrInterface = !decl->getBaseClass().empty() || !decl->getInterfaces().empty();
+
+    // C++ unions cannot have base classes or implement interfaces.
+    bool hasBaseOrInterface = (decl->getKind() != "union") &&
+                              (!decl->getBaseClass().empty() || !decl->getInterfaces().empty());
     if (hasBaseOrInterface) {
         emitRawToken(":");
         bool first = true;
@@ -1532,10 +1616,24 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
         // Emit class members (fields)
         for (const auto& member : decl->getMembers()) {
-            emitAccessIfChanged(member.accessSpecifier);
+            // Unions in C++ do not allow access specifiers between members.
+            if (decl->getKind() != "union") {
+                emitAccessIfChanged(member.accessSpecifier);
+            }
             writeIndentIfNeeded();
             emitRawToken(getCppType(member.type));
             emitRawToken(safeIdent(member.name));
+            // Emit array size if present (C-style arrays: int data[10])
+            if (!member.arraySize.empty()) {
+                emitRawToken("[");
+                emitRawToken(member.arraySize);
+                emitRawToken("]");
+            }
+            // Bitfield: emit ` : width` before the trailing ';'
+            if (!member.bitWidth.empty()) {
+                emitRawToken(":");
+                emitRawToken(member.bitWidth);
+            }
             emitRawToken(";");
             emitNewline();
         }
@@ -1561,8 +1659,16 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
             for (std::size_t i = 0; i < method->params.size(); ++i) {
                 if (i > 0) emitRawToken(",");
-                if (method->params[i].isConst) emitRawToken("const");
-                emitRawToken(getCppType(method->params[i].type));
+                
+                // Handle explicit object parameter (C++23 deducing this)
+                if (method->params[i].isExplicitObject) {
+                    emitRawToken("this");
+                    emitRawToken(getCppType(method->params[i].type));
+                } else {
+                    if (method->params[i].isConst) emitRawToken("const");
+                    emitRawToken(getCppType(method->params[i].type));
+                }
+                
                 emitRawToken(safeIdent(method->params[i].name));
                 if (!method->params[i].defaultValue.empty()) {
                     emitRawToken("=");
@@ -1724,6 +1830,11 @@ void CodeGen::visitLambdaExpression(const LambdaExpression* expr) {
     }
     emitRawToken(")");
 
+    if (!expr->getReturnType().empty()) {
+        emitRawToken("->");
+        emitRawToken(getCppType(expr->getReturnType()));
+    }
+
     // Body: if it's a ReturnStatement, emit as expression lambda { return x; }
     if (expr->getBody() != nullptr &&
         expr->getBody()->getType() == ASTNodeType::ReturnStatement) {
@@ -1824,6 +1935,14 @@ void CodeGen::visitEnumDeclaration(const EnumDeclaration* decl) {
     writeIndentIfNeeded();
     emitRawToken("}");
     emitNewline();
+}
+
+void CodeGen::visitThrowExpression(const ThrowExpression* expr) {
+    if (expr == nullptr) return;
+    emitRawToken("throw");
+    if (expr->getExpression() != nullptr) {
+        visitExpression(expr->getExpression());
+    }
 }
 
 } // namespace uzpp

@@ -243,13 +243,12 @@ int main() {
     }
 
     {
-        // moslash (switch) with multiple cases
+        // moslash (switch/pattern matching) with multiple cases
         const std::string cpp = transpileSnippet(
             "butun f(butun x) { moslash (x) { holat 1: qaytarish 10; holat 2: qaytarish 20; boshqa: qaytarish 0; } }");
-        assert(cpp.find("switch") != std::string::npos);
-        assert(cpp.find("case 1") != std::string::npos);
-        assert(cpp.find("case 2") != std::string::npos);
-        assert(cpp.find("default") != std::string::npos);
+        assert(cpp.find("if") != std::string::npos);
+        assert(cpp.find("else if") != std::string::npos);
+        assert(cpp.find("else") != std::string::npos);
     }
 
     {

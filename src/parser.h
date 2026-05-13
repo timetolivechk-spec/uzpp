@@ -83,8 +83,8 @@ private:
     std::unique_ptr<NamespaceDeclaration> parseNamespaceDeclaration();
     std::unique_ptr<IncludeStatement> parseIncludeStatement();
     std::unique_ptr<LinkStatement> parseLinkStatement();
-    std::unique_ptr<VariableDeclaration> parseVariableDeclaration(const std::string& typeName, const std::string& varName);
-    std::unique_ptr<FunctionDeclaration> parseFunctionDeclaration(const std::string& returnType, const std::string& funcName);
+    std::unique_ptr<VariableDeclaration> parseVariableDeclaration(const std::string& typeName, const std::string& varName, bool isConstExpr = false, bool isConstEval = false, bool isConstInit = false);
+    std::unique_ptr<FunctionDeclaration> parseFunctionDeclaration(const std::string& returnType, const std::string& funcName, bool isConstExpr = false, bool isConstEval = false);
     std::unique_ptr<FunctionDeclaration> parseLegacyFunctionDeclaration();
     std::unique_ptr<ClassDeclaration> parseClassDeclaration();
     std::unique_ptr<InterfaceDeclaration> parseInterfaceDeclaration();

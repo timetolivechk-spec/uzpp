@@ -1,0 +1,35 @@
+// uz++ — Pointer/reference/move semantics (Stage 2)
+
+ulash "uzpp_runtime.hpp"
+
+// Reference parameter
+bosh oshirish(butun& x) {
+    x = x + 1;
+}
+
+// Pointer parameter
+bosh ikkiga_kopaytirish(butun* p) {
+    *p = *p * 2;
+}
+
+// rvalue reference + move
+matn olib_kelish(matn&& s) {
+    qaytarish s;
+}
+
+butun asosiy() {
+    butun a = 5;
+    oshirish(a);
+    yozish << "oshirish(5) -> " << a << qator_oxiri;
+
+    butun b = 10;
+    ikkiga_kopaytirish(&b);
+    yozish << "ikkiga(10) -> " << b << qator_oxiri;
+
+    matn salom = "Salom";
+    matn natija = olib_kelish(ko'chirish(salom));
+    yozish << "rvalue: " << natija << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

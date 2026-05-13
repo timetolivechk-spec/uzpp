@@ -38,6 +38,8 @@ enum class ASTNodeType {
     ExpressionStatement,
     Block,
     MatchStatement,
+    TryStatement,
+    ThrowExpression,
     
     // Special nodes
     Namespace,
@@ -54,7 +56,8 @@ enum class ASTNodeType {
     TypeAlias,
     LambdaExpression,
     TernaryExpression,
-    StatementList
+    StatementList,
+    TokenStatement
 };
 
 class ASTNode {
@@ -254,6 +257,23 @@ private:
     Token awaitToken_;
 };
 
+class ThrowExpression final : public Expression {
+public:
+    ThrowExpression(std::unique_ptr<Expression> expr, Token throwToken)
+        : expr_(std::move(expr)), throwToken_(std::move(throwToken)) {}
+    
+    ASTNodeType getType() const override {
+        return ASTNodeType::ThrowExpression;
+    }
+    
+    Expression* getExpression() const { return expr_.get(); }
+    const Token& getThrowToken() const { return throwToken_; }
+    
+private:
+    std::unique_ptr<Expression> expr_;
+    Token throwToken_;
+};
+
 class MemberAccess final : public Expression {
 public:
     enum class AccessType { Dot, Arrow };
@@ -283,19 +303,24 @@ class SubscriptAccess final : public Expression {
 public:
     SubscriptAccess(std::unique_ptr<Expression> array, std::unique_ptr<Expression> index, Token bracketToken)
         : array_(std::move(array)), index_(std::move(index)), bracketToken_(std::move(bracketToken)) {}
-    
+
     ASTNodeType getType() const override {
         return ASTNodeType::SubscriptAccess;
     }
-    
+
     Expression* getArray() const { return array_.get(); }
     Expression* getIndex() const { return index_.get(); }
     const Token& getBracketToken() const { return bracketToken_; }
-    
+
+    // C++23 multidimensional subscript: arr[i, j, k]
+    const std::vector<std::unique_ptr<Expression>>& getExtraIndices() const { return extraIndices_; }
+    void addExtraIndex(std::unique_ptr<Expression> idx) { extraIndices_.push_back(std::move(idx)); }
+
 private:
     std::unique_ptr<Expression> array_;
     std::unique_ptr<Expression> index_;
     Token bracketToken_;
+    std::vector<std::unique_ptr<Expression>> extraIndices_;
 };
 
 class AssignmentExpression final : public Expression {
@@ -356,6 +381,22 @@ private:
     std::vector<std::unique_ptr<Statement>> statements_;
 };
 
+class TokenStatement final : public Statement {
+public:
+    explicit TokenStatement(Token token) : token_(std::move(token)) {}
+
+    ASTNodeType getType() const override {
+        return ASTNodeType::TokenStatement;
+    }
+
+    const Token& getToken() const {
+        return token_;
+    }
+
+private:
+    Token token_;
+};
+
 class ExpressionStatement final : public Statement {
 public:
     explicit ExpressionStatement(std::unique_ptr<Expression> expr)
@@ -375,9 +416,11 @@ class VariableDeclaration final : public Statement {
 public:
     VariableDeclaration(const std::string& name, const std::string& typeName,
                        std::unique_ptr<Expression> initializer, Token declToken,
-                       bool isConst = false, bool isMutable = false)
+                       bool isConst = false, bool isMutable = false,
+                       bool isConstExpr = false, bool isConstEval = false, bool isConstInit = false)
         : name_(name), typeName_(typeName), initializer_(std::move(initializer)),
-          declToken_(std::move(declToken)), isConst_(isConst), isMutable_(isMutable) {}
+          declToken_(std::move(declToken)), isConst_(isConst), isMutable_(isMutable),
+          isConstExpr_(isConstExpr), isConstEval_(isConstEval), isConstInit_(isConstInit) {}
     
     ASTNodeType getType() const override {
         return ASTNodeType::VariableDeclaration;
@@ -389,7 +432,12 @@ public:
     const Token& getDeclToken() const { return declToken_; }
     bool isConst() const { return isConst_; }
     bool isMutable() const { return isMutable_; }
-    
+    bool isConstExpr() const { return isConstExpr_; }
+    bool isConstEval() const { return isConstEval_; }
+    bool isConstInit() const { return isConstInit_; }
+    void setConstExpr(bool value) { isConstExpr_ = value; }
+    void setConstInit(bool value) { isConstInit_ = value; }
+
 private:
     std::string name_;
     std::string typeName_;
@@ -397,6 +445,9 @@ private:
     Token declToken_;
     bool isConst_;
     bool isMutable_;
+    bool isConstExpr_;
+    bool isConstEval_;
+    bool isConstInit_;
 };
 
 class ReturnStatement final : public Statement {
@@ -472,6 +523,31 @@ private:
     Token matchToken_;
 };
 
+class TryStatement final : public Statement {
+public:
+    struct CatchClause {
+        Token catchToken;
+        std::string exceptionDecl; // "std::exception& e" or similar
+        std::unique_ptr<Block> block;
+    };
+    
+    TryStatement(std::unique_ptr<Block> tryBlock, std::vector<std::unique_ptr<CatchClause>> catchClauses, Token tryToken = Token())
+        : tryBlock_(std::move(tryBlock)), catchClauses_(std::move(catchClauses)), tryToken_(std::move(tryToken)) {}
+    
+    ASTNodeType getType() const override {
+        return ASTNodeType::TryStatement;
+    }
+    
+    Block* getTryBlock() const { return tryBlock_.get(); }
+    const std::vector<std::unique_ptr<CatchClause>>& getCatchClauses() const { return catchClauses_; }
+    const Token& getTryToken() const { return tryToken_; }
+    
+private:
+    std::unique_ptr<Block> tryBlock_;
+    std::vector<std::unique_ptr<CatchClause>> catchClauses_;
+    Token tryToken_;
+};
+
 class IfStatement final : public Statement {
 public:
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> thenBranch,
@@ -488,11 +564,15 @@ public:
     Statement* getElseBranch() const { return elseBranch_.get(); }
     const Token& getIfToken() const { return ifToken_; }
     
+    bool isConstExpr() const { return isConstExpr_; }
+    void setConstExpr(bool val) { isConstExpr_ = val; }
+    
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> thenBranch_;
     std::unique_ptr<Statement> elseBranch_;
     Token ifToken_;
+    bool isConstExpr_ = false;
 };
 
 class WhileStatement final : public Statement {
@@ -558,19 +638,22 @@ public:
         std::string type;
         std::string defaultValue; // Standart qiymat, masalan: "0", "\"\"", "rost"
         bool isConst = false;
+        bool isExplicitObject = false; // C++23 explicit object parameter (this)
         Token token;
     };
     
     FunctionDeclaration(const std::string& name, const std::string& returnType,
                        std::vector<Parameter> params, std::unique_ptr<Block> body,
-                       Token funcToken = Token(), bool isAsync = false, bool isTest = false, bool isBench = false)
+                       Token funcToken = Token(), bool isAsync = false, bool isTest = false, bool isBench = false,
+                       bool isConstExpr = false, bool isConstEval = false)
         : name_(name), returnType_(returnType), params_(std::move(params)),
-          body_(std::move(body)), funcToken_(std::move(funcToken)), isAsync_(isAsync), isTest_(isTest), isBench_(isBench) {}
-    
+          body_(std::move(body)), funcToken_(std::move(funcToken)), isAsync_(isAsync), isTest_(isTest), isBench_(isBench),
+          isConstExpr_(isConstExpr), isConstEval_(isConstEval), isNoDiscard_(false), isDeprecated_(false) {}
+
     ASTNodeType getType() const override {
         return ASTNodeType::FunctionDeclaration;
     }
-    
+
     const std::string& getName() const { return name_; }
     const std::string& getReturnType() const { return returnType_; }
     const std::vector<Parameter>& getParameters() const { return params_; }
@@ -582,7 +665,17 @@ public:
     void setTest(bool test) { isTest_ = test; }
     bool isBench() const { return isBench_; }
     void setBench(bool bench) { isBench_ = bench; }
-    
+    bool isConstExpr() const { return isConstExpr_; }
+    void setConstExpr(bool value) { isConstExpr_ = value; }
+    bool isConstEval() const { return isConstEval_; }
+    void setConstEval(bool value) { isConstEval_ = value; }
+    bool isNoDiscard() const { return isNoDiscard_; }
+    void setNoDiscard(bool value) { isNoDiscard_ = value; }
+    bool isDeprecated() const { return isDeprecated_; }
+    void setDeprecated(bool value) { isDeprecated_ = value; }
+    bool isNoExcept() const { return isNoExcept_; }
+    void setNoExcept(bool value) { isNoExcept_ = value; }
+
 private:
     std::string name_;
     std::string returnType_;
@@ -592,6 +685,11 @@ private:
     bool isAsync_;
     bool isTest_;
     bool isBench_;
+    bool isConstExpr_;
+    bool isConstEval_;
+    bool isNoDiscard_;
+    bool isDeprecated_;
+    bool isNoExcept_ = false;
 };
 
 class ClassDeclaration final : public Declaration {
@@ -600,6 +698,10 @@ public:
         std::string name;
         std::string type;
         std::string accessSpecifier; // ochiq, yopiq, protected
+        std::string arraySize; // For C-style arrays: "10" for int data[10], empty if not array
+        std::string bitWidth;  // C++ bitfield: "4" for `int x : 4`. Empty if not bitfield.
+        bool isVolatile = false;
+        bool isThreadLocal = false;
         Token token;
     };
     
@@ -611,8 +713,9 @@ public:
         std::string accessSpecifier;
         bool isVirtual = false;       // override in derived class
         bool isPureVirtual = false;   // mavhum: virtual ... = 0
-        bool isConstMethod = false;   // sabit: void foo() const
+        bool isConstMethod = false;   // o'zgarmas: void foo() const
         bool isStatic = false;
+        bool isNoExcept = false;
         Token token;
         std::string initializerList; // ": field1(val1), field2(val2)" for constructors
     };
@@ -622,19 +725,21 @@ public:
                     std::vector<Member> members, std::vector<std::unique_ptr<Method>> methods,
                     Token classToken = Token())
         : name_(name), baseClass_(baseClass), interfaces_(std::move(interfaces)), members_(std::move(members)),
-          methods_(std::move(methods)), classToken_(std::move(classToken)) {}
-    
+          methods_(std::move(methods)), classToken_(std::move(classToken)), kind_("class") {}
+
     ASTNodeType getType() const override {
         return ASTNodeType::ClassDeclaration;
     }
-    
+
     const std::string& getName() const { return name_; }
     const std::string& getBaseClass() const { return baseClass_; }
     const std::vector<std::string>& getInterfaces() const { return interfaces_; }
     const std::vector<Member>& getMembers() const { return members_; }
     const std::vector<std::unique_ptr<Method>>& getMethods() const { return methods_; }
     const Token& getClassToken() const { return classToken_; }
-    
+    const std::string& getKind() const { return kind_; }
+    void setKind(const std::string& kind) { kind_ = kind; }
+
 private:
     std::string name_;
     std::string baseClass_;
@@ -642,6 +747,7 @@ private:
     std::vector<Member> members_;
     std::vector<std::unique_ptr<Method>> methods_;
     Token classToken_;
+    std::string kind_;  // "class" (default), "struct", or "union"
 };
 
 class NamespaceDeclaration final : public Declaration {
@@ -815,21 +921,25 @@ public:
 
     LambdaExpression(std::vector<Capture> captures,
                      std::vector<Param> params,
+                     std::string returnType,
                      std::unique_ptr<Statement> body,
                      Token lambdaToken)
         : captures_(std::move(captures)), params_(std::move(params)),
+          returnType_(std::move(returnType)),
           body_(std::move(body)), lambdaToken_(std::move(lambdaToken)) {}
 
     ASTNodeType getType() const override { return ASTNodeType::LambdaExpression; }
 
     const std::vector<Capture>& getCaptures() const { return captures_; }
     const std::vector<Param>&   getParams()   const { return params_; }
+    const std::string& getReturnType() const { return returnType_; }
     Statement* getBody() const { return body_.get(); }
     const Token& getLambdaToken() const { return lambdaToken_; }
 
 private:
     std::vector<Capture> captures_;
     std::vector<Param>   params_;
+    std::string          returnType_;
     std::unique_ptr<Statement> body_;
     Token lambdaToken_;
 };

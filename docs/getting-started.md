@@ -299,8 +299,8 @@ ochiq:
         qaytarish yolg'on;
     }
 
-    haqiqiy balansOlish() sabit { qaytarish balans; }
-    matn    egasiniOlish() sabit { qaytarish egasi; }
+    haqiqiy balansOlish() o'zgarmas { qaytarish balans; }
+    matn    egasiniOlish() o'zgarmas { qaytarish egasi; }
 };
 
 butun asosiy() {
@@ -430,7 +430,7 @@ ochiq:
         ma'lumot.pop_back();
         qaytarish yuqori;
     }
-    mantiqiy bo'shMi() sabit { qaytarish ma'lumot.empty(); }
+    mantiqiy bo'shMi() o'zgarmas { qaytarish ma'lumot.empty(); }
 };
 
 butun asosiy() {

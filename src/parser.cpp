@@ -132,9 +132,9 @@ std::string Parser::parseTypeString() {
         }
     }
 
-    // Trailing reference/pointer qualifiers
+    // Trailing reference/pointer qualifiers, plus variadic ellipsis (Args...)
     while (!isAtEnd() && peek().type == TokenType::Symbol &&
-           (peek().value == "&" || peek().value == "*" || peek().value == "&&")) {
+           (peek().value == "&" || peek().value == "*" || peek().value == "&&" || peek().value == "...")) {
         typeStr += advance().value;
     }
     return typeStr;
@@ -211,9 +211,17 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "nomlari", "vazifi", "ustidan_yozish", "sikldan", "satr", "son",
         "xotira", "fayl", "yagona", "umumiy", "null",
         // Casting
-        "statik_otkazish", "dinamik_otkazish", "sabit_otkazish", "qayta_otkazish",
+        "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
         // Const method modifier
-        "sabit"
+        "o'zgarmas",
+        // Compile-time modifiers (Stage 1): constexpr / consteval / constinit
+        "sobit_ifoda", "sobit_baholash", "sobit_boshlangich",
+        // Legacy aliases for compile-time modifiers (Phase 11 — preserved for back-compat)
+        "sabit_ifoda", "sabit_baholash", "sabit_boshlangich",
+        // Union (Stage 6)
+        "birlashma",
+        // Task 2 and 3
+        "statik_tasdiqlash", "xato_tashlamaydi"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -471,16 +479,22 @@ std::unique_ptr<Expression> Parser::parsePostfixExpression() {
             expr = std::make_unique<FunctionCall>(std::move(expr), std::move(args), callToken);
         }
         else if (peek().type == TokenType::Symbol && peek().value == "[") {
-            // Subscript
+            // Subscript — supports C++23 multidim: arr[i, j, k]
             const Token bracketToken = advance();
             auto index = parseExpression();
-            
+            auto sub = std::make_unique<SubscriptAccess>(std::move(expr), std::move(index), bracketToken);
+
+            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
+                advance(); // consume ','
+                sub->addExtraIndex(parseExpression());
+            }
+
             if (isAtEnd() || peek().value != "]") {
                 throw ParseError("Kutilgan ']' " + formatLocation(peek()));
             }
-            
+
             advance(); // consume ']'
-            expr = std::make_unique<SubscriptAccess>(std::move(expr), std::move(index), bracketToken);
+            expr = std::move(sub);
         }
         else if (peek().type == TokenType::Symbol && (peek().value == "." || peek().value == "->")) {
             // Member access
@@ -499,15 +513,22 @@ std::unique_ptr<Expression> Parser::parsePostfixExpression() {
         else if (peek().type == TokenType::Symbol && (peek().value == "++" || peek().value == "--")) {
             // Postfix increment/decrement
             const Token opToken = advance();
-            UnaryExpression::UnaryOp op = (opToken.value == "++") ? 
+            UnaryExpression::UnaryOp op = (opToken.value == "++") ?
                 UnaryExpression::UnaryOp::PostIncrement : UnaryExpression::UnaryOp::PostDecrement;
             expr = std::make_unique<UnaryExpression>(op, std::move(expr), opToken, false);
+        }
+        else if (peek().type == TokenType::Symbol && peek().value == "...") {
+            // Pack expansion: args... -> emit as binary "..." with empty rhs
+            const Token dotsToken = advance();
+            auto dummy = std::make_unique<LiteralExpression>(
+                LiteralExpression::LiteralType::String, "", dotsToken);
+            expr = std::make_unique<BinaryExpression>(std::move(expr), "...", std::move(dummy), dotsToken);
         }
         else {
             break;
         }
     }
-    
+
     return expr;
 }
 
@@ -515,9 +536,15 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
     if (isAtEnd()) {
         throw ParseError("Kutilgan ifoda, ammo faylning oxiri keldi");
     }
-    
+
     const Token& current = peek();
-    
+
+    // Ellipsis as an operand — supports C++17 fold expressions like (args + ...)
+    if (current.type == TokenType::Symbol && current.value == "...") {
+        const Token token = advance();
+        return std::make_unique<IdentifierExpression>("...", token);
+    }
+
     // Numeric literal
     if (current.type == TokenType::IntegerLiteral) {
         const Token token = advance();
@@ -672,7 +699,7 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 body = std::make_unique<ReturnStatement>(std::move(retExpr), retTok);
             }
 
-            return std::make_unique<LambdaExpression>(std::move(captures), std::move(params),
+            return std::make_unique<LambdaExpression>(std::move(captures), std::move(params), lambdaReturnType,
                                                       std::move(body), lambdaToken);
         }
 
@@ -772,17 +799,11 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
         }
     }
 
-    // irgitish (Throw Expression) -> translates to __uzpp_throw(X)
+    // irgitish (Throw Expression)
     if (current.type == TokenType::Identifier && current.value == "irgitish") {
         Token throwToken = advance(); // consume 'irgitish'
         auto expr = parseExpression();
-        
-        Token funcToken = throwToken;
-        funcToken.value = "__uzpp_throw";
-        auto callee = std::make_unique<IdentifierExpression>("__uzpp_throw", funcToken);
-        std::vector<std::unique_ptr<Expression>> args;
-        args.push_back(std::move(expr));
-        return std::make_unique<FunctionCall>(std::move(callee), std::move(args), throwToken);
+        return std::make_unique<ThrowExpression>(std::move(expr), throwToken);
     }
 
     // Identifier or keyword
@@ -844,7 +865,7 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
         captures.push_back(std::move(allRef));
 
         return std::make_unique<LambdaExpression>(std::move(captures), std::move(params),
-                                                  std::move(body), lambdaToken);
+                                                  "", std::move(body), lambdaToken);
     }
 
     throw ParseError("Noto'g'ri ifoda " + formatLocation(current));
@@ -945,6 +966,15 @@ std::unique_ptr<Statement> Parser::parseStatement() {
         return parseIfStatement();
     }
     
+    if (checkKeyword("statik_tasdiqlash")) {
+        // Parse as a regular function call expression — Uzbek identifier names
+        // inside (e.g. `butun`, `haqiqiy`) will be translated by codegen normally.
+        // Codegen recognises "statik_tasdiqlash" and emits "static_assert".
+        auto e = parseExpression();
+        if (!isAtEnd() && peek().value == ";") advance();
+        return std::make_unique<ExpressionStatement>(std::move(e));
+    }
+
     if (checkKeyword("moslash")) {
         return parseMatchStatement();
     }
@@ -953,39 +983,23 @@ std::unique_ptr<Statement> Parser::parseStatement() {
         const Token tryToken = advance(); // consume 'urinish'
         auto tryBlock = parseBlock();
         
-        struct CatchBlock {
-            Token catchToken;
-            std::string catchDecl;
-            std::unique_ptr<Block> block;
-        };
-        std::vector<CatchBlock> catches;
+        std::vector<std::unique_ptr<TryStatement::CatchClause>> catches;
         
         while (checkKeyword("ushlash")) {
-            CatchBlock cb;
-            cb.catchToken = advance(); // 'ushlash'
+            auto cb = std::make_unique<TryStatement::CatchClause>();
+            cb->catchToken = advance(); // 'ushlash'
             if (isAtEnd() || peek().value != "(") throw ParseError("Kutilgan '(' ushlashdan keyin " + formatLocation(peek()));
             advance(); // '('
             while (!isAtEnd() && peek().value != ")") {
-                cb.catchDecl += advance().value;
-                if (peek().value != ")") cb.catchDecl += " ";
+                cb->exceptionDecl += advance().value;
+                if (peek().value != ")") cb->exceptionDecl += " ";
             }
             advance(); // ')'
-            cb.block = parseBlock();
+            cb->block = parseBlock();
             catches.push_back(std::move(cb));
         }
         
-        std::unique_ptr<Statement> elseBranch = nullptr;
-        for (auto it = catches.rbegin(); it != catches.rend(); ++it) {
-            Token catchCondToken = it->catchToken;
-            catchCondToken.value = "__uzpp_catch " + it->catchDecl;
-            auto catchCond = std::make_unique<IdentifierExpression>(catchCondToken.value, catchCondToken);
-            elseBranch = std::make_unique<IfStatement>(std::move(catchCond), std::move(it->block), std::move(elseBranch), it->catchToken);
-        }
-        
-        Token tryCondToken = tryToken;
-        tryCondToken.value = "__uzpp_try";
-        auto tryCond = std::make_unique<IdentifierExpression>("__uzpp_try", tryCondToken);
-        return std::make_unique<IfStatement>(std::move(tryCond), std::move(tryBlock), std::move(elseBranch), tryToken);
+        return std::make_unique<TryStatement>(std::move(tryBlock), std::move(catches), tryToken);
     }
     
     if (checkKeyword("toki")) {
@@ -1114,6 +1128,12 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
 std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     const Token ifToken = advance(); // consume 'agar'
     
+    bool isConstExpr = false;
+    if (checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+        isConstExpr = true;
+        advance();
+    }
+
     if (isAtEnd() || peek().value != "(") {
         throw ParseError("Kutilgan '(' agar ifodasidan keyin " + formatLocation(peek()));
     }
@@ -1146,8 +1166,10 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
         }
     }
 
-    return std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch),
+    auto ifStmt = std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch),
                                         std::move(elseBranch), ifToken);
+    ifStmt->setConstExpr(isConstExpr);
+    return ifStmt;
 }
 
 std::unique_ptr<WhileStatement> Parser::parseWhileStatement() {
@@ -1268,6 +1290,26 @@ std::unique_ptr<ContinueStatement> Parser::parseContinueStatement() {
 }
 
 std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
+    bool isConstExpr = false;
+    bool isConstEval = false;
+    bool isConstInit = false;
+
+    while (!isAtEnd()) {
+        if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+            isConstExpr = true;
+            advance();
+        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash") || checkKeyword("sabit_baholash")) {
+            isConstEval = true;
+            advance();
+        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich") || checkKeyword("sabit_boshlangich")) {
+            isConstInit = true;
+            advance();
+        } else {
+            break;
+        }
+    }
+    if (isConstEval) throw ParseError("sobit_baholash faqat funksiyalarga qo'llaniladi");
+
     // Destructuring: ozgaruvchan [x, y] = ...
     if ((peek().value == "ozgaruvchan" || peek().value == "o'zgaruvchan" || peek().value == "ozgarmas" || peek().value == "o'zgarmas")
         && current_ + 1 < tokens_.size() && tokens_[current_ + 1].value == "[") {
@@ -1304,6 +1346,8 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         if (isConst) typeName = "o'zgarmas " + typeName;
         std::string name = advance().value;
         auto varDecl = parseVariableDeclaration(typeName, name);
+        if (isConstExpr) varDecl->setConstExpr(true);
+        if (isConstInit) varDecl->setConstInit(true);
 
         // Comma-separated declarations: butun a = 1, b = 2;
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
@@ -1312,7 +1356,10 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
             while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
                 advance(); // consume ','
                 std::string nextName = advance().value;
-                stmts.push_back(parseVariableDeclaration(typeName, nextName));
+                auto more = parseVariableDeclaration(typeName, nextName);
+                if (isConstExpr) more->setConstExpr(true);
+                if (isConstInit) more->setConstInit(true);
+                stmts.push_back(std::move(more));
             }
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
             return std::make_unique<StatementList>(std::move(stmts));
@@ -1331,10 +1378,6 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 // ===== SEMANTIC DECLARATION PARSING =====
 
 std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
-    bool isAsync = false;
-    bool isTest = false;
-    bool isBench = false;
-
     if (checkKeyword("eksport")) {
         const Token expToken = peek();
         advance(); // 'eksport' kalit so'zini yutish
@@ -1377,6 +1420,15 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         return std::make_unique<TokenNode>(t);
     }
 
+    if (checkKeyword("statik_tasdiqlash")) {
+        // Parse as a regular function call expression — Uzbek identifier names
+        // inside (e.g. `butun`, `haqiqiy`) will be translated by codegen normally.
+        // Codegen recognises "statik_tasdiqlash" and emits "static_assert".
+        auto e = parseExpression();
+        if (!isAtEnd() && peek().value == ";") advance();
+        return std::make_unique<ExpressionStatement>(std::move(e));
+    }
+
     if (checkKeyword("makro")) {
         const Token makroToken = advance(); // consume 'makro'
         if (isAtEnd() || peek().type != TokenType::Identifier) throw ParseError("Kutilgan makro nomi");
@@ -1404,22 +1456,48 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         return std::make_unique<TokenNode>(dummy);
     }
 
-    if (peek().type == TokenType::Symbol && peek().value == "@") {
-        advance(); // consume '@'
-        if (peek().type == TokenType::Identifier && peek().value == "sinov") {
-            isTest = true;
-            advance(); // consume 'sinov'
-        } else if (peek().type == TokenType::Identifier && peek().value == "bench") {
-            isBench = true;
-            advance(); // consume 'bench'
-        } else {
-            throw ParseError("Noma'lum annotatsiya " + formatLocation(peek()));
-        }
-    }
+    bool isAsync = false;
+    bool isTest = false;
+    bool isBench = false;
+    bool isConstExpr = false;
+    bool isConstEval = false;
+    bool isConstInit = false;
+    bool isNoDiscard = false;
+    bool isDeprecated = false;
 
-    if (checkKeyword("asinxron")) {
-        isAsync = true;
-        advance(); // consume 'asinxron'
+    while (!isAtEnd()) {
+        if (peek().type == TokenType::Symbol && peek().value == "@") {
+            advance(); // consume '@'
+            if (peek().type == TokenType::Identifier && peek().value == "sinov") {
+                isTest = true;
+                advance(); // consume 'sinov'
+            } else if (peek().type == TokenType::Identifier && peek().value == "bench") {
+                isBench = true;
+                advance(); // consume 'bench'
+            } else if (peek().type == TokenType::Identifier && peek().value == "tashlab_yuborilmas") {
+                isNoDiscard = true;
+                advance();
+            } else if (peek().type == TokenType::Identifier && peek().value == "eskirgan") {
+                isDeprecated = true;
+                advance();
+            } else {
+                throw ParseError("Noma'lum annotatsiya " + formatLocation(peek()));
+            }
+        } else if (checkKeyword("asinxron")) {
+            isAsync = true;
+            advance();
+        } else if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+            isConstExpr = true;
+            advance();
+        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash") || checkKeyword("sabit_baholash")) {
+            isConstEval = true;
+            advance();
+        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich") || checkKeyword("sabit_boshlangich")) {
+            isConstInit = true;
+            advance();
+        } else {
+            break;
+        }
     }
 
     if (checkKeyword("shablon")) {
@@ -1438,7 +1516,17 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                 }
             }
             if (checkKeyword("tur")) {
-                templateParams += "typename ";
+                templateParams += "typename";
+                advance();
+                // Variadic template: shablon<tur... Args>  ->  template <typename... Args>
+                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "...") {
+                    templateParams += "...";
+                    advance();
+                }
+                templateParams += " ";
+            } else if (peek().type == TokenType::Symbol && peek().value == "...") {
+                // Standalone ellipsis after a previously consumed identifier
+                templateParams += "... ";
                 advance();
             } else if (peek().type == TokenType::Identifier) {
                 templateParams += advance().value + " ";
@@ -1557,9 +1645,13 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         if (isAsync) throw ParseError("shartnoma asinxron bo'lmaydi");
         return parseInterfaceDeclaration();
     }
-    if (checkKeyword("sinf") || checkKeyword("tuzilma")) {
+    if (checkKeyword("sinf") || checkKeyword("tuzilma") || checkKeyword("birlashma")) {
         if (isAsync) throw ParseError("sinf asinxron bo'lmaydi");
-        return parseClassDeclaration();
+        std::string kw = peek().value;
+        auto cls = parseClassDeclaration();
+        if (kw == "tuzilma") cls->setKind("struct");
+        else if (kw == "birlashma") cls->setKind("union");
+        return cls;
     }
     if (checkKeyword("tur")) {
         // Type alias: tur Nom = EskiTur;
@@ -1577,6 +1669,11 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         func->setAsync(isAsync);
         func->setTest(isTest);
         func->setBench(isBench);
+        if (isConstExpr) func->setConstExpr(true);
+        if (isConstEval) func->setConstEval(true);
+        if (isConstInit) throw ParseError("sobit_boshlangich faqat o'zgaruvchilarga qo'llaniladi");
+        if (isNoDiscard) func->setNoDiscard(true);
+        if (isDeprecated) func->setDeprecated(true);
         return func;
     }
     
@@ -1609,8 +1706,17 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                     else if (tokens_[peekPos].value == ")") {
                         parenDepth--;
                         if (parenDepth == 0) {
-                            // Check if next token after closing paren is '{'
-                            if (peekPos + 1 < tokens_.size() && tokens_[peekPos + 1].value == "{") {
+                            // Look past optional post-paren function specifiers
+                            // (xato_tashlamaydi/noexcept, o'zgarmas/const) to find '{'
+                            std::size_t afterParen = peekPos + 1;
+                            while (afterParen < tokens_.size() &&
+                                   (tokens_[afterParen].value == "xato_tashlamaydi" ||
+                                    tokens_[afterParen].value == "o'zgarmas" ||
+                                    tokens_[afterParen].value == "ozgarmas" ||
+                                    tokens_[afterParen].value == "ustidan_yozish")) {
+                                afterParen++;
+                            }
+                            if (afterParen < tokens_.size() && tokens_[afterParen].value == "{") {
                                 foundBrace = true;
                             }
                             break;
@@ -1626,23 +1732,31 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                         func->setAsync(isAsync);
                     func->setTest(isTest);
                     func->setBench(isBench);
+                    if (isConstExpr) func->setConstExpr(true);
+                    if (isConstEval) func->setConstEval(true);
+                    if (isConstInit) throw ParseError("sobit_boshlangich faqat o'zgaruvchilarga qo'llaniladi");
+                    if (isNoDiscard) func->setNoDiscard(true);
+                    if (isDeprecated) func->setDeprecated(true);
                         return func;
                     } catch (const ParseError&) {
                         // Fall through to variable declaration with constructor
                     }
                 }
-                
+
                 if (isAsync) throw ParseError("O'zgaruvchini asinxron qilib bo'lmaydi");
+                if (isConstEval) throw ParseError("sobit_baholash faqat funksiyalarga qo'llaniladi");
                 auto varDecl = parseVariableDeclaration(typeName, name);
-                
+                if (isConstExpr) varDecl->setConstExpr(true);
+                if (isConstInit) varDecl->setConstInit(true);
+
                 if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
                     advance();
                 }
-                
+
                 return varDecl;
         } else {
             if (isAsync) throw ParseError("O'zgaruvchini asinxron qilib bo'lmaydi");
-            auto varDecl = parseVariableDeclaration(typeName, name);
+            auto varDecl = parseVariableDeclaration(typeName, name, isConstExpr, isConstEval, isConstInit);
                 
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
                 advance();
@@ -1745,7 +1859,7 @@ std::unique_ptr<LinkStatement> Parser::parseLinkStatement() {
     return std::make_unique<LinkStatement>(libName, token);
 }
 
-std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std::string& typeName, const std::string& varName) {
+std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std::string& typeName, const std::string& varName, bool isConstExpr, bool isConstEval, bool isConstInit) {
     Token token;
     token.type = TokenType::Identifier;
     token.value = varName;
@@ -1802,7 +1916,7 @@ std::unique_ptr<FunctionDeclaration> Parser::parseLegacyFunctionDeclaration() {
     return parseFunctionDeclaration("void", funcName);
 }
 
-std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std::string& returnType, const std::string& funcName) {
+std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std::string& returnType, const std::string& funcName, bool isConstExpr, bool isConstEval) {
     Token funcToken;
     funcToken.value = funcName;
     funcToken.line = previous().line;
@@ -1811,14 +1925,22 @@ std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std:
     
     std::vector<FunctionDeclaration::Parameter> params = parseFunctionParameters();
     
+    bool isNoExcept = false;
+    if (checkKeyword("xato_tashlamaydi")) {
+        isNoExcept = true;
+        advance();
+    }
+    
     if (isAtEnd() || peek().value != "{") {
         throw ParseError("Kutilgan funktsiya tanasi '{' " + formatLocation(peek()));
     }
     
     auto body = parseBlock();
     
-    return std::make_unique<FunctionDeclaration>(funcName, returnType, std::move(params), 
-                                                 std::move(body), funcToken);
+    auto funcDecl = std::make_unique<FunctionDeclaration>(funcName, returnType, std::move(params), 
+                                                 std::move(body), funcToken, false, false, false, isConstExpr, isConstEval);
+    funcDecl->setNoExcept(isNoExcept);
+    return funcDecl;
 }
 
 std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
@@ -1837,22 +1959,38 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
         
         FunctionDeclaration::Parameter param;
         
-        if (peek().value == "ozgarmas" || peek().value == "o'zgarmas") {
-            param.isConst = true;
-            advance();
-        }
-        
-        param.type = parseTypeString();
-        
-        // Second identifier = name (if present)
-        if (!isAtEnd() && peek().type == TokenType::Identifier &&
-            peek().value != "," && peek().value != ")") {
-            param.name = advance().value;
+        // Check for explicit object parameter (C++23 deducing this): oz or bosh
+        if (params.empty() && (peek().value == "oz" || peek().value == "bosh")) {
+            param.isExplicitObject = true;
+            param.name = advance().value; // consume "oz" or "bosh"
             param.token = previous();
+            // After oz/bosh, expect reference type (e.g., oz Klass&& self)
+            if (!isAtEnd() && peek().type == TokenType::Identifier) {
+                param.type = parseTypeString();
+                if (!isAtEnd() && peek().type == TokenType::Identifier &&
+                    peek().value != "," && peek().value != ")") {
+                    param.name = advance().value; // consume actual parameter name
+                    param.token = previous();
+                }
+            }
         } else {
-            // Unnamed parameter — use auto-generated name
-            param.name = "_p" + std::to_string(params.size());
-            param.token = previous();
+            if (peek().value == "ozgarmas" || peek().value == "o'zgarmas") {
+                param.isConst = true;
+                advance();
+            }
+            
+            param.type = parseTypeString();
+            
+            // Second identifier = name (if present)
+            if (!isAtEnd() && peek().type == TokenType::Identifier &&
+                peek().value != "," && peek().value != ")") {
+                param.name = advance().value;
+                param.token = previous();
+            } else {
+                // Unnamed parameter — use auto-generated name
+                param.name = "_p" + std::to_string(params.size());
+                param.token = previous();
+            }
         }
         
         // Standart qiymat: butun son = 0
@@ -1973,6 +2111,11 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 method->token = advance(); // consume ClassName
                 
                 method->params = parseFunctionParameters(); // consumes (...)
+                // Optional noexcept right after parameters: ClassName(params) xato_tashlamaydi ...
+                if (!isAtEnd() && peek().value == "xato_tashlamaydi") {
+                    method->isNoExcept = true;
+                    advance();
+                }
                 // Constructor initializer list: ClassName(params) : field1(val), field2(val2) { }
                 if (!isAtEnd() && peek().value == ":") {
                     method->initializerList = " :";
@@ -2035,6 +2178,19 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 if (isAtEnd() || peek().value != "(") typeName = "inline static " + typeName;
             }
 
+            // Check for C-style array syntax: data[10]
+            std::string arraySize;
+            if (!isAtEnd() && peek().value == "[") {
+                advance(); // consume '['
+                if (!isAtEnd() && (peek().type == TokenType::IntegerLiteral)) {
+                    arraySize = peek().value;
+                    advance(); // consume size
+                }
+                if (!isAtEnd() && peek().value == "]") {
+                    advance(); // consume ']'
+                }
+            }
+
             if (!isAtEnd() && peek().value == "(") {
                 // Parse Method
                 auto method = std::make_unique<ClassDeclaration::Method>();
@@ -2045,11 +2201,12 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 method->params = parseFunctionParameters();
                 method->isStatic = isStatic;
 
-                // Post-params modifiers: sabit (const method), ustidan_yozish (override), mavhum (pure virtual)
-                while (!isAtEnd() && (peek().value == "ustidan_yozish" || peek().value == "mavhum" || peek().value == "sabit")) {
+                // Post-params modifiers: o'zgarmas (const method), ustidan_yozish (override), mavhum (pure virtual), xato_tashlamaydi (noexcept)
+                while (!isAtEnd() && (peek().value == "ustidan_yozish" || peek().value == "mavhum" || peek().value == "o'zgarmas" || peek().value == "xato_tashlamaydi")) {
                     if (peek().value == "ustidan_yozish") method->isVirtual = true;
                     if (peek().value == "mavhum") method->isPureVirtual = true;
-                    if (peek().value == "sabit") method->isConstMethod = true;
+                    if (peek().value == "o'zgarmas") method->isConstMethod = true;
+                    if (peek().value == "xato_tashlamaydi") method->isNoExcept = true;
                     advance();
                 }
                 if (isMavhum) method->isPureVirtual = true;
@@ -2070,9 +2227,20 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 auto member = ClassDeclaration::Member();
                 member.type = typeName;
                 member.name = name;
+                member.arraySize = arraySize; // For C-style arrays
                 member.accessSpecifier = currentAccess;
+
+                // Bitfield syntax: <type> <name> : <width>;
+                if (member.arraySize.empty() && !isAtEnd() && peek().type == TokenType::Symbol && peek().value == ":") {
+                    advance(); // consume ':'
+                    if (isAtEnd() || peek().type != TokenType::IntegerLiteral) {
+                        throw ParseError("Kutilgan bit kengligi (butun son) " + formatLocation(peek()));
+                    }
+                    member.bitWidth = advance().value;
+                }
+
                 members.push_back(member);
-                
+
                 if (!isAtEnd() && peek().value == "=") {
                     advance(); // skip '='
                     while (!isAtEnd() && peek().value != ";") {

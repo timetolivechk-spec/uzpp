@@ -1,0 +1,38 @@
+// uz++ — Union (birlashma) va bitfield testi
+
+ulash "uzpp_runtime.hpp"
+
+// Klassik union — bitta xotira maydonida ko'p turlar
+birlashma Qiymat {
+    butun butun_qiymat;
+    haqiqiy haqiqiy_qiymat;
+}
+
+// Bit polelar — kompakt joylashuv (2 + 4 + 5 = 11 bit; oxirgi qiymat ishorali)
+tuzilma Bayroqlar {
+    butun ochiq : 2;
+    butun rejim : 4;
+    butun yosh  : 5;
+}
+
+butun asosiy() {
+    Qiymat q;
+    q.butun_qiymat = 1234;
+    yozish << "Union butun: " << q.butun_qiymat << qator_oxiri;
+
+    q.haqiqiy_qiymat = 3.14;
+    yozish << "Union haqiqiy: " << q.haqiqiy_qiymat << qator_oxiri;
+
+    Bayroqlar b;
+    b.ochiq = 1;
+    b.rejim = 5;
+    b.yosh  = 12;
+    yozish << "Bayroqlar: ochiq=" << b.ochiq
+           << " rejim=" << b.rejim
+           << " yosh=" << b.yosh
+           << qator_oxiri;
+    yozish << "Bayroqlar hajmi (bayt) = " << sizeof(b) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

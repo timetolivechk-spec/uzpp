@@ -1,0 +1,48 @@
+// uz++ — Funksiya ortida qoqilishi (function overloading) testi
+
+ulash "uzpp_runtime.hpp"
+
+// Birinchi versiya - butun bilan
+bosh chiqar(butun n) {
+    yozish << "Butun: " << n << qator_oxiri;
+}
+
+// Ikkinchi versiya - matn bilan
+bosh chiqar_matn(matn s) {
+    yozish << "Matn: " << s << qator_oxiri;
+}
+
+// Uchinchi versiya - haqiqiy bilan
+bosh chiqar_haqiqiy(haqiqiy x) {
+    yozish << "Haqiqiy: " << x << qator_oxiri;
+}
+
+// Qo'shimcha overloaded versiyalar
+butun qoshi_bitta(butun x) {
+    qaytarish x;
+}
+
+butun qoshi_ikki(butun x, butun y) {
+    qaytarish x + y;
+}
+
+butun qoshi_uch(butun x, butun y, butun z) {
+    qaytarish x + y + z;
+}
+
+butun asosiy() {
+    // Test chiqar() overloading bilan turli argumentlar
+    chiqar(42);
+    chiqar_matn("Salom");
+    chiqar_haqiqiy(3.14);
+    
+    // Test qoshi() overloading bilan turli sondagi argumentlar
+    yozish << "qoshi_bitta(5) = " << qoshi_bitta(5) << qator_oxiri;
+    yozish << "qoshi_ikki(3, 4) = " << qoshi_ikki(3, 4) << qator_oxiri;
+    yozish << "qoshi_uch(1, 2, 3) = " << qoshi_uch(1, 2, 3) << qator_oxiri;
+    
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
+
+

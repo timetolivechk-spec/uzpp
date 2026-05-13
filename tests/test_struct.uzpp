@@ -8,11 +8,11 @@ tuzilma Nuqta {
 
     Nuqta(haqiqiy x_, haqiqiy y_) : x(x_), y(y_) {}
 
-    haqiqiy masofa() sabit {
+    haqiqiy masofa() o'zgarmas {
         qaytarish x * x + y * y;
     }
 
-    bosh chiqar() sabit {
+    bosh chiqar() o'zgarmas {
         yozish << "(" << x << ", " << y << ")";
     }
 }

@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.1.7] — 2026-05-13
+
+### Til imkoniyatlari (transpilatsiya)
+- **Compile-time modifikatorlari (Stage 1):** `sobit_ifoda`/`sabit_ifoda` → `constexpr`,
+  `sobit_baholash`/`sabit_baholash` → `consteval`, `sobit_boshlangich`/`sabit_boshlangich`
+  → `constinit`. Ikkala nom ham qabul qilinadi.
+- **Funksiya atributlari:** `@tashlab_yuborilmas` → `[[nodiscard]]`,
+  `@eskirgan` → `[[deprecated]]`.
+- **`agar sobit_ifoda (...)`** → `if constexpr (...)` — shablonlarda compile-time tarmoqlash.
+- **`statik_tasdiqlash(cond, "msg")`** → `static_assert(cond, "msg")`.
+- **`xato_tashlamaydi`** → `noexcept` — funksiya parametrlaridan keyin yoki konstruktor
+  initializer-list dan oldin.
+- **`birlashma`** → `union`, **bitfield** sintaksisi (`butun x : 4`), **C-uslubidagi massivlar**
+  sinf maydonlarida (`butun data[10]`).
+- **C++23 multidim subscript:** `arr[i, j, k]` ko'p o'lchovli indekslash.
+- **Variadic shablonlar va fold-ifodalar:** `shablon <tur... Args>`, `(args + ...)`,
+  pack expansion `args...`.
+- **Deducing this (C++23):** `oz`/`bosh` birinchi parametr — explicit object parameter.
+- **Funksiya overloading:** TypeChecker bir nomli funksiyalarni qayta e'lon qilishga ruxsat beradi.
+- **Structured binding:** `o'zgaruvchan [a, b] = p;` ichidagi nomlar to'g'ri ro'yxatga olinadi.
+
+### Sifat
+- 36/36 testlar muvaffaqiyatli o'tadi. Phase 11 va Phase 12 birlashtirildi.
+
 ## [2.1.6] — 2026-05-12
 
 ### Marketplace ko'rinishi

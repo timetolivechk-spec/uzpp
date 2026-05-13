@@ -1,0 +1,32 @@
+// uz++ — C++23 multidim subscript: arr[i, j]
+
+ulash "uzpp_runtime.hpp"
+
+sinf Matritsa {
+yopiq:
+    vektor<butun> data;
+ochiq:
+    Matritsa() {
+        uchun (butun i = 0; i < 9; i = i + 1) {
+            data.push_back(i + 1);
+        }
+    }
+
+    // C++23 multidim subscript
+    butun& operator[](butun i, butun j) {
+        qaytarish data[i * 3 + j];
+    }
+}
+
+butun asosiy() {
+    Matritsa m;
+    yozish << "m[1, 2] = " << m[1, 2] << qator_oxiri; // -> 6
+    yozish << "m[0, 0] = " << m[0, 0] << qator_oxiri; // -> 1
+    yozish << "m[2, 2] = " << m[2, 2] << qator_oxiri; // -> 9
+
+    m[0, 0] = 100;
+    yozish << "after m[0,0]=100, m[0,0] = " << m[0, 0] << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

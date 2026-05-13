@@ -4,10 +4,10 @@ ulash "uzpp_runtime.hpp"
 
 // Mavhum asosiy sinf
 sinf Shakl {
-    mavhum haqiqiy yuza() sabit;
-    mavhum haqiqiy perimetr() sabit;
+    mavhum haqiqiy yuza() o'zgarmas;
+    mavhum haqiqiy perimetr() o'zgarmas;
 
-    bosh chiqar() sabit {
+    bosh chiqar() o'zgarmas {
         yozish << "Yuza: " << yuza() << ", Perimetr: " << perimetr() << qator_oxiri;
     }
 }
@@ -18,11 +18,11 @@ sinf Doira meros Shakl {
 
     Doira(haqiqiy r) : radius(r) {}
 
-    haqiqiy yuza() sabit ustidan_yozish {
+    haqiqiy yuza() o'zgarmas ustidan_yozish {
         qaytarish 3.14159 * radius * radius;
     }
 
-    haqiqiy perimetr() sabit ustidan_yozish {
+    haqiqiy perimetr() o'zgarmas ustidan_yozish {
         qaytarish 2.0 * 3.14159 * radius;
     }
 }
@@ -34,11 +34,11 @@ sinf Turtburchak meros Shakl {
 
     Turtburchak(haqiqiy e, haqiqiy b) : eni(e), boyi(b) {}
 
-    haqiqiy yuza() sabit ustidan_yozish {
+    haqiqiy yuza() o'zgarmas ustidan_yozish {
         qaytarish eni * boyi;
     }
 
-    haqiqiy perimetr() sabit ustidan_yozish {
+    haqiqiy perimetr() o'zgarmas ustidan_yozish {
         qaytarish 2.0 * (eni + boyi);
     }
 }

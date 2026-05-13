@@ -46,15 +46,15 @@ ochiq:
         qaytarish yuqori;
     }
 
-    T qayt() sabit {
+    T qayt() o'zgarmas {
         agar (bo_shMi()) {
             irgitish std::runtime_error("Stek bo'sh!");
         }
         qaytarish ma_lumot.back();
     }
 
-    mantiqiy bo_shMi() sabit { qaytarish ma_lumot.empty(); }
-    butun hajm() sabit { qaytarish ma_lumot.size(); }
+    mantiqiy bo_shMi() o'zgarmas { qaytarish ma_lumot.empty(); }
+    butun hajm() o'zgarmas { qaytarish ma_lumot.size(); }
 };
 
 // --- Abstract geometrik shakllar ---

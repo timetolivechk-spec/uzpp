@@ -69,11 +69,11 @@ ochiq:
         qaytarish yolg'on;
     }
 
-    haqiqiy balansOlish() sabit { qaytarish balans; }
-    matn egasiniOlish() sabit { qaytarish egasi; }
-    butun operatsiyalarSoni() sabit { qaytarish operatsiyalar; }
+    haqiqiy balansOlish() o'zgarmas { qaytarish balans; }
+    matn egasiniOlish() o'zgarmas { qaytarish egasi; }
+    butun operatsiyalarSoni() o'zgarmas { qaytarish operatsiyalar; }
 
-    bosh hisobot() sabit {
+    bosh hisobot() o'zgarmas {
         yozish << "=== Hisob: " << egasi << " ===" << qator_oxiri;
         yozish << "  Balans: " << balans << " so'm" << qator_oxiri;
         yozish << "  Operatsiyalar: " << operatsiyalar << qator_oxiri;

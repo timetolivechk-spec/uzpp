@@ -3,14 +3,14 @@
 ulash "uzpp_runtime.hpp"
 
 sinf Hayvon {
-    mavhum matn ovoz() sabit;
-    bosh gapir() sabit {
+    mavhum matn ovoz() o'zgarmas;
+    bosh gapir() o'zgarmas {
         yozish << ovoz() << qator_oxiri;
     }
 }
 
 sinf Mushuk meros Hayvon {
-    matn ovoz() sabit ustidan_yozish { qaytarish "Miyov"; }
+    matn ovoz() o'zgarmas ustidan_yozish { qaytarish "Miyov"; }
     bosh sakra() { yozish << "Mushuk sakradi!" << qator_oxiri; }
 }
 

@@ -1,0 +1,26 @@
+// uz++ — Variadic shablonlar (template <typename... Args>) + pack expansion
+
+ulash "uzpp_runtime.hpp"
+
+// Argumentlar sonini olish — sizeof...(args)
+shablon <tur... Args>
+butun argumentlar_soni(Args... args) {
+    qaytarish sizeof...(args);
+}
+
+// Fold expression — qaytarib chiqaradi
+shablon <tur... Args>
+butun yigindi(Args... args) {
+    qaytarish (args + ...);
+}
+
+butun asosiy() {
+    yozish << "5 ta argument: " << argumentlar_soni(1, 2, 3, 4, 5) << qator_oxiri;
+    yozish << "0 ta argument: " << argumentlar_soni() << qator_oxiri;
+
+    yozish << "yigindi(1,2,3,4,5) = " << yigindi(1, 2, 3, 4, 5) << qator_oxiri;
+    yozish << "yigindi(10,20) = " << yigindi(10, 20) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

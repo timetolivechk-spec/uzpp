@@ -97,10 +97,12 @@ private:
     void visitPipelineExpression(const PipelineExpression* expr);
     void visitLambdaExpression(const LambdaExpression* expr);
     void visitTernaryExpression(const TernaryExpression* expr);
+    void visitThrowExpression(const ThrowExpression* expr);
     
     // Statement visitors
     void visitStatement(const Statement* stmt);
     void visitIfStatement(const IfStatement* stmt);
+    void visitTryStatement(const TryStatement* stmt);
     void visitWhileStatement(const WhileStatement* stmt);
     void visitForStatement(const ForStatement* stmt);
     void visitBlock(const Block* stmt);

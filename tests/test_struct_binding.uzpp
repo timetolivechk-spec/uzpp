@@ -1,0 +1,13 @@
+// uz++ — Structured binding test
+// ozgaruvchan [x, y] = ...  ->  auto [x, y] = ...
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    juftlik<butun, butun> p = juftlik<butun, butun>(3, 7);
+    o'zgaruvchan [a, b] = p;
+
+    yozish << "a=" << a << " b=" << b << qator_oxiri;
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

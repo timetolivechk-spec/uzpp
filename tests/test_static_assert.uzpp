@@ -1,0 +1,7 @@
+ulash "uzpp_runtime.hpp"
+
+statik_tasdiqlash(sizeof(butun) >= 4, "butun kamida 4 bayt bo'lishi kerak");
+
+butun asosiy() {
+    qaytarish 0;
+}
