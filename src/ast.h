@@ -446,6 +446,8 @@ public:
     void setThreadLocal(bool value) { isThreadLocal_ = value; }
     bool isStaticLocal() const { return isStaticLocal_; }
     void setStaticLocal(bool value) { isStaticLocal_ = value; }
+    bool isInline() const { return isInline_; }
+    void setInline(bool value) { isInline_ = value; }
 
 private:
     std::string name_;
@@ -460,6 +462,7 @@ private:
     std::string arraySize_;
     bool isThreadLocal_ = false;
     bool isStaticLocal_ = false;
+    bool isInline_ = false;
 };
 
 class ReturnStatement final : public Statement {
@@ -984,11 +987,15 @@ public:
     const std::string& getReturnType() const { return returnType_; }
     Statement* getBody() const { return body_.get(); }
     const Token& getLambdaToken() const { return lambdaToken_; }
+    
+    const std::string& getTemplateParams() const { return templateParams_; }
+    void setTemplateParams(const std::string& tp) { templateParams_ = tp; }
 
 private:
     std::vector<Capture> captures_;
     std::vector<Param>   params_;
     std::string          returnType_;
+    std::string          templateParams_;
     std::unique_ptr<Statement> body_;
     Token lambdaToken_;
 };

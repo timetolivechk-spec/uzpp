@@ -1,0 +1,25 @@
+// uz++ — C++20 lambda template parameters: []shablon<tur T>(T x){...}
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // Single template param
+    o'zgaruvchan ikkilantir = []shablon<tur T>(T x) {
+        qaytarish x * 2;
+    };
+
+    yozish << "ikkilantir(10) = " << ikkilantir(10) << qator_oxiri;
+    yozish << "ikkilantir(2.5) = " << ikkilantir(2.5) << qator_oxiri;
+    yozish << "ikkilantir(\"Hi\") concat: skipped" << qator_oxiri;
+
+    // Two template params with trailing return
+    o'zgaruvchan qoshish = []shablon<tur T, tur U>(T a, U b) {
+        qaytarish a + b;
+    };
+
+    yozish << "qoshish(3, 4) = " << qoshish(3, 4) << qator_oxiri;
+    yozish << "qoshish(2.5, 3) = " << qoshish(2.5, 3) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

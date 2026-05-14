@@ -300,7 +300,13 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // co_yield generators
         "chiqar_qadam",
         // decltype(expr)
-        "tur_baholash", "decltype"
+        "tur_baholash", "decltype",
+        // inline variables (C++17)
+        "qator_ichi",
+        // lambda this-capture
+        "bu",
+        // initializer_list type alias
+        "boshlovchi_royxat"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -686,8 +692,12 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
             if (tokens_[lookahead].value == "[") bracketDepth++;
             else if (tokens_[lookahead].value == "]") {
                 if (bracketDepth == 0) {
-                    if (lookahead + 1 < tokens_.size() && tokens_[lookahead + 1].value == "(") {
-                        mightBeLambda = true;
+                    if (lookahead + 1 < tokens_.size()) {
+                        const std::string& nxt = tokens_[lookahead + 1].value;
+                        // C++20 lambda template prefix: []shablon<T>(args){...}
+                        if (nxt == "(" || nxt == "shablon") {
+                            mightBeLambda = true;
+                        }
                     }
                     break;
                 }
@@ -702,7 +712,16 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
 
             while (!isAtEnd() && peek().value != "]") {
                 LambdaExpression::Capture cap;
-                if (peek().value == "&") {
+                // C++17 *this capture (by value): [*bu] or [*this]
+                if (peek().value == "*") {
+                    advance(); // '*'
+                    if (!isAtEnd() && peek().type == TokenType::Identifier &&
+                        (peek().value == "bu" || peek().value == "this")) {
+                        advance();
+                        cap.name = "*this";
+                        cap.byRef = false;
+                    }
+                } else if (peek().value == "&") {
                     cap.byRef = true;
                     advance(); // consume '&'
                     if (!isAtEnd() && peek().type == TokenType::Identifier && peek().value != "]" && peek().value != ",") {
@@ -715,7 +734,13 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                     cap.name = "=";
                     cap.byRef = false;
                 } else if (peek().type == TokenType::Identifier) {
-                    cap.name = advance().value;
+                    std::string n = advance().value;
+                    // [bu] / [this] — pointer-this capture
+                    if (n == "bu" || n == "this") {
+                        cap.name = "this";
+                    } else {
+                        cap.name = n;
+                    }
                     cap.byRef = false;
                 }
                 // C++14 init-capture: [name = expr]
@@ -741,6 +766,36 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 if (!isAtEnd() && peek().value == ",") advance();
             }
             if (!isAtEnd()) advance(); // consume ']'
+
+            // Parse optional template parameters: []shablon<tur T, tur U>(...) {...}
+            // Translate Uzbek `tur` → C++ `typename` per existing shablon convention.
+            std::string templateParams;
+            if (checkKeyword("shablon")) {
+                advance(); // consume 'shablon'
+                if (!isAtEnd() && peek().value == "<") {
+                    advance(); // consume '<'
+                    templateParams = "<";
+                    bool first = true;
+                    while (!isAtEnd() && peek().value != ">") {
+                        if (!first && peek().value == ",") {
+                            templateParams += ", ";
+                            advance();
+                            continue;
+                        }
+                        if (checkKeyword("tur")) {
+                            templateParams += "typename ";
+                            advance();
+                        } else if (peek().type == TokenType::Identifier) {
+                            templateParams += advance().value + " ";
+                        } else {
+                            templateParams += advance().value;
+                        }
+                        first = false;
+                    }
+                    if (!isAtEnd()) advance(); // consume '>'
+                    templateParams += ">";
+                }
+            }
 
             // Parse parameter list
             std::vector<LambdaExpression::Param> params;
@@ -804,8 +859,10 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 body = std::make_unique<ReturnStatement>(std::move(retExpr), retTok);
             }
 
-            return std::make_unique<LambdaExpression>(std::move(captures), std::move(params), lambdaReturnType,
+            auto lambdaNode = std::make_unique<LambdaExpression>(std::move(captures), std::move(params), lambdaReturnType,
                                                       std::move(body), lambdaToken);
+            lambdaNode->setTemplateParams(templateParams);
+            return lambdaNode;
         }
 
         // Array Literal: [1, 2, 3]
@@ -1554,6 +1611,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
     bool isMutable = false;
     bool isThreadLocal = false;
     bool isStaticLocal = false;
+    bool isInlineVar = false;
     while (!isAtEnd()) {
         if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda")) {
             isConstExpr = true;
@@ -1575,6 +1633,10 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         } else if (checkKeyword("statik")) {
             // local static — Meyers singleton / lazy init
             isStaticLocal = true;
+            advance();
+        } else if (checkKeyword("qator_ichi") || checkKeyword("inline")) {
+            // C++17 inline variables on namespace scope
+            isInlineVar = true;
             advance();
         } else {
             break;
@@ -1623,6 +1685,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         if (isMutable) varDecl->setMutable(true);
         if (isThreadLocal) varDecl->setThreadLocal(true);
         if (isStaticLocal) varDecl->setStaticLocal(true);
+        if (isInlineVar) varDecl->setInline(true);
 
         // Comma-separated declarations: butun a = 1, b = 2;
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
@@ -1637,6 +1700,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
                 if (isMutable) more->setMutable(true);
                 if (isThreadLocal) more->setThreadLocal(true);
                 if (isStaticLocal) more->setStaticLocal(true);
+                if (isInlineVar) more->setInline(true);
                 stmts.push_back(std::move(more));
             }
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
@@ -1771,6 +1835,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
     bool isConstInit = false;
     bool isNoDiscard = false;
     bool isDeprecated = false;
+    bool isInlineVar = false;
     std::string alignment;
 
     while (!isAtEnd()) {
@@ -1814,6 +1879,10 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
             advance();
         } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich")) {
             isConstInit = true;
+            advance();
+        } else if (checkKeyword("qator_ichi") || checkKeyword("inline")) {
+            // C++17 inline variables on namespace scope
+            isInlineVar = true;
             advance();
         } else {
             break;
@@ -1998,11 +2067,19 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         return func;
     }
     
+    // o'zgarmas/ozgarmas TYPE NAME → const TYPE NAME (mirror of local parser)
+    bool isGlobalConst = false;
+    if (!isAtEnd() && (peek().value == "o'zgarmas" || peek().value == "ozgarmas")) {
+        isGlobalConst = true;
+        advance();
+    }
+
     // C-Style disambiguation: <Type> <Name>
     if (looksLikeDeclHelper(tokens_, current_)) {
         std::string typeName = parseTypeString();
+        if (isGlobalConst) typeName = "o'zgarmas " + typeName;
         std::string name = advance().value;
-        
+
         if (name == "operator" && !isAtEnd() && peek().type == TokenType::Symbol) {
             name += advance().value;
             if (name == "operator(" && !isAtEnd() && peek().value == ")") name += advance().value;
@@ -2101,6 +2178,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                 auto varDecl = parseVariableDeclaration(typeName, name);
                 if (isConstExpr) varDecl->setConstExpr(true);
                 if (isConstInit) varDecl->setConstInit(true);
+                if (isInlineVar) varDecl->setInline(true);
 
                 if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
                     advance();
@@ -2110,11 +2188,12 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         } else {
             if (isAsync) throw ParseError("O'zgaruvchini asinxron qilib bo'lmaydi");
             auto varDecl = parseVariableDeclaration(typeName, name, isConstExpr, isConstEval, isConstInit);
-                
+            if (isInlineVar) varDecl->setInline(true);
+
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
                 advance();
             }
-                
+
             return varDecl;
         }
     }

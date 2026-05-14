@@ -1,0 +1,35 @@
+// uz++ — Lambda this-capture: [bu] / [*bu]
+
+ulash "uzpp_runtime.hpp"
+
+sinf Hisoblagich {
+ochiq:
+    butun qiymat;
+
+    Hisoblagich(butun q) : qiymat(q) {}
+
+    // [bu] -> [this] (pointer capture)
+    butun ikkilantir() {
+        o'zgaruvchan lam = [bu]() {
+            qaytarish bu->qiymat * 2;
+        };
+        qaytarish lam();
+    }
+
+    // [*bu] -> [*this] (C++17 by-value capture)
+    butun uchlantir() {
+        o'zgaruvchan lam = [*bu]() {
+            qaytarish qiymat * 3;
+        };
+        qaytarish lam();
+    }
+}
+
+butun asosiy() {
+    Hisoblagich h(10);
+    yozish << "[bu] ikkilantir = " << h.ikkilantir() << qator_oxiri;
+    yozish << "[*bu] uchlantir = " << h.uchlantir() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

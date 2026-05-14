@@ -1,0 +1,26 @@
+// uz++ — std::initializer_list<T> via boshlovchi_royxat<T>
+
+ulash <initializer_list>
+ulash "uzpp_runtime.hpp"
+
+sinf Kontayner {
+ochiq:
+    butun yigindi;
+
+    Kontayner(boshlovchi_royxat<butun> elems) : yigindi(0) {
+        uchun (butun e : elems) {
+            yigindi = yigindi + e;
+        }
+    }
+}
+
+butun asosiy() {
+    Kontayner k({10, 20, 30});
+    yozish << "Sum(10, 20, 30) = " << k.yigindi << qator_oxiri;
+
+    Kontayner k2({1, 2, 3, 4, 5});
+    yozish << "Sum(1..5) = " << k2.yigindi << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

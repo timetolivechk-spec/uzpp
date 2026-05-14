@@ -301,6 +301,8 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"asosiy", "main"},
         {"belgi", "char"},
         {"bosh", "void"},
+        {"boshlovchi_royxat", "std::initializer_list"},
+        {"bu", "this"},   // lambda this-capture / method body
         {"butun", "int"},
         // Unsigned variants ("musbat" = positive)
         {"musbat_butun",   "unsigned int"},
@@ -644,6 +646,7 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
 
     static const std::unordered_map<std::string, std::string> typeMap = {
         {"bosh", "void"},
+        {"boshlovchi_royxat", "std::initializer_list"},
         {"butun", "int"},
         {"musbat_butun", "unsigned int"},
         {"musbat_qisqa", "unsigned short"},
@@ -1481,7 +1484,7 @@ void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt->isStaticLocal()) emitRawToken("static");
     if (stmt->isThreadLocal()) emitRawToken("thread_local");
 
-    if (indentLevel_ == namespaceDepth_ && !stmt->isStaticLocal() && !stmt->isThreadLocal()) {
+    if (stmt->isInline() || (indentLevel_ == namespaceDepth_ && !stmt->isStaticLocal() && !stmt->isThreadLocal())) {
         emitRawToken("inline");
     }
 
@@ -1938,7 +1941,7 @@ void CodeGen::visitLambdaExpression(const LambdaExpression* expr) {
             if (cap.byRef) emitRawToken("&");
             else emitRawToken("=");
         } else {
-            if (cap.byRef) emitRawToken("&");
+            if (cap.byRef && cap.name != "this" && cap.name != "*this") emitRawToken("&");
             emitRawToken(cap.name);
             // C++14 init-capture: name = expr
             if (!cap.initExpr.empty()) {
@@ -1948,6 +1951,10 @@ void CodeGen::visitLambdaExpression(const LambdaExpression* expr) {
         }
     }
     emitRawToken("]");
+
+    if (!expr->getTemplateParams().empty()) {
+        emitRawToken(expr->getTemplateParams());
+    }
 
     // Parameter list
     emitRawToken("(");
