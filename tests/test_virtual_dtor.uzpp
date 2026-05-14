@@ -1,0 +1,40 @@
+// uz++ — Virtual destructor for proper polymorphic cleanup
+
+ulash "uzpp_runtime.hpp"
+
+sinf Hayvon {
+ochiq:
+    matn nomi;
+
+    Hayvon(matn n) : nomi(n) {
+        yozish << "Hayvon yaratildi: " << nomi << qator_oxiri;
+    }
+
+    mavhum ~Hayvon() {
+        yozish << "Hayvon o'ldi: " << nomi << qator_oxiri;
+    }
+
+    mavhum bosh ovoz() = 0;
+}
+
+sinf Mushuk meros Hayvon {
+ochiq:
+    Mushuk(matn n) : Hayvon(n) {}
+
+    ~Mushuk() ustidan_yozish {
+        yozish << "Mushuk dtor: " << nomi << qator_oxiri;
+    }
+
+    bosh ovoz() ustidan_yozish {
+        yozish << nomi << ": Miyov!" << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    Hayvon* hayv = yangi Mushuk("Pisya");
+    hayv->ovoz();
+    o'chirish hayv;  // virtual dtor sababli ham Mushuk, ham Hayvon dtor chaqiriladi
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

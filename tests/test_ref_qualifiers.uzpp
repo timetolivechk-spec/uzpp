@@ -1,0 +1,33 @@
+// uz++ — Method ref-qualifiers (&, &&)
+
+ulash "uzpp_runtime.hpp"
+
+sinf Buffer {
+ochiq:
+    matn ma'lumot;
+
+    Buffer(matn s) : ma'lumot(s) {}
+
+    // Lvalue-ref qualified — only callable on lvalues
+    matn nusxa() & {
+        qaytarish ma'lumot;
+    }
+
+    // Rvalue-ref qualified — only callable on rvalues, moves the data
+    matn olib_ket() && {
+        qaytarish ko'chirish(ma'lumot);
+    }
+}
+
+butun asosiy() {
+    Buffer b("Salom dunyo");
+    matn n1 = b.nusxa();  // lvalue → calls &
+    yozish << "Nusxa: " << n1 << qator_oxiri;
+    yozish << "Bufer hali: " << b.ma'lumot << qator_oxiri;
+
+    matn n2 = Buffer("Vaqtinchalik").olib_ket();  // rvalue → calls &&
+    yozish << "Olib ketildi: " << n2 << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

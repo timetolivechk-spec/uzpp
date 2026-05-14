@@ -219,7 +219,14 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // Union (Stage 6)
         "birlashma",
         // Task 2 and 3
-        "statik_tasdiqlash", "xato_tashlamaydi"
+        "statik_tasdiqlash", "xato_tashlamaydi",
+        // Storage modifiers (mutable, thread_local)
+        "ozgaruvchi_o'zgartirish", "mutable",
+        "oqim_mahalliy", "thread_local",
+        // friend declarations
+        "dust", "friend",
+        // extern "C" linkage
+        "tashqi", "extern"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -1320,6 +1327,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
     bool isConstEval = false;
     bool isConstInit = false;
 
+    bool isMutable = false;
+    bool isThreadLocal = false;
+    bool isStaticLocal = false;
     while (!isAtEnd()) {
         if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda")) {
             isConstExpr = true;
@@ -1329,6 +1339,18 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
             advance();
         } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich")) {
             isConstInit = true;
+            advance();
+        } else if (checkKeyword("ozgaruvchi_o'zgartirish") || checkKeyword("mutable")) {
+            // mutable — for caching in const methods
+            isMutable = true;
+            advance();
+        } else if (checkKeyword("oqim_mahalliy") || checkKeyword("thread_local")) {
+            // thread_local — per-thread storage
+            isThreadLocal = true;
+            advance();
+        } else if (checkKeyword("statik")) {
+            // local static — Meyers singleton / lazy init
+            isStaticLocal = true;
             advance();
         } else {
             break;
@@ -1374,6 +1396,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         auto varDecl = parseVariableDeclaration(typeName, name);
         if (isConstExpr) varDecl->setConstExpr(true);
         if (isConstInit) varDecl->setConstInit(true);
+        if (isMutable) varDecl->setMutable(true);
+        if (isThreadLocal) varDecl->setThreadLocal(true);
+        if (isStaticLocal) varDecl->setStaticLocal(true);
 
         // Comma-separated declarations: butun a = 1, b = 2;
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
@@ -1385,6 +1410,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
                 auto more = parseVariableDeclaration(typeName, nextName);
                 if (isConstExpr) more->setConstExpr(true);
                 if (isConstInit) more->setConstInit(true);
+                if (isMutable) more->setMutable(true);
+                if (isThreadLocal) more->setThreadLocal(true);
+                if (isStaticLocal) more->setStaticLocal(true);
                 stmts.push_back(std::move(more));
             }
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
@@ -1404,6 +1432,35 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 // ===== SEMANTIC DECLARATION PARSING =====
 
 std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
+    // extern "C" { ... } — FFI linkage block.
+    // We emit it as raw C++ wrapping the parsed declarations.
+    if (checkKeyword("tashqi") || checkKeyword("extern")) {
+        const Token externToken = peek();
+        // Look ahead: tashqi "C" { ... } or tashqi "C" decl;
+        if (current_ + 1 < tokens_.size() && tokens_[current_ + 1].type == TokenType::StringLiteral) {
+            advance(); // consume 'tashqi'
+            std::string linkage = advance().value; // "C" or "C++" with quotes
+            // Open brace?
+            if (!isAtEnd() && peek().value == "{") {
+                advance(); // '{'
+                std::vector<std::unique_ptr<ASTNode>> children;
+                // Marker child = opening 'extern "C" {'
+                Token openMarker = externToken;
+                openMarker.value = "extern " + linkage + " {\n";
+                children.push_back(std::make_unique<TokenNode>(openMarker));
+                while (!isAtEnd() && peek().value != "}") {
+                    children.push_back(parseGlobalDeclaration());
+                }
+                if (!isAtEnd()) advance(); // '}'
+                Token closeMarker = externToken;
+                closeMarker.value = "}\n";
+                children.push_back(std::make_unique<TokenNode>(closeMarker));
+                Token open; open.value = ""; Token close; close.value = "";
+                return std::make_unique<GroupNode>(open, close, std::move(children));
+            }
+        }
+    }
+
     if (checkKeyword("eksport")) {
         const Token expToken = peek();
         advance(); // 'eksport' kalit so'zini yutish
@@ -2137,6 +2194,35 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
             }
         }
 
+        // Friend declaration: `dust sinf Foo;` or `dust bosh foo(...);`
+        // Collected as raw token text and emitted verbatim ("friend ...") in codegen.
+        if (peek().type == TokenType::Identifier && (peek().value == "dust" || peek().value == "friend")) {
+            advance();
+            std::string friendDecl = "friend ";
+            // Map sinf/tuzilma to class/struct, otherwise emit raw
+            while (!isAtEnd() && peek().value != ";") {
+                const std::string& v = peek().value;
+                if (v == "sinf") friendDecl += "class ";
+                else if (v == "tuzilma") friendDecl += "struct ";
+                else if (v == "bosh") friendDecl += "void ";
+                else if (v == "butun") friendDecl += "int ";
+                else if (v == "haqiqiy") friendDecl += "double ";
+                else if (v == "matn") friendDecl += "std::string ";
+                else friendDecl += v + " ";
+                advance();
+            }
+            if (!isAtEnd()) advance(); // consume ';'
+            friendDecl += ";";
+            // store on the parent class via a sentinel; we add it later
+            // (here we keep it local; the loop reads it via classDecl below)
+            // For simplicity, push directly to a vector captured by reference
+            // — but we're not in the class decl yet. Use a marker member:
+            members.emplace_back();
+            members.back().type = "__uzpp_friend__";  // sentinel
+            members.back().name = friendDecl;          // carries the raw line
+            continue;
+        }
+
         bool isStatic = false;
         bool isMavhum = false; // pure virtual (base class abstract method)
         // Pre-method modifiers: statik, mavhum
@@ -2192,10 +2278,35 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 advance(); // consume '~'
                 method->name = "~" + advance().value; // consume ClassName
                 method->token = previous();
+                // mavhum ~Sinf() — virtual destructor
+                if (isMavhum) method->isVirtual = true;
 
                 method->params = parseFunctionParameters();
+                if (!isAtEnd() && peek().value == "xato_tashlamaydi") {
+                    method->isNoExcept = true;
+                    advance();
+                }
+                // ustidan_yozish (override) after dtor params
+                if (!isAtEnd() && peek().value == "ustidan_yozish") {
+                    method->isVirtual = true;
+                    advance();
+                }
                 if (!isAtEnd() && peek().value == "{") {
                     method->body = parseBlock();
+                } else if (!isAtEnd() && peek().value == "=") {
+                    advance(); // '='
+                    if (!isAtEnd() && peek().value == "0") {
+                        method->isPureVirtual = true;
+                        method->isVirtual = true;
+                        advance();
+                    } else if (!isAtEnd() && peek().value == "default") {
+                        method->isDefaulted = true;
+                        advance();
+                    } else if (!isAtEnd() && peek().value == "delete") {
+                        method->isDeleted = true;
+                        advance();
+                    }
+                    if (!isAtEnd() && peek().value == ";") advance();
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();
                 }
@@ -2252,6 +2363,11 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                     if (peek().value == "o'zgarmas") method->isConstMethod = true;
                     if (peek().value == "xato_tashlamaydi") method->isNoExcept = true;
                     advance();
+                }
+                // C++11 ref-qualifier on method: void f() & / void f() &&
+                if (!isAtEnd() && peek().type == TokenType::Symbol &&
+                    (peek().value == "&" || peek().value == "&&")) {
+                    method->refQualifier = advance().value;
                 }
                 if (isMavhum) method->isPureVirtual = true;
 

@@ -1,0 +1,29 @@
+// uz++ — friend declarations
+
+ulash "uzpp_runtime.hpp"
+
+sinf Mahfiy {
+yopiq:
+    butun maxfiy_qiymat;
+ochiq:
+    Mahfiy(butun q) : maxfiy_qiymat(q) {}
+
+    dust sinf Diagnostika;
+}
+
+sinf Diagnostika {
+ochiq:
+    bosh tekshir(Mahfiy& m) {
+        // Diagnostika is friend, so it can read private field
+        yozish << "Maxfiy qiymat: " << m.maxfiy_qiymat << qator_oxiri;
+    }
+}
+
+butun asosiy() {
+    Mahfiy m(42);
+    Diagnostika d;
+    d.tekshir(m);
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

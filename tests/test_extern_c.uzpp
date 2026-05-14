@@ -1,0 +1,17 @@
+// uz++ — extern "C" linkage block for FFI
+
+ulash "uzpp_runtime.hpp"
+
+tashqi "C" {
+    butun jami_c(butun a, butun b) {
+        qaytarish a + b;
+    }
+}
+
+butun asosiy() {
+    butun n = jami_c(7, 35);
+    yozish << "jami_c(7, 35) = " << n << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

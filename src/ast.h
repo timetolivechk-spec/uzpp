@@ -439,6 +439,11 @@ public:
     void setArraySize(const std::string& s) { arraySize_ = s; }
     void setConstExpr(bool value) { isConstExpr_ = value; }
     void setConstInit(bool value) { isConstInit_ = value; }
+    void setMutable(bool value) { isMutable_ = value; }
+    bool isThreadLocal() const { return isThreadLocal_; }
+    void setThreadLocal(bool value) { isThreadLocal_ = value; }
+    bool isStaticLocal() const { return isStaticLocal_; }
+    void setStaticLocal(bool value) { isStaticLocal_ = value; }
 
 private:
     std::string name_;
@@ -451,6 +456,8 @@ private:
     bool isConstEval_;
     bool isConstInit_;
     std::string arraySize_;
+    bool isThreadLocal_ = false;
+    bool isStaticLocal_ = false;
 };
 
 class ReturnStatement final : public Statement {
@@ -736,6 +743,7 @@ public:
         bool isNoExcept = false;
         bool isDefaulted = false;     // = default  (e.g. for operator<=>)
         bool isDeleted = false;       // = delete
+        std::string refQualifier;     // "&" or "&&" — ref-qualified method
         Token token;
         std::string initializerList; // ": field1(val1), field2(val2)" for constructors
     };
@@ -759,6 +767,8 @@ public:
     const Token& getClassToken() const { return classToken_; }
     const std::string& getKind() const { return kind_; }
     void setKind(const std::string& kind) { kind_ = kind; }
+    const std::vector<std::string>& getFriendDecls() const { return friendDecls_; }
+    void addFriendDecl(const std::string& decl) { friendDecls_.push_back(decl); }
 
 private:
     std::string name_;
@@ -768,6 +778,7 @@ private:
     std::vector<std::unique_ptr<Method>> methods_;
     Token classToken_;
     std::string kind_;  // "class" (default), "struct", or "union"
+    std::vector<std::string> friendDecls_;  // raw "friend ..." declarations
 };
 
 class NamespaceDeclaration final : public Declaration {

@@ -732,8 +732,12 @@ private:
             {"note:", "eslatma:"},
             {"expected", "Kutilgan"},
             {"before", "shundan oldin"},
-            {"from", "dan"},
-            {"to", "ga"},
+            // NB: bare "from" / "to" / "int" / "char" / "bool" / "void"
+            // are too short — they collide with substrings inside identifiers
+            // and filenames ("test_virtual_dtor" → "test_virtual_dgar" if
+            // "to"→"ga"). Restrict type names to ones bracketed by safe
+            // characters by using ' '+name+' ' or "'name'" patterns where
+            // GCC actually emits them.
             {"std::unordered_map", "lug'at"},
             {"std::shared_ptr", "umumiy_korsatkich"},
             {"std::unique_ptr", "yagona_korsatkich"},
@@ -741,12 +745,12 @@ private:
             {"std::vector", "vektor"},
             {"std::optional", "ixtiyoriy"},
             {"std::pair", "juftlik"},
-            {"int", "butun"},
-            {"double", "haqiqiy"},
-            {"float", "kasr"},
-            {"char", "belgi"},
-            {"bool", "mantiqiy"},
-            {"void", "bosh"}
+            {"'int'", "'butun'"},
+            {"'double'", "'haqiqiy'"},
+            {"'float'", "'kasr'"},
+            {"'char'", "'belgi'"},
+            {"'bool'", "'mantiqiy'"},
+            {"'void'", "'bosh'"}
         };
 
         for (const auto& [from, to] : replacements) {

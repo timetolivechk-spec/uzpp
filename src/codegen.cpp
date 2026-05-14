@@ -1415,7 +1415,11 @@ void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt == nullptr) return;
     writeIndentIfNeeded();
 
-    if (indentLevel_ == namespaceDepth_) {
+    // Storage classes — emit BEFORE 'inline' so they don't get swallowed
+    if (stmt->isStaticLocal()) emitRawToken("static");
+    if (stmt->isThreadLocal()) emitRawToken("thread_local");
+
+    if (indentLevel_ == namespaceDepth_ && !stmt->isStaticLocal() && !stmt->isThreadLocal()) {
         emitRawToken("inline");
     }
 
@@ -1423,6 +1427,7 @@ void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt->isConstExpr()) emitRawToken("constexpr");
     if (stmt->isConstInit()) emitRawToken("constinit");
 
+    if (stmt->isMutable()) emitRawToken("mutable");
     if (stmt->isConst()) emitRawToken("const");
 
     emitRawToken(getCppType(stmt->getTypeName()));
@@ -1628,6 +1633,13 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
         // Emit class members (fields)
         for (const auto& member : decl->getMembers()) {
+            // Friend-declaration sentinel: type="__uzpp_friend__", name holds raw "friend ...;"
+            if (member.type == "__uzpp_friend__") {
+                writeIndentIfNeeded();
+                // Bypass safeIdent — friend decl is literal C++
+                output_ << member.name << "\n";
+                continue;
+            }
             // Unions in C++ do not allow access specifiers between members.
             if (decl->getKind() != "union") {
                 emitAccessIfChanged(member.accessSpecifier);
@@ -1657,7 +1669,12 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
             // Prefix modifiers
             if (method->isStatic) emitRawToken("static");
-            if (method->isPureVirtual) emitRawToken("virtual");
+            // virtual prefix: required for pure-virtual AND for virtual destructors
+            // (destructors can't use 'override' — they need explicit 'virtual')
+            bool isDtor = !method->name.empty() && method->name[0] == '~';
+            if (method->isPureVirtual || (isDtor && method->isVirtual)) {
+                emitRawToken("virtual");
+            }
 
             if (!method->returnType.empty()) {
                 // Strip manual "static " prefix from returnType if we handle it via flag
@@ -1692,8 +1709,14 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
             // Post-params modifiers
             if (method->isConstMethod) emitRawToken("const");
+            // C++11 ref-qualifier: void f() & / && — must come AFTER const, BEFORE noexcept
+            if (!method->refQualifier.empty()) emitRawToken(method->refQualifier);
             if (method->isNoExcept) emitRawToken("noexcept");
-            if (method->isVirtual && !method->isPureVirtual) emitRawToken("override");
+            // override is for derived-class overrides; destructors with isVirtual
+            // get 'virtual' as a prefix (above) and never 'override'.
+            if (method->isVirtual && !method->isPureVirtual && !isDtor) {
+                emitRawToken("override");
+            }
 
             // Emit constructor initializer list before body
             if (!method->initializerList.empty()) {
