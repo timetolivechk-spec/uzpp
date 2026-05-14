@@ -229,7 +229,35 @@ void DapServer::handleMessage(const std::string& content) {
             sendMessage(response);
             sendMessage("{\"seq\":" + std::to_string(seq + 2) + ",\"type\":\"event\",\"event\":\"initialized\"}");
         } else if (command == "setBreakpoints") {
-            std::string response = "{\"seq\":" + std::to_string(seq + 1) + ",\"type\":\"response\",\"request_seq\":" + std::to_string(seq) + ",\"success\":true,\"command\":\"setBreakpoints\",\"body\":{\"breakpoints\":[]}}";
+            // DAP sends arguments.source.path and arguments.breakpoints[].line.
+            // Forward each line to gdb via `-break-insert <path>:<line>` and
+            // report them as verified in the response so the IDE highlights
+            // the breakpoint markers correctly.
+            std::string srcPath = extractJsonString(content, "path");
+            std::ostringstream verified;
+            verified << "[";
+            // Extract every "line":NUM occurrence inside the arguments.breakpoints array
+            size_t scan = content.find("\"breakpoints\"");
+            bool first = true;
+            while (scan != std::string::npos) {
+                size_t lp = content.find("\"line\":", scan);
+                if (lp == std::string::npos) break;
+                size_t end = content.find_first_of(",}", lp + 7);
+                if (end == std::string::npos) break;
+                std::string lineStr = content.substr(lp + 7, end - lp - 7);
+                int bpLine = 0;
+                try { bpLine = std::stoi(lineStr); } catch (...) { bpLine = 0; }
+                if (bpLine > 0 && !srcPath.empty()) {
+                    sendGdbCommand("-break-insert \"" + srcPath + "\":" + std::to_string(bpLine));
+                    waitForGdbResponse(); // drain
+                }
+                if (!first) verified << ",";
+                verified << "{\"verified\":true,\"line\":" << bpLine << "}";
+                first = false;
+                scan = end + 1;
+            }
+            verified << "]";
+            std::string response = "{\"seq\":" + std::to_string(seq + 1) + ",\"type\":\"response\",\"request_seq\":" + std::to_string(seq) + ",\"success\":true,\"command\":\"setBreakpoints\",\"body\":{\"breakpoints\":" + verified.str() + "}}";
             sendMessage(response);
         } else if (command == "configurationDone") {
             sendGdbCommand("-exec-run");

@@ -102,37 +102,73 @@ void Formatter::formatFunctionDeclaration(const FunctionDeclaration* decl) {
 void Formatter::formatClassDeclaration(const ClassDeclaration* decl) {
     if (!decl) return;
     writeIndent();
-    emitRaw("sinf ");
+    // Preserve `kind`: class/struct/union → sinf/tuzilma/birlashma
+    const std::string& kind = decl->getKind();
+    if (kind == "struct") emitRaw("tuzilma ");
+    else if (kind == "union") emitRaw("birlashma ");
+    else emitRaw("sinf ");
     emitRaw(decl->getName());
     if (!decl->getBaseClass().empty()) {
         emitRaw(" meros ");
         emitRaw(decl->getBaseClass());
+        for (const auto& iface : decl->getInterfaces()) {
+            emitRaw(", ");
+            emitRaw(iface);
+        }
     }
     emitRaw(" {");
     emitNewline();
     indentLevel_++;
 
     for (const auto& m : decl->getMembers()) {
+        // Skip sentinel members like friend-declarations stored as fake fields
+        if (m.type == "__uzpp_friend__") continue;
         writeIndent();
         emitRaw(m.type);
         emitRaw(" ");
         emitRaw(m.name);
+        if (!m.arraySize.empty()) {
+            emitRaw("[");
+            emitRaw(m.arraySize);
+            emitRaw("]");
+        }
+        if (!m.bitWidth.empty()) {
+            emitRaw(" : ");
+            emitRaw(m.bitWidth);
+        }
         emitRaw(";");
         emitNewline();
     }
     for (const auto& m : decl->getMethods()) {
         writeIndent();
+        if (m->isStatic) emitRaw("statik ");
+        if (m->isPureVirtual) emitRaw("mavhum ");
         if (!m->returnType.empty()) { emitRaw(m->returnType); emitRaw(" "); }
         emitRaw(m->name);
         emitRaw("(");
         for (std::size_t i = 0; i < m->params.size(); ++i) {
             if (i > 0) emitRaw(", ");
-            if (m->params[i].isConst) emitRaw("ozgarmas ");
+            if (m->params[i].isConst) emitRaw("o'zgarmas ");
             emitRaw(m->params[i].type);
             emitRaw(" ");
             emitRaw(m->params[i].name);
         }
         emitRaw(")");
+        // Post-params modifiers: const-method, noexcept, ref-qualifier, override
+        if (m->isConstMethod) emitRaw(" o'zgarmas");
+        if (!m->refQualifier.empty()) { emitRaw(" "); emitRaw(m->refQualifier); }
+        if (m->isNoExcept) emitRaw(" xato_tashlamaydi");
+        if (m->isVirtual && !m->isPureVirtual && !(!m->name.empty() && m->name[0] == '~')) {
+            emitRaw(" ustidan_yozish");
+        }
+        // Constructor initializer list
+        if (!m->initializerList.empty()) {
+            emitRaw(m->initializerList);
+        }
+        // = default / = delete / = 0
+        if (m->isDefaulted) { emitRaw(" = default;"); emitNewline(); continue; }
+        if (m->isDeleted)   { emitRaw(" = delete;");  emitNewline(); continue; }
+        if (m->isPureVirtual && !m->body) { emitRaw(" = 0;"); emitNewline(); continue; }
         emitNewline();
         if (m->body) formatBlock(m->body.get());
         emitNewline();
@@ -202,9 +238,22 @@ void Formatter::formatTypeAlias(const TypeAlias* decl) {
 void Formatter::formatIncludeStatement(const IncludeStatement* stmt) {
     if (!stmt) return;
     writeIndent();
-    emitRaw("ulash \"");
-    emitRaw(stmt->getModuleName());
-    emitRaw("\";");
+    emitRaw("ulash ");
+    const std::string& mod = stmt->getModuleName();
+    // Detect already-quoted forms — don't double-wrap.
+    //   <header>  → angle include, emit as-is
+    //   "header"  → already quoted, emit as-is
+    //   bare      → wrap in "..."
+    bool angled = !mod.empty() && mod.front() == '<' && mod.back() == '>';
+    bool quoted = mod.size() >= 2 && mod.front() == '"' && mod.back() == '"';
+    if (angled || quoted) {
+        emitRaw(mod);
+    } else {
+        emitRaw("\"");
+        emitRaw(mod);
+        emitRaw("\"");
+    }
+    emitRaw(";");
     emitNewline();
 }
 

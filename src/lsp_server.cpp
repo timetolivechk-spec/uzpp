@@ -307,7 +307,7 @@ void LspServer::handleMessage(const std::string& content) {
     }
     else if (method == "textDocument/hover") {
         std::string idStr = extractId(content);
-        
+
         // Extract cursor position
         size_t linePos = content.find("\"line\":");
         size_t charPos = content.find("\"character\":");
@@ -318,10 +318,15 @@ void LspServer::handleMessage(const std::string& content) {
         if (charPos != std::string::npos) {
             hoverChar = std::stoi(content.substr(charPos + 12, content.find_first_of(",}", charPos) - charPos - 12));
         }
-        
-        // Get the text of the current document (from didChange cache - simplified: parse uri)
+
         std::string uri = extractJsonString(content, "uri");
-        std::string word = extractJsonString(content, "word"); // VS Code might send this
+        // LSP spec doesn't send a "word" — extract it from the cached document
+        // at the given position. (Bug fix: previous code used extractJsonString(content,"word")
+        // which never matched, so hover always saw empty word and returned null.)
+        std::string word;
+        if (!uri.empty() && documentCache_.contains(uri)) {
+            word = getWordAtPosition(documentCache_[uri], hoverLine, hoverChar);
+        }
 
         std::string hoverContent = buildHover(word);
         std::string response;
