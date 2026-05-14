@@ -1166,15 +1166,21 @@ void CodeGen::visitIfStatement(const IfStatement* stmt) {
     emitRawToken("(");
     visitExpression(stmt->getCondition());
     emitRawToken(")");
+    // C++20 branch hint on then-branch: if (cond) [[likely]] { ... }
+    if (stmt->isThenLikely()) emitRawToken("[[likely]]");
+    else if (stmt->isThenUnlikely()) emitRawToken("[[unlikely]]");
     emitNewline();
-    
+
     indentMore();
     visitStatement(stmt->getThenBranch());
     indentLess();
-    
+
     if (stmt->getElseBranch() != nullptr) {
         writeIndentIfNeeded();
         emitRawToken("else");
+        // C++20 branch hint on else-branch: else [[unlikely]] { ... }
+        if (stmt->isElseLikely()) emitRawToken("[[likely]]");
+        else if (stmt->isElseUnlikely()) emitRawToken("[[unlikely]]");
         emitNewline();
         indentMore();
         visitStatement(stmt->getElseBranch());
@@ -1421,6 +1427,12 @@ void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
 
     emitRawToken(getCppType(stmt->getTypeName()));
     emitRawToken(safeIdent(stmt->getName()));
+    
+    if (!stmt->getArraySize().empty()) {
+        emitRawToken("[");
+        emitRawToken(stmt->getArraySize());
+        emitRawToken("]");
+    }
     
     if (stmt->getInitializer() != nullptr) {
         emitRawToken("=");
@@ -1680,6 +1692,7 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
             // Post-params modifiers
             if (method->isConstMethod) emitRawToken("const");
+            if (method->isNoExcept) emitRawToken("noexcept");
             if (method->isVirtual && !method->isPureVirtual) emitRawToken("override");
 
             // Emit constructor initializer list before body
@@ -1690,6 +1703,14 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
             if (method->isPureVirtual && !method->body) {
                 // Pure virtual: no body, just = 0;
                 emitRawToken("= 0;");
+                emitNewline();
+            } else if (method->isDefaulted) {
+                // = default — defaulted member (e.g. operator<=>)
+                emitRawToken("= default;");
+                emitNewline();
+            } else if (method->isDeleted) {
+                // = delete — deleted member
+                emitRawToken("= delete;");
                 emitNewline();
             } else {
                 emitNewline();

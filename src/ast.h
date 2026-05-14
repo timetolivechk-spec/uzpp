@@ -435,6 +435,8 @@ public:
     bool isConstExpr() const { return isConstExpr_; }
     bool isConstEval() const { return isConstEval_; }
     bool isConstInit() const { return isConstInit_; }
+    const std::string& getArraySize() const { return arraySize_; }
+    void setArraySize(const std::string& s) { arraySize_ = s; }
     void setConstExpr(bool value) { isConstExpr_ = value; }
     void setConstInit(bool value) { isConstInit_ = value; }
 
@@ -448,6 +450,7 @@ private:
     bool isConstExpr_;
     bool isConstEval_;
     bool isConstInit_;
+    std::string arraySize_;
 };
 
 class ReturnStatement final : public Statement {
@@ -566,13 +569,28 @@ public:
     
     bool isConstExpr() const { return isConstExpr_; }
     void setConstExpr(bool val) { isConstExpr_ = val; }
-    
+
+    // C++20 branch-prediction hints on the then-branch
+    bool isThenLikely() const { return isThenLikely_; }
+    bool isThenUnlikely() const { return isThenUnlikely_; }
+    void setThenLikely(bool v) { isThenLikely_ = v; }
+    void setThenUnlikely(bool v) { isThenUnlikely_ = v; }
+    // ...and on the else-branch
+    bool isElseLikely() const { return isElseLikely_; }
+    bool isElseUnlikely() const { return isElseUnlikely_; }
+    void setElseLikely(bool v) { isElseLikely_ = v; }
+    void setElseUnlikely(bool v) { isElseUnlikely_ = v; }
+
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> thenBranch_;
     std::unique_ptr<Statement> elseBranch_;
     Token ifToken_;
     bool isConstExpr_ = false;
+    bool isThenLikely_ = false;
+    bool isThenUnlikely_ = false;
+    bool isElseLikely_ = false;
+    bool isElseUnlikely_ = false;
 };
 
 class WhileStatement final : public Statement {
@@ -716,6 +734,8 @@ public:
         bool isConstMethod = false;   // o'zgarmas: void foo() const
         bool isStatic = false;
         bool isNoExcept = false;
+        bool isDefaulted = false;     // = default  (e.g. for operator<=>)
+        bool isDeleted = false;       // = delete
         Token token;
         std::string initializerList; // ": field1(val1), field2(val2)" for constructors
     };

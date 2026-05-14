@@ -1,0 +1,29 @@
+// uz++ — Branch hints: @bashqarib (likely) va @kamdan_kam (unlikely)
+
+ulash "uzpp_runtime.hpp"
+
+butun ishlash(butun x) {
+    agar (x > 0) @bashqarib {
+        qaytarish x * 2;
+    } aks_holda @kamdan_kam {
+        qaytarish -1;
+    }
+}
+
+butun asosiy() {
+    butun jami = 0;
+    uchun (butun i = 1; i <= 10; i = i + 1) {
+        jami = jami + ishlash(i);
+    }
+    yozish << "Yig'indi (1..10): " << jami << qator_oxiri;
+    yozish << "ishlash(-5) = " << ishlash(-5) << qator_oxiri;
+
+    // Simpler if without else
+    butun n = 42;
+    agar (n > 0) @bashqarib {
+        yozish << "n musbat" << qator_oxiri;
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

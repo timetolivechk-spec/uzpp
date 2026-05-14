@@ -266,7 +266,7 @@ bool Parser::isEqualityOperator(const std::string& text) const {
 }
 
 bool Parser::isRelationalOperator(const std::string& text) const {
-    return text == "<" || text == ">" || text == "<=" || text == ">=";
+    return text == "<" || text == ">" || text == "<=" || text == ">=" || text == "<=>";
 }
 
 bool Parser::isAdditiveOperator(const std::string& text) const {
@@ -1144,11 +1144,34 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     }
     
     advance(); // consume ')'
+
+    // C++20 branch hints on the then-branch: agar (cond) @bashqarib { ... }
+    // (@bashqarib = "обычно/чаще всего" → [[likely]], @kamdan_kam = "редко" → [[unlikely]])
+    auto parseBranchHint = [&](bool& likely, bool& unlikely) {
+        if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "@") {
+            std::size_t saved = current_;
+            advance(); // '@'
+            if (!isAtEnd() && peek().type == TokenType::Identifier &&
+                (peek().value == "bashqarib" || peek().value == "kamdan_kam")) {
+                if (peek().value == "bashqarib") likely = true;
+                else unlikely = true;
+                advance(); // consume the hint identifier
+            } else {
+                current_ = saved; // not a branch hint — back off
+            }
+        }
+    };
+
+    bool thenLikely = false, thenUnlikely = false;
+    parseBranchHint(thenLikely, thenUnlikely);
+
     auto thenBranch = parseStatement();
-    
+
     std::unique_ptr<Statement> elseBranch;
+    bool elseLikely = false, elseUnlikely = false;
     if (matchKeyword("aks") || matchKeyword("aks_holda")) {
         // else-if: aks agar (...) or aks_holda agar (...)
+        parseBranchHint(elseLikely, elseUnlikely);
         if (checkKeyword("agar")) {
             elseBranch = parseIfStatement();
         } else {
@@ -1160,6 +1183,7 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
         bool isElse = next < tokens_.size() && tokens_[next].value == "{";
         if (isElse) {
             advance(); // consume 'boshqa'
+            parseBranchHint(elseLikely, elseUnlikely);
             elseBranch = parseStatement();
         }
     }
@@ -1167,6 +1191,10 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     auto ifStmt = std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch),
                                         std::move(elseBranch), ifToken);
     ifStmt->setConstExpr(isConstExpr);
+    if (thenLikely) ifStmt->setThenLikely(true);
+    if (thenUnlikely) ifStmt->setThenUnlikely(true);
+    if (elseLikely) ifStmt->setElseLikely(true);
+    if (elseUnlikely) ifStmt->setElseUnlikely(true);
     return ifStmt;
 }
 
@@ -1863,7 +1891,20 @@ std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std:
     token.value = varName;
     token.line = previous().line;
     token.column = previous().column;
-    
+
+    // C-style array dimension: butun arr[10];
+    std::string arraySize;
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "[") {
+        advance(); // consume '['
+        if (!isAtEnd() && peek().type == TokenType::IntegerLiteral) {
+            arraySize = advance().value;
+        }
+        if (isAtEnd() || peek().value != "]") {
+            throw ParseError("Kutilgan ']' massiv hajmidan keyin " + formatLocation(peek()));
+        }
+        advance(); // consume ']'
+    }
+
     std::unique_ptr<Expression> init = nullptr;
     if (peek().type == TokenType::Symbol && peek().value == "=") {
         advance();
@@ -1905,7 +1946,12 @@ std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std:
     // NOTE: Do NOT consume semicolon here - let callers decide based on context
     // Global declarations and statements have different semicolon requirements
     
-    return std::make_unique<VariableDeclaration>(varName, typeName, std::move(init), token, false);
+    auto decl = std::make_unique<VariableDeclaration>(varName, typeName, std::move(init), token, false);
+    decl->setArraySize(arraySize);
+    if (isConstExpr) decl->setConstExpr(true);
+    if (isConstInit) decl->setConstInit(true);
+    (void)isConstEval; // consteval applies to functions, not variables
+    return decl;
 }
 
 std::unique_ptr<FunctionDeclaration> Parser::parseLegacyFunctionDeclaration() {
@@ -2213,7 +2259,15 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                     method->body = parseBlock();
                 } else if (!isAtEnd() && peek().value == "=") {
                     advance(); // '='
-                    if (!isAtEnd() && peek().value == "0") advance(); // consume '0'
+                    if (!isAtEnd() && peek().value == "0") {
+                        advance(); // pure virtual: = 0
+                    } else if (!isAtEnd() && peek().value == "default") {
+                        method->isDefaulted = true;
+                        advance();
+                    } else if (!isAtEnd() && peek().value == "delete") {
+                        method->isDeleted = true;
+                        advance();
+                    }
                     if (!isAtEnd() && peek().value == ";") advance();
                 } else if (!isAtEnd() && peek().value == ";") {
                     advance();

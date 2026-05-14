@@ -338,6 +338,7 @@ Token Lexer::scanCharacter() {
 
 Token Lexer::scanSymbol() {
     static const std::vector<std::string> multiCharacterSymbols = {
+        "<=>", // C++20 three-way comparison (spaceship) — MUST be before "<=" and ">"
         "...",  // C++ parameter pack ellipsis (variadic templates)
         "::", "->", "++", "--", "<<=", ">>=", "==", "!=", "<=", ">=", "&&", "||", "??" "=", "??",
         "|>", "=>",  // Phase 26: pipeline and arrow operators

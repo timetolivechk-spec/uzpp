@@ -1,0 +1,32 @@
+// uz++ — Local C-style massivlar (butun arr[N])
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    butun buf[5];
+    uchun (butun i = 0; i < 5; i = i + 1) {
+        buf[i] = (i + 1) * 10;
+    }
+
+    yozish << "Buf: ";
+    uchun (butun i = 0; i < 5; i = i + 1) {
+        yozish << buf[i] << " ";
+    }
+    yozish << qator_oxiri;
+
+    butun jami = 0;
+    uchun (butun i = 0; i < 5; i = i + 1) {
+        jami = jami + buf[i];
+    }
+    yozish << "Yig'indi: " << jami << qator_oxiri;
+
+    butun matritsa[9];
+    uchun (butun i = 0; i < 9; i = i + 1) {
+        matritsa[i] = i * i;
+    }
+    yozish << "matritsa[4] = " << matritsa[4] << qator_oxiri;
+    yozish << "matritsa[8] = " << matritsa[8] << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

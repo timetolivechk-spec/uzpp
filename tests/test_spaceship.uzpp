@@ -1,0 +1,34 @@
+// uz++ — C++20 three-way comparison (spaceship) <=>
+
+ulash "uzpp_runtime.hpp"
+
+sinf Nuqta {
+ochiq:
+    butun x;
+    butun y;
+
+    Nuqta(butun a, butun b) : x(a), y(b) {}
+
+    // Defaulted three-way comparison — gives <, <=, >, >=, ==, != all at once
+    auto operator<=>(o'zgarmas Nuqta& boshqa) o'zgarmas = default;
+}
+
+butun asosiy() {
+    Nuqta a(1, 2);
+    Nuqta b(1, 2);
+    Nuqta c(3, 4);
+
+    yozish << "a == b: " << (a == b) << qator_oxiri;
+    yozish << "a == c: " << (a == c) << qator_oxiri;
+    yozish << "a <  c: " << (a < c)  << qator_oxiri;
+    yozish << "c >  a: " << (c > a)  << qator_oxiri;
+    yozish << "a != c: " << (a != c) << qator_oxiri;
+
+    // Direct spaceship: returns std::strong_ordering
+    auto cmp = a <=> c;
+    yozish << "a <=> c == 0? " << (cmp == 0) << qator_oxiri;
+    yozish << "a <=> c <  0? " << (cmp <  0) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
