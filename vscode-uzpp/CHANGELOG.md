@@ -3,9 +3,8 @@
 ## [2.1.7] — 2026-05-13
 
 ### Til imkoniyatlari (transpilatsiya)
-- **Compile-time modifikatorlari (Stage 1):** `sobit_ifoda`/`sabit_ifoda` → `constexpr`,
-  `sobit_baholash`/`sabit_baholash` → `consteval`, `sobit_boshlangich`/`sabit_boshlangich`
-  → `constinit`. Ikkala nom ham qabul qilinadi.
+- **Compile-time modifikatorlari (Stage 1):** `sobit_ifoda` → `constexpr`,
+  `sobit_baholash` → `consteval`, `sobit_boshlangich` → `constinit`.
 - **Funksiya atributlari:** `@tashlab_yuborilmas` → `[[nodiscard]]`,
   `@eskirgan` → `[[deprecated]]`.
 - **`agar sobit_ifoda (...)`** → `if constexpr (...)` — shablonlarda compile-time tarmoqlash.

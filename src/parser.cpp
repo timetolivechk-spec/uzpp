@@ -216,8 +216,6 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "o'zgarmas",
         // Compile-time modifiers (Stage 1): constexpr / consteval / constinit
         "sobit_ifoda", "sobit_baholash", "sobit_boshlangich",
-        // Legacy aliases for compile-time modifiers (Phase 11 — preserved for back-compat)
-        "sabit_ifoda", "sabit_baholash", "sabit_boshlangich",
         // Union (Stage 6)
         "birlashma",
         // Task 2 and 3
@@ -1129,7 +1127,7 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     const Token ifToken = advance(); // consume 'agar'
     
     bool isConstExpr = false;
-    if (checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+    if (checkKeyword("sobit_ifoda")) {
         isConstExpr = true;
         advance();
     }
@@ -1295,13 +1293,13 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
     bool isConstInit = false;
 
     while (!isAtEnd()) {
-        if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+        if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda")) {
             isConstExpr = true;
             advance();
-        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash") || checkKeyword("sabit_baholash")) {
+        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash")) {
             isConstEval = true;
             advance();
-        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich") || checkKeyword("sabit_boshlangich")) {
+        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich")) {
             isConstInit = true;
             advance();
         } else {
@@ -1486,13 +1484,13 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         } else if (checkKeyword("asinxron")) {
             isAsync = true;
             advance();
-        } else if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda") || checkKeyword("sabit_ifoda")) {
+        } else if (checkKeyword("o'zgarmas_ifoda") || checkKeyword("sobit_ifoda")) {
             isConstExpr = true;
             advance();
-        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash") || checkKeyword("sabit_baholash")) {
+        } else if (checkKeyword("o'zgarmas_baholash") || checkKeyword("sobit_baholash")) {
             isConstEval = true;
             advance();
-        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich") || checkKeyword("sabit_boshlangich")) {
+        } else if (checkKeyword("o'zgarmas_boshlangich") || checkKeyword("sobit_boshlangich")) {
             isConstInit = true;
             advance();
         } else {

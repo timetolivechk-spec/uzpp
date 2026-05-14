@@ -1,30 +1,30 @@
 // uz++ — Compile-time modifiers test (Stage 1)
-// sabit_ifoda       -> constexpr
-// sabit_baholash    -> consteval
-// sabit_boshlangich -> constinit
+// sobit_ifoda       -> constexpr
+// sobit_baholash    -> consteval
+// sobit_boshlangich -> constinit
 
 ulash "uzpp_runtime.hpp"
 
 // constexpr function
-sabit_ifoda butun kvadrat(butun x) {
+sobit_ifoda butun kvadrat(butun x) {
     qaytarish x * x;
 }
 
 // consteval function — MUST be evaluated at compile time
-sabit_baholash butun kub(butun x) {
+sobit_baholash butun kub(butun x) {
     qaytarish x * x * x;
 }
 
 // constinit global — guaranteed initialised at program start
-sabit_boshlangich butun global_son = 42;
+sobit_boshlangich butun global_son = 42;
 
 // constexpr global
-sabit_ifoda butun PI_TAQRIBAN = 3;
+sobit_ifoda butun PI_TAQRIBAN = 3;
 
 butun asosiy() {
     // Compile-time constant
-    sabit_ifoda butun a = kvadrat(5);
-    sabit_ifoda butun b = kub(3);
+    sobit_ifoda butun a = kvadrat(5);
+    sobit_ifoda butun b = kub(3);
 
     yozish << "kvadrat(5) = " << a << qator_oxiri;
     yozish << "kub(3) = " << b << qator_oxiri;
