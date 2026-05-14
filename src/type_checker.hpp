@@ -730,6 +730,12 @@ private:
                 if (name.find('<') != std::string::npos) break;
                 // Pack-expansion / fold-expression ellipsis — kompilyator C++ ga so'zma-so'z chiqaradi
                 if (name == "...") break;
+                // C++ built-in operators — not variables
+                static const std::unordered_set<std::string> cppOperators = {
+                    "sizeof", "sizeof...", "typeid", "alignof", "alignas", "decltype",
+                    "noexcept", "static_assert", "throw"
+                };
+                if (cppOperators.contains(name)) break;
                 // Ogohlantirish faqat kichik harf bilan boshlangan va "::" qatnashmagan noma'lum o'zgaruvchilarga
                 if (!name.empty() && std::islower(name[0]) && name.find("::") == std::string::npos && !isDeclared(name)) {
                     reportWarning("Noma'lum o'zgaruvchi ishlatilmoqda -> " + name, id->getSourceToken());
@@ -798,7 +804,7 @@ private:
                 std::string savedReturn = currentReturnType_;
                 reachable_ = true;
                 reportedUnreachable_ = false;
-                currentReturnType_ = "ozgaruvchan";
+                currentReturnType_ = lam->getReturnType().empty() ? "ozgaruvchan" : lam->getReturnType();
                 enterScope();
                 for (const auto& p : lam->getParams()) {
                     declareVar(p.name, p.type.empty() ? "ozgaruvchan" : p.type, lam->getLambdaToken());

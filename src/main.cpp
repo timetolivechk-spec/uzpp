@@ -720,10 +720,33 @@ private:
         const std::vector<std::pair<std::string, std::string>> replacements = {
             {"error:", "XATO:"},
             {"warning:", "OGOHLANTIRISH:"},
+            {"was not declared in this scope", "ushbu qamrovda e'lon qilinmagan"},
+            {"no matching function for call to", "mos keladigan funksiya topilmadi"},
+            {"is private within this context", "bu kontekstda yopiq"},
+            {"cannot convert", "o'tkazib bo'lmaydi"},
             {"undefined reference", "noma'lum havola"},
             {"No such file or directory", "Bunday fayl yoki katalog topilmadi"},
+            {"candidate expects", "nomzod kutadi"},
+            {"arguments provided", "argumentlar berildi"},
+            {"candidate:", "nomzod:"},
+            {"note:", "eslatma:"},
             {"expected", "Kutilgan"},
-            {"before", "shundan oldin"}
+            {"before", "shundan oldin"},
+            {"from", "dan"},
+            {"to", "ga"},
+            {"std::unordered_map", "lug'at"},
+            {"std::shared_ptr", "umumiy_korsatkich"},
+            {"std::unique_ptr", "yagona_korsatkich"},
+            {"std::string", "matn"},
+            {"std::vector", "vektor"},
+            {"std::optional", "ixtiyoriy"},
+            {"std::pair", "juftlik"},
+            {"int", "butun"},
+            {"double", "haqiqiy"},
+            {"float", "kasr"},
+            {"char", "belgi"},
+            {"bool", "mantiqiy"},
+            {"void", "bosh"}
         };
 
         for (const auto& [from, to] : replacements) {

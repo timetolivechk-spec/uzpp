@@ -1,0 +1,6 @@
+// Test for sizeof and typeid false positive warnings
+butun asosiy() {
+    butun n = sizeof(butun);
+    butun y = alignof(butun);
+    qaytarish 0;
+}

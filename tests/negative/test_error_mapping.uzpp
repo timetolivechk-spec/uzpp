@@ -1,0 +1,7 @@
+// Qasddan xato qilingan fayl, test_error_mapping uchun
+butun asosiy() {
+    matn m = "salom";
+    // xato: funksiya yo'q, butun kutadi lekin matn berildi
+    noma_lum_funksiya(m);
+    qaytarish 0;
+}
