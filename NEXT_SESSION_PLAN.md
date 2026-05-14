@@ -1,198 +1,81 @@
-# План работы для одной сессии — uz++ (для следующего AI агента)
+# Next session plan — uz++
 
-## Проект кратко
+> Read `~/.claude/projects/C--Users-MSN-uz--/memory/project_uzpp.md` first.
+> It has the full project context, hard-won gotchas, file map, and conventions.
+> This document only lists what to work on **next**.
 
-**uz++** — транспилятор языка с узбекскоязычным синтаксисом в C++23. Конвейер: `Lexer → Parser → AST → TypeChecker → CodeGen → g++`. Цель: дать носителям узбекского языка возможность программировать на родном языке с полным покрытием возможностей C++23.
+## Current state at a glance
 
-**Текущее состояние:** **37/37 тестов проходят** локально в main repo (`C:/Users/MSN/uz++`). Реализованы:
-- compile-time модификаторы (`sobit_ifoda` / `sobit_baholash` / `sobit_boshlangich`)
-- указатели/ссылки, move-семантика, все 4 каста, auto
-- перегрузка операторов и функций
-- шаблоны (включая variadic, fold, концепты)
-- атрибуты `[[nodiscard]]` / `[[deprecated]]`
-- structured bindings, unions, bitfields, multidim subscript `arr[i, j]`
-- deducing-this (`oz`/`bosh` explicit object parameter)
-- `if constexpr`, `static_assert`, `noexcept`
-- C-style массивы **в полях класса** (не в локальных переменных!)
+- **64/64 tests pass locally.** ~90% C++23 coverage.
+- Latest commit: `d0b48bb feat(tooling): semantic tokens + round-trip comments`.
+- Build: `cmake --build build_wt`. Regression: see memory file.
+- **Nothing is pushed by default.** User pushes manually.
+- VSCode extension at v2.1.7 — do not bump.
 
-**Сборка:** `cmake --build "c:/Users/MSN/uz++/build_wt"`
-**Регресс (37/37 ожидается):**
-```bash
-cd C:/Users/MSN/uz++
-pass=0; fail=0; for f in tests/*.uzpp; do
-  ./build_wt/uzpp.exe qurish "$f" 2>&1 | grep -q "MUVAFFAQIYAT: Dastur tayyor" \
-    && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: $f"; }
-done; echo "$pass / $((pass+fail))"
-```
+## What to pick from (rough priority — verify with user before starting)
 
----
+### 🟡 Tooling polish — inline comments
+The formatter still loses comments that are inside expressions, statement
+bodies, blank lines between sections. Lexer captures them already
+(`Token.leadingComments`), but formatter only emits them at top-level
+nodes. Big-ish work (~200 lines). Files: `src/formatter.cpp`,
+specifically the `formatBlock` / `formatStatement` / `formatExpression`
+paths.
 
-## Три хирургические задачи (развитие языка)
+### 🟡 LSP — inlay hints
+`o'zgaruvchan x = qaytar_qiymat()` — IDE should show `: <inferred type>`
+after the variable name. Requires re-running TypeChecker on the cached
+document and emitting `textDocument/inlayHint` responses with positions.
+~80 lines in `src/lsp_server.cpp`. Declare `inlayHintProvider:true` in
+the initialize capabilities response.
 
-### Задача 1: Локальные C-style массивы `butun arr[10];` (~25 строк)
+### 🟡 LSP — code actions
+Quick-fixes for the warnings TypeChecker emits. E.g. when "O'zgaruvchi 'x'
+e'lon qilingan, lekin ishlatilmagan" fires, offer "Prefix with `_`" or
+"Remove declaration". Needs new handler `textDocument/codeAction` plus
+mapping from warning text → action. ~120 lines.
 
-**Проблема:** Сейчас `butun data[10];` работает только как поле класса (Phase 12 добавил `Member::arraySize`). В теле функции или глобально это даёт `Noto'g'ri ifoda`:
-```
-butun asosiy() {
-    butun buf[5];          // ← parser падает
-    buf[0] = 42;
-    qaytarish 0;
-}
-```
+### 🟡 DAP — better variable rendering
+`parseGdbVariables` produces flat strings; complex types (vector of pair,
+std::optional, smart pointers) come out unreadable. ~100 lines in
+`src/dap_server.cpp` to invoke gdb-MI's `-var-create` / `-var-list-children`
+for rich tree expansion.
 
-Это уже всплывало в `tests/test_multidim_subscript.uzpp` — пришлось обходить через `vektor<butun>`.
+### 🟢 Error messages — better positional mapping
+`translateErrors()` is pure substring sub. Real win would be parsing the
+g++ output for `<file>:<line>:<col>:` and re-mapping to .uzpp positions via
+the `#line` directives we already emit. ~60 lines, `src/main.cpp:~720`.
 
-**Где:**
-- [src/ast.h](src/ast.h) — `VariableDeclaration`. Добавить `std::string arraySize_;` (по аналогии с `ClassDeclaration::Member::arraySize`).
-- [src/parser.cpp](src/parser.cpp) — `parseVariableDeclaration(typeName, varName)`. После имени проверить `[`, прочитать integer literal, прочитать `]`.
-- [src/codegen.cpp](src/codegen.cpp) — `visitVariableDeclaration`. Если `arraySize_` непуст, эмиссировать `Type name[N]` вместо `Type name`.
+### 🔴 Type-checker honesty (hard, multi-session)
+Template body type tracking, partial specialization, SFINAE / concept
+dispatch, dead-branch in `if constexpr`. **Don't pick this without 3+
+sessions of runway** — it changes architectural assumptions throughout.
 
-**Решение:**
-1. В `ast.h::VariableDeclaration` добавить:
-   ```cpp
-   const std::string& getArraySize() const { return arraySize_; }
-   void setArraySize(const std::string& s) { arraySize_ = s; }
-   private:
-       std::string arraySize_;  // empty if not array
-   ```
-2. В `parser.cpp::parseVariableDeclaration` сразу после `Token token = ...` блока добавить:
-   ```cpp
-   std::string arraySize;
-   if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "[") {
-       advance();
-       if (peek().type == TokenType::IntegerLiteral) {
-           arraySize = advance().value;
-       }
-       if (peek().value != "]") throw ParseError("Kutilgan ']' massiv hajmidan keyin");
-       advance();
-   }
-   ```
-   В конце функции — `decl->setArraySize(arraySize)`.
-3. В `codegen.cpp::visitVariableDeclaration` после `emitRawToken(safeIdent(stmt->getName()));` добавить:
-   ```cpp
-   if (!stmt->getArraySize().empty()) {
-       emitRawToken("[");
-       emitRawToken(stmt->getArraySize());
-       emitRawToken("]");
-   }
-   ```
+### 🟢 Language gaps left (small wins individually)
+- `std::source_location` alias (~5 lines, just identifierTranslations)
+- Module partitions `export module foo:bar;` (~25 lines, parser)
+- Trailing `requires` on **classes** (currently only on functions; ~15 lines)
+- `static operator()` C++23 (deducing-this on call site; ~20 lines)
 
-**Тест:** `tests/test_local_arrays.uzpp` — функция с локальным массивом, цикл инициализации, чтение, печать суммы.
+## Rules
 
----
+1. **Surgical edits only.** Touch what you need; don't reformat-while-here.
+2. **Tests with the implementation.** No feature is done without `tests/test_X.uzpp`.
+3. **0 regressions, 64/64+ on every change.** Full loop is the contract.
+4. **Don't push.** Don't publish. Don't bump versions. User does that.
+5. **Don't bring back `sabit_*`.** It's intentionally removed; the canonical
+   forms are `sobit_*` / `o'zgarmas_*`.
+6. **If the disk fills (>95%) the linker fails silently** with cryptic
+   "ld returned 1 exit status" and no real error. Check `df -h /c`; clean
+   `dist/`, `build_release/`, `zip_staging/` if needed.
+7. **Worktrees diverge from main.** Always work in `C:/Users/MSN/uz++`
+   unless told otherwise.
 
-### Задача 2: `[[likely]]` / `[[unlikely]]` на if-операторах (~30 строк)
+## Suggested next batch (4 surgical tasks, ~120 lines)
 
-**Проблема:** C++20 ввёл `[[likely]]` / `[[unlikely]]` как hint для оптимизатора:
-```cpp
-if (x > 0) [[likely]] { ... } else [[unlikely]] { ... }
-```
-В uz++ нет способа выразить эту подсказку. Полезна для hot-loops и performance-critical кода — и идеально вписывается в существующий слой атрибутов.
+I'd suggest LSP inlay hints + code actions + error-message line mapping
++ `std::source_location` alias as one session — they're independent,
+all 4 fit comfortably in 200 lines total, and they all visibly improve
+the editor experience.
 
-**Где:**
-- [src/ast.h](src/ast.h) — `IfStatement`. Добавить `bool isLikely_ = false; bool isUnlikely_ = false;` + сеттеры.
-- [src/parser.cpp](src/parser.cpp) — `parseIfStatement()`. После `(condition)` ПЕРЕД `{` принимать `@bashqarib` (likely) или `@kamdan_kam` (unlikely). Альтернативно в else-ветке.
-- [src/codegen.cpp](src/codegen.cpp) — `visitIfStatement()`. Эмиссировать `[[likely]]` сразу после `)` и до `{`.
-
-**Решение:**
-1. AST: новые поля + геттеры/сеттеры в `IfStatement`.
-2. Парсер: после `advance()` для `)` (closed paren) проверить `@`. Если `peek().value == "@" && peek(1).value == "bashqarib"` → `isLikely`, если `"kamdan_kam"` → `isUnlikely`. Поглощать 2 токена.
-3. Та же логика для else-ветки.
-4. Кодоген: после `)` и до then-блока эмиссировать соответствующий атрибут.
-
-**Имена** (на узбекском): `@bashqarib` = "обычно/чаще всего" (likely), `@kamdan_kam` = "редко" (unlikely). Если эти названия не нравятся — спросить пользователя перед коммитом.
-
-**Тест:** `tests/test_likely.uzpp` — цикл с `agar (x > 0) @bashqarib { ... } yoki @kamdan_kam { ... }`, проверить что компилируется и печатает ожидаемое.
-
----
-
-### Задача 3: Spaceship operator `<=>` (~25 строк)
-
-**Проблема:** C++20 ввёл оператор `<=>` (three-way comparison) и `= default` для него. Это **standard** способ дать структуре полное упорядочивание автоматически:
-```cpp
-struct Nuqta {
-    int x, y;
-    auto operator<=>(const Nuqta&) const = default;
-};
-```
-В uz++ нельзя написать `operator<=>` — лексер не распознаёт `<=>` как один токен, и нет понимания того что это — оператор.
-
-**Где:**
-- [src/lexer.cpp](src/lexer.cpp:340) — массив `multiCharacterSymbols`. Добавить `"<=>"` в начало (перед `"<="`).
-- [src/codegen.cpp](src/codegen.cpp) — `getOperatorSymbol()` (если есть mapping). `<=>` уже валидный C++ оператор — должен работать сам по себе.
-- [src/parser.cpp](src/parser.cpp) — `parseRelationalExpression()`. Возможно нужно добавить `<=>` в `isRelationalOperator()`.
-
-**Решение:**
-1. **Lexer**: добавить `"<=>"` в `multiCharacterSymbols` в самое начало — longest-match гарантирует что лексер увидит `<=>` как одну подстроку и не разобьёт на `<=` + `>`.
-2. **Parser**: убедиться что `isRelationalOperator(text)` возвращает true для `"<=>"`. Если нет — добавить. Возможно потребуется отдельный precedence уровень (в C++ `<=>` имеет precedence ВЫШЕ чем `<`/`>`, но НИЖЕ чем `<<`).
-3. **Codegen**: `getOperatorSymbol` должен возвращать `"<=>"` как есть. Никакого Uzbek-mapping не нужно.
-4. **Operator overloading**: проверить что `operator<=>(...)` парсится через существующий путь в parseGlobalDeclaration (там уже есть special-case для `operator+`, `operator==` и др. — возможно нужно расширить).
-
-**Тест:** `tests/test_spaceship.uzpp` — struct с двумя полями, `auto operator<=>(const Nuqta&) sabit = default;`, плюс сравнения `<`, `>`, `==`. Запустить и проверить что упорядочивание работает.
-
-**Подсказка:** `operator<=>` парсится составным именем "operator<=>". В parser.cpp:1614-1620 уже есть код:
-```cpp
-if (name == "operator" && !isAtEnd() && peek().type == TokenType::Symbol) {
-    name += advance().value;
-    if (name == "operator(" && ...) name += advance().value;
-    else if (name == "operator[" && ...) name += advance().value;
-}
-```
-Нужно расширить — если первый присоединённый символ это `<=>`, имя уже верное (`operator<=>`).
-
----
-
-## Правила работы
-
-1. **Никаких удалений без обоснования.** Каждое удаление существующего кода — только если оно:
-   - заменяется эквивалентной/лучшей логикой в том же коммите,
-   - либо удаляется мёртвый код, доказанно недостижимый (с указанием почему).
-   - **Все существующие ключевые слова (`o'zgarmas_*`, `sobit_*`) — намеренные алиасы, не трогать.** Слово `sabit` намеренно удалено из проекта — не возвращать.
-
-2. **Хирургически точно.** Изменения локальные. Не рефакторить попутно. Не «улучшать» соседний код.
-
-3. **Регресс после каждой задачи** (команда выше). Цель — **37/37 → 38-40/40** (37 текущих + 1-3 новых теста), 0 регрессий. Если хоть один существующий тест упал — откатить и разобраться.
-
-4. **Обратная совместимость:** новые поля AST с дефолтными значениями. Существующие конструкторы не менять — только setters добавлять.
-
-5. **Тесты пишутся до коммита** — сначала тест-файл, потом изменения парсера/кодогена, потом проверка.
-
-6. **При неоднозначности — спросить.** Если имя ключевого слова или вариант реализации неочевиден (особенно: имя для `[[likely]]/[[unlikely]]`), лучше задать вопрос пользователю чем угадывать.
-
-7. **Не пушить, не публиковать релиз, не трогать CI.** Только локальные коммиты в `main`. Пользователь сам решит когда пушить.
-
----
-
-## Контекст и подсказки
-
-- Главный файл AST: [src/ast.h](src/ast.h) (~880 строк)
-- Главный парсер: [src/parser.cpp](src/parser.cpp) (~2250 строк)
-- Кодоген: [src/codegen.cpp](src/codegen.cpp) (~1820 строк)
-- Лексер: [src/lexer.cpp](src/lexer.cpp) (~370 строк)
-- Тип-чекер (header-only): [src/type_checker.hpp](src/type_checker.hpp) (~900 строк)
-- **Класс-поля C-array уже работают** ([src/parser.cpp:2153-2180](src/parser.cpp) парсит `[10]` после имени поля). Реюзать тот же паттерн для локальных переменных.
-- **Атрибуты функций** ([src/parser.cpp:1480-1500](src/parser.cpp) — `@tashlab_yuborilmas` / `@eskirgan`) — рабочий образец для парсинга `@likely`/`@unlikely`.
-- **Перегрузка операторов** уже работает: `tests/test_operator_overload.uzpp` показывает `operator+`, `operator==` и др. Используется парсинг составного имени в parseGlobalDeclaration.
-- **Lexer multi-char symbols**: при добавлении `<=>` поставить **в начало списка** (порядок матчинга — first wins).
-
----
-
-## Ожидаемый итог сессии
-
-- **37/37 → 40/40 тестов проходят** локально (37 текущих + 3 новых)
-- **0 регрессий**
-- **3 новые возможности C++20**: локальные C-arrays, `[[likely]]/[[unlikely]]`, spaceship `<=>`
-- **~80 строк кода** добавлено суммарно
-- Обновлена память (`C:/Users/MSN/.claude/projects/C--Users-MSN-uz--/memory/project_uzpp.md`) с актуальным состоянием
-- **НЕ пушить и не публиковать.** Локальные коммиты на `main`. Пользователь сам решит дальнейшие действия.
-
----
-
-## Что НЕ делать в этой сессии
-
-- **Не трогать CI/CD.** Workflow и skip-list оставить как есть.
-- **Не публиковать VSCode extension и GitHub Release.** Версия остаётся 2.1.7.
-- **Не пушить в GitHub.** Все коммиты только локально.
-- **Не возвращать удалённый `sabit_*`.** Слово целенаправленно убрано.
-- **Не переделывать `translateErrors()`.** Прошлый агент уже расширил его.
-- **Не трогать type-checker'ные `sizeof`/lambda-исключения.** Они уже работают.
+But ask the user first — they may have other priorities.
