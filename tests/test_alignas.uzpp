@@ -1,0 +1,20 @@
+// uz++ — alignas(N) alignment specifier
+
+ulash <atomic>
+ulash "uzpp_runtime.hpp"
+
+@tekislash(64) sinf CacheLine {
+ochiq:
+    atomik<butun> qiymat;
+}
+
+butun asosiy() {
+    yozish << "alignof(CacheLine) = " << alignof(CacheLine) << qator_oxiri;
+    yozish << "sizeof(CacheLine)  = " << sizeof(CacheLine) << qator_oxiri;
+
+    agar (alignof(CacheLine) >= 64) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+    qaytarish 1;
+}

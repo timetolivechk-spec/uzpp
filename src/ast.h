@@ -706,6 +706,10 @@ public:
     void setDeprecated(bool value) { isDeprecated_ = value; }
     bool isNoExcept() const { return isNoExcept_; }
     void setNoExcept(bool value) { isNoExcept_ = value; }
+    bool hasTrailingReturn() const { return hasTrailingReturn_; }
+    void setTrailingReturn(bool value) { hasTrailingReturn_ = value; }
+    const std::string& getRequiresClause() const { return requiresClause_; }
+    void setRequiresClause(const std::string& clause) { requiresClause_ = clause; }
 
 private:
     std::string name_;
@@ -721,6 +725,8 @@ private:
     bool isNoDiscard_;
     bool isDeprecated_;
     bool isNoExcept_ = false;
+    bool hasTrailingReturn_ = false;
+    std::string requiresClause_;
 };
 
 class ClassDeclaration final : public Declaration {
@@ -776,6 +782,9 @@ public:
     void setKind(const std::string& kind) { kind_ = kind; }
     const std::vector<std::string>& getFriendDecls() const { return friendDecls_; }
     void addFriendDecl(const std::string& decl) { friendDecls_.push_back(decl); }
+    
+    const std::string& getAlignment() const { return alignment_; }
+    void setAlignment(const std::string& alignment) { alignment_ = alignment; }
 
 private:
     std::string name_;
@@ -786,6 +795,7 @@ private:
     Token classToken_;
     std::string kind_;  // "class" (default), "struct", or "union"
     std::vector<std::string> friendDecls_;  // raw "friend ..." declarations
+    std::string alignment_;  // alignas(N) value
 };
 
 class NamespaceDeclaration final : public Declaration {
@@ -951,6 +961,7 @@ public:
     struct Capture {
         std::string name;
         bool byRef = false; // & captures — va& / va=
+        std::string initExpr;  // C++14 init-capture: [name = init_expr]
     };
     struct Param {
         std::string name;

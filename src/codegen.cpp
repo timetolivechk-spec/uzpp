@@ -412,6 +412,8 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"dinamik_otkazish",  "dynamic_cast"},
         {"o'zgarmas_otkazish",    "const_cast"},
         {"qayta_otkazish",    "reinterpret_cast"},
+        // Type deduction (C++11+)
+        {"tur_baholash",      "decltype"},
         // Memory management
         {"yangi",             "new"},
         {"o'chirish",         "delete"},
@@ -549,6 +551,19 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
     }
     if (uzppType.starts_with("template ")) {
         return uzppType;
+    }
+
+    // Handle decltype(expr) — pass through as-is, it's a type expression
+    if (uzppType.starts_with("decltype(") || uzppType.starts_with("tur_baholash(")) {
+        std::string result = uzppType;
+        // Replace tur_baholash with decltype
+        size_t pos = result.find("tur_baholash");
+        if (pos != std::string::npos) {
+            result.replace(pos, 12, "decltype");
+        }
+        // Translate identifiers inside parentheses if needed
+        // (complex case; for now just return as-is since identifiers are already translated by parser)
+        return result;
     }
 
     // o'zgarmas TYPE yoki ozgarmas TYPE -> const TYPE
@@ -1518,6 +1533,10 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
         } else {
             emitRawToken("uzpp::Asinxron::Vazifa<" + retType + ">");
         }
+    } else if (decl->hasTrailingReturn()) {
+        // Trailing-return form: `auto fn(args) -> Ret` — keep `auto` here,
+        // emit the actual return type after the parameter list.
+        emitRawToken("auto");
     } else {
         emitRawToken(retType);
     }
@@ -1569,13 +1588,23 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
 
     emitRawToken(")");
     if (decl->isNoExcept()) emitRawToken("noexcept");
+    // Trailing return type goes here, after parameter list
+    if (decl->hasTrailingReturn()) {
+        emitRawToken("->");
+        emitRawToken(retType);
+    }
+    // C++20 trailing requires-clause
+    if (!decl->getRequiresClause().empty()) {
+        emitRawToken("requires");
+        emitRawToken("(" + decl->getRequiresClause() + ")");
+    }
     emitNewline();
 
     bool oldAsyncState = currentFunctionIsAsync_;
     currentFunctionIsAsync_ = decl->isAsync();
-    
+
     visitBlock(decl->getBody());
-    
+
     currentFunctionIsAsync_ = oldAsyncState;
 }
 
@@ -1636,6 +1665,10 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
     if (kind == "struct") emitRawToken("struct");
     else if (kind == "union") emitRawToken("union");
     else emitRawToken("class");
+    // C++11 alignas(N) — must come between class-key and name
+    if (!decl->getAlignment().empty()) {
+        emitRawToken("alignas(" + decl->getAlignment() + ")");
+    }
     emitRawToken(safeIdent(decl->getName()));
 
     // C++ unions cannot have base classes or implement interfaces.
@@ -1907,6 +1940,11 @@ void CodeGen::visitLambdaExpression(const LambdaExpression* expr) {
         } else {
             if (cap.byRef) emitRawToken("&");
             emitRawToken(cap.name);
+            // C++14 init-capture: name = expr
+            if (!cap.initExpr.empty()) {
+                emitRawToken("=");
+                emitRawToken(cap.initExpr);
+            }
         }
     }
     emitRawToken("]");

@@ -10,6 +10,25 @@ namespace {
     bool looksLikeDeclHelper(const std::vector<Token>& tokens, std::size_t current) {
         std::size_t i = current;
         if (i >= tokens.size() || tokens[i].type != TokenType::Identifier) return false;
+        // Special case: decltype(...) / tur_baholash(...) acts as a type.
+        // Skip past the balanced parentheses, then expect identifier.
+        if (tokens[i].value == "decltype" || tokens[i].value == "tur_baholash") {
+            i++;
+            if (i >= tokens.size() || tokens[i].value != "(") return false;
+            i++;
+            int depth = 1;
+            while (i < tokens.size() && depth > 0) {
+                if (tokens[i].value == "(") depth++;
+                else if (tokens[i].value == ")") depth--;
+                i++;
+            }
+            // Optional &/*/&& after decltype(...)
+            while (i < tokens.size() && tokens[i].type == TokenType::Symbol &&
+                   (tokens[i].value == "&" || tokens[i].value == "*" || tokens[i].value == "&&")) {
+                i++;
+            }
+            return (i < tokens.size() && tokens[i].type == TokenType::Identifier);
+        }
         i++;
         while (i < tokens.size() && tokens[i].type == TokenType::Symbol && tokens[i].value == "::") {
             i++;
@@ -26,7 +45,7 @@ namespace {
                 i++;
             }
         }
-        while (i < tokens.size() && tokens[i].type == TokenType::Symbol && 
+        while (i < tokens.size() && tokens[i].type == TokenType::Symbol &&
                (tokens[i].value == "&" || tokens[i].value == "*" || tokens[i].value == "&&")) {
             i++;
         }
@@ -97,6 +116,34 @@ std::string Parser::formatLocation(const Token& token) const {
 // ===== TYPE STRING PARSING =====
 
 std::string Parser::parseTypeString() {
+    // C++11 decltype(expr) — type deduction. Uzbek alias: tur_baholash(expr).
+    // Collect everything inside (...) as raw text, emit as `decltype(...)`.
+    if (!isAtEnd() && peek().type == TokenType::Identifier &&
+        (peek().value == "decltype" || peek().value == "tur_baholash")) {
+        advance(); // consume keyword
+        if (isAtEnd() || peek().value != "(") {
+            throw ParseError("Kutilgan '(' decltype/tur_baholash dan keyin");
+        }
+        advance(); // '('
+        std::string inner;
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            const std::string& v = peek().value;
+            if (v == "(") depth++;
+            else if (v == ")") { depth--; if (depth == 0) break; }
+            inner += peek().value + " ";
+            advance();
+        }
+        if (!isAtEnd()) advance(); // ')'
+        std::string base = "decltype(" + inner + ")";
+        // Allow trailing &/&&/*/... qualifiers on decltype(...) too
+        while (!isAtEnd() && peek().type == TokenType::Symbol &&
+               (peek().value == "&" || peek().value == "*" || peek().value == "&&" || peek().value == "...")) {
+            base += advance().value;
+        }
+        return base;
+    }
+
     // Base name (may include namespace like uzpp::Tanlov)
     std::string typeStr = advance().value;
     while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
@@ -127,6 +174,26 @@ std::string Parser::parseTypeString() {
                     typeStr += ">";
                     depth = 0;
                 }
+            } else {
+                typeStr += advance().value;
+            }
+        }
+    }
+
+    // Check for function call-like syntax: decltype(...) or tur_baholash(...)
+    // Only handle if we just parsed those identifiers
+    if ((typeStr == "decltype" || typeStr == "tur_baholash") &&
+        !isAtEnd() && peek().type == TokenType::Symbol && peek().value == "(") {
+        typeStr += advance().value; // consume "("
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            const std::string& val = peek().value;
+            if (val == "(") {
+                depth++;
+                typeStr += advance().value;
+            } else if (val == ")") {
+                depth--;
+                typeStr += advance().value;
             } else {
                 typeStr += advance().value;
             }
@@ -213,6 +280,8 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "xotira", "fayl", "yagona", "umumiy", "null",
         // Casting
         "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
+        // Type deduction (C++11+)
+        "decltype", "tur_baholash",
         // Const method modifier
         "o'zgarmas",
         // Compile-time modifiers (Stage 1): constexpr / consteval / constinit
@@ -229,7 +298,9 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // extern "C" linkage
         "tashqi", "extern",
         // co_yield generators
-        "chiqar_qadam"
+        "chiqar_qadam",
+        // decltype(expr)
+        "tur_baholash", "decltype"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -646,6 +717,25 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 } else if (peek().type == TokenType::Identifier) {
                     cap.name = advance().value;
                     cap.byRef = false;
+                }
+                // C++14 init-capture: [name = expr]
+                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "=" && !cap.name.empty() && cap.name != "=") {
+                    advance(); // '='
+                    int depth = 0;
+                    static const std::unordered_map<std::string, std::string> rawTokenMap = {
+                        {"rost", "true"}, {"yolg'on", "false"},
+                        {"ko'chirish", "std::move"},
+                        {"null", "nullptr"}
+                    };
+                    while (!isAtEnd()) {
+                        const std::string& v = peek().value;
+                        if (depth == 0 && (v == "," || v == "]")) break;
+                        if (v == "(" || v == "[" || v == "{") depth++;
+                        else if (v == ")" || v == "]" || v == "}") depth--;
+                        auto it = rawTokenMap.find(v);
+                        cap.initExpr += (it != rawTokenMap.end() ? it->second : v) + " ";
+                        advance();
+                    }
                 }
                 captures.push_back(std::move(cap));
                 if (!isAtEnd() && peek().value == ",") advance();
@@ -1681,6 +1771,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
     bool isConstInit = false;
     bool isNoDiscard = false;
     bool isDeprecated = false;
+    std::string alignment;
 
     while (!isAtEnd()) {
         if (peek().type == TokenType::Symbol && peek().value == "@") {
@@ -1697,6 +1788,18 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
             } else if (peek().type == TokenType::Identifier && peek().value == "eskirgan") {
                 isDeprecated = true;
                 advance();
+            } else if (peek().type == TokenType::Identifier && peek().value == "tekislash") {
+                // @tekislash(N) — C++ alignas(N) alignment specifier
+                advance(); // consume 'tekislash'
+                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "(") {
+                    advance(); // consume '('
+                    if (!isAtEnd() && peek().type == TokenType::IntegerLiteral) {
+                        alignment = advance().value; // get alignment value
+                    }
+                    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ")") {
+                        advance(); // consume ')'
+                    }
+                }
             } else {
                 throw ParseError("Noma'lum annotatsiya " + formatLocation(peek()));
             }
@@ -1868,6 +1971,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         auto cls = parseClassDeclaration();
         if (kw == "tuzilma") cls->setKind("struct");
         else if (kw == "birlashma") cls->setKind("union");
+        if (!alignment.empty()) cls->setAlignment(alignment);
         return cls;
     }
     if (checkKeyword("tur")) {
@@ -1923,15 +2027,47 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                     else if (tokens_[peekPos].value == ")") {
                         parenDepth--;
                         if (parenDepth == 0) {
-                            // Look past optional post-paren function specifiers
-                            // (xato_tashlamaydi/noexcept, o'zgarmas/const) to find '{'
+                            // Look past optional post-paren modifiers:
+                            // - trailing return type: -> Type...
+                            // - function specifiers: xato_tashlamaydi/noexcept, o'zgarmas/const, ustidan_yozish
                             std::size_t afterParen = peekPos + 1;
-                            while (afterParen < tokens_.size() &&
-                                   (tokens_[afterParen].value == "xato_tashlamaydi" ||
-                                    tokens_[afterParen].value == "o'zgarmas" ||
-                                    tokens_[afterParen].value == "ozgarmas" ||
-                                    tokens_[afterParen].value == "ustidan_yozish")) {
-                                afterParen++;
+                            while (afterParen < tokens_.size()) {
+                                if (tokens_[afterParen].value == "->") {
+                                    // Skip trailing return type: -> Type...
+                                    // Handle complex types with <>, (), etc.
+                                    afterParen++;
+                                    int templateDepth = 0;
+                                    int parenInType = 0;
+                                    while (afterParen < tokens_.size()) {
+                                        const std::string& tok = tokens_[afterParen].value;
+                                        if (tok == "<") templateDepth++;
+                                        else if (tok == ">") templateDepth--;
+                                        else if (tok == "(") parenInType++;
+                                        else if (tok == ")") {
+                                            if (parenInType == 0) break; // End of return type
+                                            parenInType--;
+                                        } else if (tok == "{" || tok == ";") {
+                                            break; // End of return type
+                                        }
+                                        
+                                        // Stop if we see function modifiers at top level
+                                        if (templateDepth == 0 && parenInType == 0 &&
+                                            (tok == "xato_tashlamaydi" || tok == "o'zgarmas" ||
+                                             tok == "ozgarmas" || tok == "ustidan_yozish")) {
+                                            break;
+                                        }
+                                        afterParen++;
+                                    }
+                                    continue;
+                                } else if (tokens_[afterParen].value == "xato_tashlamaydi" ||
+                                           tokens_[afterParen].value == "o'zgarmas" ||
+                                           tokens_[afterParen].value == "ozgarmas" ||
+                                           tokens_[afterParen].value == "ustidan_yozish") {
+                                    afterParen++;
+                                    continue;
+                                } else {
+                                    break;
+                                }
                             }
                             if (afterParen < tokens_.size() && tokens_[afterParen].value == "{") {
                                 foundBrace = true;
@@ -2180,15 +2316,34 @@ std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std:
     // C++11 trailing return type: funksiya foo(...) -> butun { ... }
     // Also works for auto-deduced abbreviated function templates.
     std::string finalReturnType = returnType;
+    bool hasTrailingReturn = false;
     if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "->") {
         advance(); // consume '->'
         finalReturnType = parseTypeString();
+        hasTrailingReturn = true;
     }
 
     bool isNoExcept = false;
     if (checkKeyword("xato_tashlamaydi")) {
         isNoExcept = true;
         advance();
+    }
+
+    // C++20 trailing requires-clause: shart (cond) before body
+    std::string requiresClause;
+    if (checkKeyword("shart")) {
+        advance(); // 'shart'
+        if (isAtEnd() || peek().value != "(") throw ParseError("Kutilgan '(' shart dan keyin");
+        advance();
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            const std::string& v = peek().value;
+            if (v == "(") depth++;
+            else if (v == ")") { depth--; if (depth == 0) break; }
+            requiresClause += peek().value + " ";
+            advance();
+        }
+        if (!isAtEnd()) advance(); // ')'
     }
 
     if (isAtEnd() || peek().value != "{") {
@@ -2200,6 +2355,8 @@ std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std:
     auto funcDecl = std::make_unique<FunctionDeclaration>(funcName, finalReturnType, std::move(params),
                                                  std::move(body), funcToken, false, false, false, isConstExpr, isConstEval);
     funcDecl->setNoExcept(isNoExcept);
+    if (hasTrailingReturn) funcDecl->setTrailingReturn(true);
+    if (!requiresClause.empty()) funcDecl->setRequiresClause(requiresClause);
     return funcDecl;
 }
 

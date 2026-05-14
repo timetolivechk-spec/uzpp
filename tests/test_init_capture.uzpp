@@ -1,0 +1,25 @@
+// uz++ — C++14 lambda init-capture: [a = expr]
+
+ulash <memory>
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    o'zgaruvchan p = std::make_unique<butun>(42);
+
+    // Move into lambda — only possible with init-capture
+    o'zgaruvchan lam = [p = ko'chirish(p)]() {
+        qaytarish *p;
+    };
+
+    yozish << "Olingan: " << lam() << qator_oxiri;
+
+    // Compute and capture
+    o'zgaruvchan x = 5;
+    o'zgaruvchan lam2 = [y = x * x]() {
+        qaytarish y;
+    };
+    yozish << "y = x*x = " << lam2() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
