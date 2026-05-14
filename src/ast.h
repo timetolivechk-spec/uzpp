@@ -242,19 +242,21 @@ private:
 
 class AwaitExpression final : public Expression {
 public:
-    AwaitExpression(std::unique_ptr<Expression> expr, Token awaitToken)
-        : expr_(std::move(expr)), awaitToken_(std::move(awaitToken)) {}
-    
+    AwaitExpression(std::unique_ptr<Expression> expr, Token awaitToken, bool isYield = false)
+        : expr_(std::move(expr)), awaitToken_(std::move(awaitToken)), isYield_(isYield) {}
+
     ASTNodeType getType() const override {
         return ASTNodeType::AwaitExpression;
     }
-    
+
     Expression* getExpression() const { return expr_.get(); }
     const Token& getAwaitToken() const { return awaitToken_; }
-    
+    bool isYield() const { return isYield_; }
+
 private:
     std::unique_ptr<Expression> expr_;
     Token awaitToken_;
+    bool isYield_;
 };
 
 class ThrowExpression final : public Expression {
@@ -731,6 +733,7 @@ public:
         std::string bitWidth;  // C++ bitfield: "4" for `int x : 4`. Empty if not bitfield.
         bool isVolatile = false;
         bool isThreadLocal = false;
+        bool hasNoUniqueAddress = false;  // C++20 [[no_unique_address]]
         Token token;
     };
     

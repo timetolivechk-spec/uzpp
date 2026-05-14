@@ -72,7 +72,7 @@ private:
     std::unique_ptr<MatchStatement> parseMatchStatement();
     std::unique_ptr<IfStatement> parseIfStatement();
     std::unique_ptr<WhileStatement> parseWhileStatement();
-    std::unique_ptr<ForStatement> parseForStatement();
+    std::unique_ptr<Statement> parseForStatement();
     std::unique_ptr<ReturnStatement> parseReturnStatement();
     std::unique_ptr<BreakStatement> parseBreakStatement();
     std::unique_ptr<ContinueStatement> parseContinueStatement();

@@ -1,0 +1,22 @@
+// uz++ — C++20 co_yield via chiqar_qadam
+
+ulash <generator>
+ulash "uzpp_runtime.hpp"
+
+std::generator<butun> sanagich(butun chegara) {
+    butun i = 0;
+    toki (i < chegara) {
+        chiqar_qadam i;
+        i = i + 1;
+    }
+}
+
+butun asosiy() {
+    uchun (butun n : sanagich(5)) {
+        yozish << n << " ";
+    }
+    yozish << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

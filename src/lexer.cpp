@@ -36,6 +36,37 @@ std::vector<Token> Lexer::tokenize() {
             continue;
         }
 
+        // C++11 raw string literal: R"(...)" or R"delim(...)delim"
+        // We emit the whole literal (including R-prefix and delimiters) so
+        // codegen can pass it straight through to g++.
+        if (current == 'R' && peek(1) == '"') {
+            const std::size_t start = position_;
+            const int startLine = line_;
+            const int startColumn = column_;
+            advance(); advance(); // R"
+            std::string delim;
+            while (!isAtEnd() && peek() != '(') {
+                delim += peek();
+                advance();
+            }
+            if (!isAtEnd()) advance(); // '('
+            std::string closeSeq = ")" + delim + "\"";
+            while (!isAtEnd()) {
+                bool matches = true;
+                for (std::size_t i = 0; i < closeSeq.size(); ++i) {
+                    if (peek(i) != closeSeq[i]) { matches = false; break; }
+                }
+                if (matches) {
+                    for (std::size_t i = 0; i < closeSeq.size(); ++i) advance();
+                    tokens.push_back(makeToken(TokenType::StringLiteral, start, startLine, startColumn));
+                    goto rawDone;
+                }
+                advance();
+            }
+            throw std::runtime_error("Yopilmagan raw string qator: " + std::to_string(startLine));
+            rawDone: continue;
+        }
+
         if (isIdentifierStart(current)) {
             tokens.push_back(scanIdentifier());
             continue;
@@ -196,14 +227,17 @@ Token Lexer::scanNumber() {
         return makeToken(TokenType::IntegerLiteral, start, startLine, startColumn);
     }
 
-    while (std::isdigit(static_cast<unsigned char>(peek())) != 0) {
+    // C++14 numeric separator: 1'000'000 — apostrophe between digits
+    while (std::isdigit(static_cast<unsigned char>(peek())) != 0 ||
+           (peek() == '\'' && std::isdigit(static_cast<unsigned char>(peek(1))) != 0)) {
         advance();
     }
 
     if (peek() == '.' && std::isdigit(static_cast<unsigned char>(peek(1))) != 0) {
         isFloat = true;
         advance();
-        while (std::isdigit(static_cast<unsigned char>(peek())) != 0) {
+        while (std::isdigit(static_cast<unsigned char>(peek())) != 0 ||
+               (peek() == '\'' && std::isdigit(static_cast<unsigned char>(peek(1))) != 0)) {
             advance();
         }
     }

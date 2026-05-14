@@ -1,0 +1,30 @@
+// uz++ — Atomic types + [[no_unique_address]]
+
+ulash <atomic>
+ulash "uzpp_runtime.hpp"
+
+tuzilma Bos {  // empty base, EBO target
+}
+
+sinf Hisoblagich {
+ochiq:
+    @noyob_manzil Bos bos;     // [[no_unique_address]] — zero overhead
+    atomik<butun> qiymat;
+
+    Hisoblagich() : qiymat(0) {}
+    bosh oshir() {
+        qiymat = qiymat + 1;
+    }
+}
+
+butun asosiy() {
+    Hisoblagich h;
+    h.oshir();
+    h.oshir();
+    h.oshir();
+    yozish << "Qiymat: " << h.qiymat.load() << qator_oxiri;
+    yozish << "Hisoblagich hajmi: " << sizeof(h) << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

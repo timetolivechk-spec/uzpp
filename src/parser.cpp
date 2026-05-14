@@ -227,7 +227,9 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // friend declarations
         "dust", "friend",
         // extern "C" linkage
-        "tashqi", "extern"
+        "tashqi", "extern",
+        // co_yield generators
+        "chiqar_qadam"
     };
     
     for (const auto& kw : uzbekKeywords) {
@@ -420,6 +422,13 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
         const Token opToken = advance(); // consume 'kutish'
         auto expr = parseUnaryExpression();
         return std::make_unique<AwaitExpression>(std::move(expr), opToken);
+    }
+
+    // C++20 co_yield generators: `chiqar_qadam expr` → `co_yield expr`
+    if (!isAtEnd() && peek().type == TokenType::Identifier && peek().value == "chiqar_qadam") {
+        const Token opToken = advance(); // consume 'chiqar_qadam'
+        auto expr = parseUnaryExpression();
+        return std::make_unique<AwaitExpression>(std::move(expr), opToken, /*isYield=*/true);
     }
 
     // yangi Tur(args)  →  new Type(args)
@@ -1019,10 +1028,33 @@ std::unique_ptr<Expression> Parser::parseIdentifierOrCall() {
 // ===== SEMANTIC STATEMENT PARSING =====
 
 std::unique_ptr<Statement> Parser::parseStatement() {
+    // C++23 [[assume(cond)]]; — optimisation hint as a standalone statement.
+    // Syntax: `@taxmin(cond);` — collect tokens inside () as raw text.
+    if (peek().type == TokenType::Symbol && peek().value == "@" &&
+        current_ + 1 < tokens_.size() && tokens_[current_+1].value == "taxmin") {
+        const Token atTok = advance(); // '@'
+        advance(); // 'taxmin'
+        if (peek().value != "(") throw ParseError("Kutilgan '(' taxmindan keyin");
+        advance(); // '('
+        std::string cond;
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+            if (peek().value == "(") depth++;
+            else if (peek().value == ")") { depth--; if (depth == 0) break; }
+            cond += peek().value + " ";
+            advance();
+        }
+        if (!isAtEnd()) advance(); // ')'
+        if (!isAtEnd() && peek().value == ";") advance();
+        Token t = atTok;
+        t.value = "[[assume(" + cond + ")]];\n";
+        return std::make_unique<TokenStatement>(t);
+    }
+
     if (checkKeyword("agar")) {
         return parseIfStatement();
     }
-    
+
     if (checkKeyword("statik_tasdiqlash")) {
         // Parse as a regular function call expression — Uzbek identifier names
         // inside (e.g. `butun`, `haqiqiy`) will be translated by codegen normally.
@@ -1289,7 +1321,7 @@ std::unique_ptr<WhileStatement> Parser::parseWhileStatement() {
     return std::make_unique<WhileStatement>(std::move(condition), std::move(body), whileToken);
 }
 
-std::unique_ptr<ForStatement> Parser::parseForStatement() {
+std::unique_ptr<Statement> Parser::parseForStatement() {
     const Token forToken = advance(); // consume 'uchun'
     
     if (isAtEnd() || peek().value != "(") {
@@ -1317,6 +1349,44 @@ std::unique_ptr<ForStatement> Parser::parseForStatement() {
         auto body = parseStatement();
         return std::make_unique<ForStatement>(std::move(init), std::move(rangeExpr),
                                              nullptr, std::move(body), forToken, true);
+    }
+
+    // C++20 range-for with init: uchun (DECL1; DECL2 : EXPR) { ... }
+    // We detect this when after init we see `;` followed by a decl-then-`:`.
+    if (!isAtEnd() && peek().value == ";") {
+        // Lookahead — find `:` or second `;` first
+        std::size_t scan = current_ + 1;
+        int depth = 0;
+        bool foundColon = false;
+        while (scan < tokens_.size()) {
+            const std::string& v = tokens_[scan].value;
+            if (v == "(" || v == "[" || v == "{") depth++;
+            else if (v == ")" || v == "]" || v == "}") {
+                if (depth == 0) break;
+                depth--;
+            } else if (depth == 0 && v == ";") break;
+            else if (depth == 0 && v == ":") { foundColon = true; break; }
+            scan++;
+        }
+        if (foundColon) {
+            advance(); // consume ';' between init and range-decl
+            // Parse range-declaration
+            auto rangeDecl = parseDeclarationOrExpressionStatement();
+            if (peek().value != ":") throw ParseError("Kutilgan ':' range-for ichida");
+            advance(); // ':'
+            auto rangeExpr = parseExpression();
+            if (peek().value != ")") throw ParseError("Kutilgan ')'");
+            advance();
+            auto body = parseStatement();
+            // C++20 range-for-with-init: rewrite as
+            //   { init; for (rangedecl : rangeexpr) body }
+            std::vector<std::unique_ptr<Statement>> blockStmts;
+            if (init) blockStmts.push_back(std::move(init));
+            auto rangeFor = std::make_unique<ForStatement>(std::move(rangeDecl),
+                std::move(rangeExpr), nullptr, std::move(body), forToken, true);
+            blockStmts.push_back(std::move(rangeFor));
+            return std::make_unique<Block>(std::move(blockStmts));
+        }
     }
 
     if (isAtEnd() || peek().value != ";") {
@@ -1439,7 +1509,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 
     // Ifoda sifatida boshlana oladigan kalit so'zlarni tur deb qabul qilmaslik
     static const std::unordered_set<std::string> exprOnlyKeywords = {
-        "kutish", "irgitish", "yangi", "o'chirish", "ochirish"
+        "kutish", "irgitish", "yangi", "o'chirish", "ochirish", "chiqar_qadam"
     };
     if (peek().type == TokenType::Identifier && exprOnlyKeywords.contains(peek().value)) {
         auto expr = parseExpression();
@@ -1955,7 +2025,18 @@ std::unique_ptr<NamespaceDeclaration> Parser::parseNamespaceDeclaration() {
 
 std::unique_ptr<IncludeStatement> Parser::parseIncludeStatement() {
     const Token token = advance(); // past 'ulash' or '#include'
-    std::string moduleName = advance().value;
+    std::string moduleName;
+    // Angle-form `ulash <header>` — assemble from tokens since lexer splits '<', name, '>'.
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
+        moduleName = advance().value; // '<'
+        while (!isAtEnd() && peek().value != ">") {
+            moduleName += peek().value;
+            advance();
+        }
+        if (!isAtEnd()) moduleName += advance().value; // '>'
+    } else {
+        moduleName = advance().value;
+    }
 
     // Path-traversal va xavfsizlik tekshiruvi.
     // moduleName lekserdan tirnoqlar bilan kelishi mumkin ("tarmoq.hpp"), shuning uchun
@@ -2406,6 +2487,14 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
             }
         }
 
+        // Optional `@noyob_manzil` attribute on a member field (C++20 [[no_unique_address]])
+        bool hasNoUniqueAddr = false;
+        if (peek().type == TokenType::Symbol && peek().value == "@" &&
+            current_ + 1 < tokens_.size() && tokens_[current_ + 1].value == "noyob_manzil") {
+            advance(); advance();
+            hasNoUniqueAddr = true;
+        }
+
         // Method or Field: Type Name ...
         if (looksLikeDeclHelper(tokens_, current_)) {
             std::string typeName = parseTypeString();
@@ -2487,6 +2576,7 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                 member.name = name;
                 member.arraySize = arraySize; // For C-style arrays
                 member.accessSpecifier = currentAccess;
+                member.hasNoUniqueAddress = hasNoUniqueAddr;
 
                 // Bitfield syntax: <type> <name> : <width>;
                 if (member.arraySize.empty() && !isAtEnd() && peek().type == TokenType::Symbol && peek().value == ":") {

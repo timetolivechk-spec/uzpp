@@ -762,7 +762,9 @@ private:
             }
             case ASTNodeType::AwaitExpression: {
                 auto aw = static_cast<const AwaitExpression*>(expr);
-                if (!currentFunctionIsAsync_) {
+                // co_yield doesn't require `asinxron` — it just needs a coroutine-return-type
+                // (e.g. std::generator<T>). The frontend doesn't track that, so we trust g++.
+                if (!aw->isYield() && !currentFunctionIsAsync_) {
                     reportError("'kutish' (await) operatori faqat 'asinxron' funksiyalar ichida ishlatilishi mumkin.", aw->getAwaitToken());
                 }
                 checkExpr(aw->getExpression());

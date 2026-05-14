@@ -1,0 +1,14 @@
+// uz++ — C++23 [[assume]] hint
+
+ulash "uzpp_runtime.hpp"
+
+butun hisobla(butun x) {
+    @taxmin(x > 0);
+    qaytarish x * 2;
+}
+
+butun asosiy() {
+    yozish << "hisobla(5) = " << hisobla(5) << qator_oxiri;
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

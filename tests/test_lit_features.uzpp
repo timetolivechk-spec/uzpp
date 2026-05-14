@@ -1,0 +1,20 @@
+// uz++ — Lexer features: raw strings, numeric separators
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    // Numeric separator
+    butun mln = 1'000'000;
+    haqiqiy pi_aniq = 3.14'15;
+    yozish << "Million: " << mln << ", pi_aniq: " << pi_aniq << qator_oxiri;
+
+    // Raw string — backslashes and quotes don't need escaping
+    matn yol = R"(C:\Users\test\file.txt)";
+    yozish << "Yo'l: " << yol << qator_oxiri;
+
+    matn regex = R"(\d+\.\d+)";
+    yozish << "Regex: " << regex << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

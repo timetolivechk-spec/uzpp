@@ -322,6 +322,9 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"musbat_butun32", "std::uint32_t"},
         {"musbat_butun64", "std::uint64_t"},
         {"hajm_turi",      "std::size_t"},
+        // Atomic and concurrency types
+        {"atomik",         "std::atomic"},
+        {"atomik_bayroq",  "std::atomic_flag"},
         {"chiqarish", "std::cout"},
         {"filtr", "std::views::filter"},
         {"filter", "std::views::filter"},
@@ -644,6 +647,8 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"musbat_butun32", "std::uint32_t"},
         {"musbat_butun64", "std::uint64_t"},
         {"hajm_turi", "std::size_t"},
+        {"atomik", "std::atomic"},
+        {"atomik_bayroq", "std::atomic_flag"},
         {"ozgaruvchan", "auto"},
         {"o'zgaruvchan", "auto"},
         {"ozgarmas", "const auto"},
@@ -1687,6 +1692,7 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
                 emitAccessIfChanged(member.accessSpecifier);
             }
             writeIndentIfNeeded();
+            if (member.hasNoUniqueAddress) emitRawToken("[[no_unique_address]]");
             emitRawToken(getCppType(member.type));
             emitRawToken(safeIdent(member.name));
             // Emit array size if present (C-style arrays: int data[10])
@@ -1867,7 +1873,7 @@ void CodeGen::visitLinkStatement(const LinkStatement* stmt) {
 
 void CodeGen::visitAwaitExpression(const AwaitExpression* expr) {
     if (expr == nullptr) return;
-    emitRawToken("co_await");
+    emitRawToken(expr->isYield() ? "co_yield" : "co_await");
     visitExpression(expr->getExpression());
 }
 
