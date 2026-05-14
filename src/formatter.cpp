@@ -30,6 +30,37 @@ void Formatter::formatNodes(const std::vector<std::unique_ptr<ASTNode>>& nodes) 
 void Formatter::formatNode(const ASTNode* node) {
     if (!node) return;
 
+    // Emit any line/block comments captured by the lexer that were
+    // sitting in front of this node, so the formatter is round-trip
+    // safe (was a silent comment-eraser before this change).
+    switch (node->getType()) {
+        case ASTNodeType::FunctionDeclaration:
+            emitLeadingComments(static_cast<const FunctionDeclaration*>(node)->getFunctionToken());
+            break;
+        case ASTNodeType::ClassDeclaration:
+            emitLeadingComments(static_cast<const ClassDeclaration*>(node)->getClassToken());
+            break;
+        case ASTNodeType::NamespaceDeclaration:
+            emitLeadingComments(static_cast<const NamespaceDeclaration*>(node)->getTargetToken());
+            break;
+        case ASTNodeType::InterfaceDeclaration:
+            emitLeadingComments(static_cast<const InterfaceDeclaration*>(node)->getInterfaceToken());
+            break;
+        case ASTNodeType::IncludeStatement:
+            emitLeadingComments(static_cast<const IncludeStatement*>(node)->getIncludeToken());
+            break;
+        case ASTNodeType::TypeAlias:
+            emitLeadingComments(static_cast<const TypeAlias*>(node)->getToken());
+            break;
+        case ASTNodeType::EnumDeclaration:
+            emitLeadingComments(static_cast<const EnumDeclaration*>(node)->getToken());
+            break;
+        case ASTNodeType::Token:
+            emitLeadingComments(static_cast<const TokenNode*>(node)->getToken());
+            break;
+        default: break;
+    }
+
     switch (node->getType()) {
         // Legacy token/group nodes
         case ASTNodeType::Token:
@@ -662,6 +693,16 @@ void Formatter::emitRawToken(const std::string& token) {
     output_ << token;
     lastToken_ = token;
     lineStart_ = false;
+}
+
+void Formatter::emitLeadingComments(const Token& tok) {
+    if (tok.leadingComments.empty()) return;
+    for (const auto& c : tok.leadingComments) {
+        writeIndent();
+        // Emit raw text (already includes "//" or "/* ... */")
+        output_ << c;
+        emitNewline();
+    }
 }
 
 void Formatter::emitNewline() {

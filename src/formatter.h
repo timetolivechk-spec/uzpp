@@ -55,6 +55,9 @@ private:
     void emitRawToken(const std::string& token);
     void emitNewline();
     bool needsSpaceBefore(const std::string& previous, const std::string& current) const;
+    // Emit `// ...` / `/* ... */` comments captured by the lexer as
+    // leadingComments on the given token, each on its own line. No-op if empty.
+    void emitLeadingComments(const Token& tok);
 };
 
 } // namespace uzpp

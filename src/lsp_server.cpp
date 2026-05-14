@@ -68,7 +68,10 @@ void LspServer::handleMessage(const std::string& content) {
         std::string idStr = extractId(content);
         
         // Declare all features the server supports
-        std::string response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + 
+        // SemanticTokensLegend describes the token types/modifiers we emit
+        // in textDocument/semanticTokens/full responses below. Order MUST
+        // match the indices we encode in buildSemanticTokens().
+        std::string response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr +
                                ",\"result\":{\"capabilities\":{\"textDocumentSync\":2," // 2 = Incremental Sync
                                "\"completionProvider\":{\"triggerCharacters\":[\".\",\" \"]},"
                                "\"documentSymbolProvider\":true,"
@@ -77,7 +80,15 @@ void LspServer::handleMessage(const std::string& content) {
                                "\"renameProvider\":true,"
                                "\"referencesProvider\":true,"
                                "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\",\",\"]},"
-                               "\"hoverProvider\":true}}}";
+                               "\"hoverProvider\":true,"
+                               "\"semanticTokensProvider\":{"
+                                   "\"legend\":{"
+                                       "\"tokenTypes\":[\"keyword\",\"type\",\"function\",\"variable\",\"namespace\",\"string\",\"number\",\"comment\",\"operator\"],"
+                                       "\"tokenModifiers\":[]"
+                                   "},"
+                                   "\"range\":false,"
+                                   "\"full\":true"
+                               "}}}}";
         sendMessage(response);
     }
     else if (method == "textDocument/didChange" || method == "textDocument/didOpen") {
@@ -335,6 +346,15 @@ void LspServer::handleMessage(const std::string& content) {
         } else {
             response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + hoverContent + "\"}}}";
         }
+        sendMessage(response);
+    }
+    else if (method == "textDocument/semanticTokens/full") {
+        std::string idStr = extractId(content);
+        std::string uri = extractJsonString(content, "uri");
+        std::string text;
+        if (!uri.empty() && documentCache_.contains(uri)) text = documentCache_[uri];
+        std::string data = buildSemanticTokens(text);
+        std::string response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":{\"data\":[" + data + "]}}";
         sendMessage(response);
     }
     else if (method == "shutdown") {
@@ -670,6 +690,131 @@ std::string LspServer::buildHover(const std::string& word) {
 }
 
 // Implementation of missing LSP methods
+// Encode the document as LSP semantic tokens: array of 5-tuples
+// [deltaLine, deltaStartChar, length, tokenType, tokenModifier].
+// We classify every identifier-like word against three sets:
+//   - keyword  (control flow, declarations, modifiers)
+//   - type     (primitive + stdlib types)
+//   - function (well-known stdlib calls)
+// Everything else is left unclassified so the IDE's syntax highlighter
+// can handle user identifiers normally.
+std::string LspServer::buildSemanticTokens(const std::string& text) {
+    // Type indices MUST match the legend declared in `initialize`:
+    //   0=keyword 1=type 2=function 3=variable 4=namespace
+    //   5=string  6=number 7=comment 8=operator
+    static const std::unordered_map<std::string, int> kind = {
+        // keywords (0)
+        {"agar",0},{"aks",0},{"aks_holda",0},{"uchun",0},{"toki",0},{"qaytarish",0},{"qaytish",0},
+        {"to'xtatish",0},{"davom_etish",0},{"sinf",0},{"tuzilma",0},{"birlashma",0},{"funksiya",0},
+        {"shablon",0},{"shartnoma",0},{"shart",0},{"mavhum",0},{"meros",0},{"amalga_oshirish",0},
+        {"statik",0},{"ulash",0},{"eksport",0},{"import",0},{"modul",0},{"nomlar_fazosi",0},
+        {"urinish",0},{"ushlash",0},{"irgitish",0},{"asinxron",0},{"kutish",0},{"chiqar_qadam",0},
+        {"yangi",0},{"o'chirish",0},{"ochirish",0},{"ko'chirish",0},{"va",0},{"yoki",0},
+        {"rost",0},{"yolg'on",0},{"noto'g'ri",0},{"to'g'ri",0},{"null",0},
+        {"moslash",0},{"holat",0},{"boshqa",0},{"sanab_olish",0},{"tushuncha",0},{"makro",0},
+        {"o'zgaruvchan",0},{"ozgaruvchan",0},{"o'zgarmas",0},{"ozgarmas",0},
+        {"sobit_ifoda",0},{"sobit_baholash",0},{"sobit_boshlangich",0},
+        {"o'zgarmas_ifoda",0},{"o'zgarmas_baholash",0},{"o'zgarmas_boshlangich",0},
+        {"statik_otkazish",0},{"dinamik_otkazish",0},{"o'zgarmas_otkazish",0},{"qayta_otkazish",0},
+        {"sabit_otkazish",0},{"statik_tasdiqlash",0},{"xato_tashlamaydi",0},
+        {"ustidan_yozish",0},{"dust",0},{"tashqi",0},{"tur",0},{"bu",0},{"oz",0},
+        {"qator_ichi",0},{"oqim_mahalliy",0},{"ozgaruvchi_o'zgartirish",0},
+        {"tur_baholash",0},{"decltype",0},
+        // types (1)
+        {"butun",1},{"haqiqiy",1},{"kasr",1},{"belgi",1},{"mantiqiy",1},{"matn",1},{"bosh",1},
+        {"vektor",1},{"lug'at",1},{"to'plam",1},{"ixtiyoriy",1},{"juftlik",1},{"uchlik",1},
+        {"yagona_korsatkich",1},{"umumiy_korsatkich",1},{"kuchsiz_korsatkich",1},
+        {"musbat_butun",1},{"musbat_qisqa",1},{"musbat_uzun",1},{"musbat_belgi",1},
+        {"qisqa",1},{"uzun",1},{"butun8",1},{"butun16",1},{"butun32",1},{"butun64",1},
+        {"musbat_butun8",1},{"musbat_butun16",1},{"musbat_butun32",1},{"musbat_butun64",1},
+        {"hajm_turi",1},{"atomik",1},{"atomik_bayroq",1},{"boshlovchi_royxat",1},
+        {"Natija",1},{"Tanlov",1},{"funksiya_tur",1},
+        // functions (2)
+        {"yozish",2},{"chiqarish",2},{"olish",2},{"kiritish",2},{"qator_oxiri",2},
+        {"tartibla",2},{"qidirish",2},{"saralash",2},{"teskari",2},
+        {"map",2},{"filter",2},{"filtr",2},{"xaritalash",2},{"yigish",2},
+        {"yangi_yagona",2},{"yangi_umumiy",2},
+    };
+
+    std::ostringstream out;
+    int prevLine = 0, prevStart = 0;
+    bool first = true;
+    int lineNum = 0;
+    std::size_t pos = 0;
+    while (pos < text.size()) {
+        // line start: scan tokens until newline
+        std::size_t lineStart = pos;
+        std::size_t i = pos;
+        bool inBlockComment = false;
+        while (i < text.size() && text[i] != '\n') {
+            // skip line comments
+            if (!inBlockComment && i + 1 < text.size() && text[i] == '/' && text[i + 1] == '/') {
+                int col = static_cast<int>(i - lineStart);
+                int len = 0;
+                while (i + len < text.size() && text[i + len] != '\n') len++;
+                int dLine = lineNum - prevLine;
+                int dStart = (dLine == 0) ? col - prevStart : col;
+                if (!first) out << ",";
+                out << dLine << "," << dStart << "," << len << ",7,0";
+                first = false;
+                prevLine = lineNum; prevStart = col;
+                i += len;
+                continue;
+            }
+            // skip strings — don't try to tokenize inside
+            if (!inBlockComment && text[i] == '"') {
+                std::size_t s = i;
+                i++;
+                while (i < text.size() && text[i] != '"' && text[i] != '\n') {
+                    if (text[i] == '\\' && i + 1 < text.size()) i++;
+                    i++;
+                }
+                if (i < text.size() && text[i] == '"') i++;
+                int col = static_cast<int>(s - lineStart);
+                int len = static_cast<int>(i - s);
+                int dLine = lineNum - prevLine;
+                int dStart = (dLine == 0) ? col - prevStart : col;
+                if (!first) out << ",";
+                out << dLine << "," << dStart << "," << len << ",5,0";
+                first = false;
+                prevLine = lineNum; prevStart = col;
+                continue;
+            }
+            // identifier — alphanumeric/_/apostrophe/backtick start
+            unsigned char c = static_cast<unsigned char>(text[i]);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+                std::size_t s = i;
+                while (i < text.size()) {
+                    unsigned char cc = static_cast<unsigned char>(text[i]);
+                    if ((cc >= 'a' && cc <= 'z') || (cc >= 'A' && cc <= 'Z') ||
+                        (cc >= '0' && cc <= '9') || cc == '_' || cc == '\'' || cc == '`') {
+                        i++;
+                    } else break;
+                }
+                std::string word = text.substr(s, i - s);
+                auto it = kind.find(word);
+                if (it != kind.end()) {
+                    int col = static_cast<int>(s - lineStart);
+                    int len = static_cast<int>(i - s);
+                    int dLine = lineNum - prevLine;
+                    int dStart = (dLine == 0) ? col - prevStart : col;
+                    if (!first) out << ",";
+                    out << dLine << "," << dStart << "," << len << "," << it->second << ",0";
+                    first = false;
+                    prevLine = lineNum; prevStart = col;
+                }
+                continue;
+            }
+            i++;
+        }
+        // advance past newline
+        if (i < text.size() && text[i] == '\n') i++;
+        pos = i;
+        lineNum++;
+    }
+    return out.str();
+}
+
 std::string LspServer::getWordAtPosition(const std::string& text, int line, int character) {
     std::istringstream stream(text);
     std::string currentLine;

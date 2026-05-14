@@ -22,6 +22,11 @@ struct Token {
     std::string value;
     int line;
     int column;
+    // Comments that appeared in the source between the previous token and this
+    // one — captured by the lexer so the formatter / IDE tooling can faithfully
+    // round-trip them. Each entry is the raw comment text including the
+    // leading `//` or `/*...*/`. Empty for most tokens.
+    std::vector<std::string> leadingComments;
 };
 
 class Lexer {
@@ -35,6 +40,10 @@ private:
     std::size_t position_;
     int line_;
     int column_;
+    // Comments accumulated by skipWhitespaceAndComments that have not yet been
+    // attached to a token. Drained by takeQueuedComments() when the next real
+    // token is created.
+    std::vector<std::string> pendingComments_;
 
     bool isAtEnd() const;
     char peek(std::size_t lookahead = 0) const;
@@ -42,6 +51,7 @@ private:
     bool match(char expected);
 
     void skipWhitespaceAndComments();
+    std::vector<std::string> takeQueuedComments();
     bool isIdentifierStart(char value) const;
     bool isIdentifierPart(char value) const;
 

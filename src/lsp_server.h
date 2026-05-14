@@ -22,6 +22,7 @@ private:
     std::string buildDocumentSymbols(const Program* program);
     std::string findDefinition(const std::string& uri, const std::string& word);
     std::string buildSignatureHelp(const std::string& uri, int line, int character);
+    std::string buildSemanticTokens(const std::string& text);
     void applyContentChanges(std::string& document, const std::string& contentChangesJson);
 
     std::unordered_map<std::string, std::string> documentCache_;

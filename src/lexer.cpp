@@ -29,6 +29,20 @@ std::vector<Token> Lexer::tokenize() {
         if (isAtEnd()) {
             break;
         }
+        const std::size_t sizeBefore = tokens.size();
+
+        // RAII helper: at scope exit, attach any pending comments to the
+        // most recently produced token. Works for all scan branches below.
+        struct AttachAtEnd {
+            std::vector<Token>& tokens;
+            std::size_t sizeBefore;
+            Lexer& self;
+            ~AttachAtEnd() {
+                if (tokens.size() > sizeBefore && !self.pendingComments_.empty()) {
+                    tokens[sizeBefore].leadingComments = self.takeQueuedComments();
+                }
+            }
+        } attach{tokens, sizeBefore, *this};
 
         const char current = peek();
         if (current == 'f' && peek(1) == '"') {
@@ -95,7 +109,8 @@ std::vector<Token> Lexer::tokenize() {
         tokens.push_back(scanSymbol());
     }
 
-    tokens.push_back(Token{TokenType::EndOfFile, "", line_, column_});
+    Token eof{TokenType::EndOfFile, "", line_, column_, takeQueuedComments()};
+    tokens.push_back(std::move(eof));
     return tokens;
 }
 
@@ -142,13 +157,17 @@ void Lexer::skipWhitespaceAndComments() {
         }
 
         if (current == '/' && peek(1) == '/') {
+            const std::size_t start = position_;
             while (!isAtEnd() && peek() != '\n') {
                 advance();
             }
+            // Capture the line comment (without trailing newline) for round-trip.
+            pendingComments_.push_back(source_.substr(start, position_ - start));
             continue;
         }
 
         if (current == '/' && peek(1) == '*') {
+            const std::size_t start = position_;
             advance();
             advance();
             while (!isAtEnd()) {
@@ -159,11 +178,18 @@ void Lexer::skipWhitespaceAndComments() {
                 }
                 advance();
             }
+            pendingComments_.push_back(source_.substr(start, position_ - start));
             continue;
         }
 
         break;
     }
+}
+
+std::vector<std::string> Lexer::takeQueuedComments() {
+    std::vector<std::string> out;
+    out.swap(pendingComments_);
+    return out;
 }
 
 bool Lexer::isIdentifierStart(char value) const {
