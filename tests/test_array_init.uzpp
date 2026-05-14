@@ -1,0 +1,11 @@
+// uz++ — C-array initializer: butun arr[3] = {1, 2, 3};
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    butun arr[3] = {10, 20, 30};
+    yozish << "arr[0]=" << arr[0] << " arr[1]=" << arr[1] << " arr[2]=" << arr[2] << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

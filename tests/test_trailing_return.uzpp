@@ -1,0 +1,19 @@
+// uz++ — Trailing return type: funksiya foo() -> Type
+
+ulash "uzpp_runtime.hpp"
+
+funksiya kvadrat(butun x) -> butun {
+    qaytarish x * x;
+}
+
+funksiya nomi() -> matn {
+    qaytarish "uz++";
+}
+
+butun asosiy() {
+    yozish << "kvadrat(7) = " << kvadrat(7) << qator_oxiri;
+    yozish << "nomi() = " << nomi() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

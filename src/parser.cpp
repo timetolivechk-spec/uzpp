@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace uzpp {
@@ -749,6 +750,57 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 std::vector<std::unique_ptr<Expression>>{}, braceToken);
         }
 
+        // Designated initializer: {.x = 1, .y = 2}
+        if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ".") {
+            std::string designatedText = "{";
+            bool first = true;
+            while (!isAtEnd() && peek().value != "}") {
+                if (!first) designatedText += ", ";
+                if (peek().value != ".") {
+                    throw ParseError("Kutilgan '.' designated initializer'da " + formatLocation(peek()));
+                }
+                advance(); // '.'
+                if (isAtEnd() || peek().type != TokenType::Identifier) {
+                    throw ParseError("Kutilgan maydon nomi designated initializer'da");
+                }
+                std::string field = advance().value;
+                if (isAtEnd() || peek().value != "=") {
+                    throw ParseError("Kutilgan '=' designated initializer maydonidan keyin");
+                }
+                advance(); // '='
+                // Collect value as text up to ',' or '}' at current nesting level.
+                // Translate common Uzbek literals/types since this text bypasses codegen.
+                static const std::unordered_map<std::string, std::string> rawTokenMap = {
+                    {"rost", "true"}, {"to'g'ri", "true"},
+                    {"yolg'on", "false"}, {"yolgon", "false"}, {"noto'g'ri", "false"},
+                    {"butun", "int"}, {"haqiqiy", "double"}, {"kasr", "float"},
+                    {"belgi", "char"}, {"mantiqiy", "bool"}, {"bosh", "void"},
+                    {"matn", "std::string"}, {"vektor", "std::vector"},
+                    {"null", "nullptr"}
+                };
+                std::string valueText;
+                int depth = 0;
+                while (!isAtEnd()) {
+                    const std::string& v = peek().value;
+                    if (depth == 0 && (v == "," || v == "}")) break;
+                    if (v == "{" || v == "(" || v == "[") depth++;
+                    else if (v == "}" || v == ")" || v == "]") depth--;
+                    auto it = rawTokenMap.find(v);
+                    valueText += (it != rawTokenMap.end() ? it->second : v) + " ";
+                    advance();
+                }
+                designatedText += "." + field + " = " + valueText;
+                first = false;
+                if (!isAtEnd() && peek().value == ",") advance();
+            }
+            if (!isAtEnd()) advance(); // '}'
+            designatedText += "}";
+            // Emit as an identifier expression carrying the literal C++ text
+            Token litTok = braceToken;
+            litTok.value = designatedText;
+            return std::make_unique<IdentifierExpression>(designatedText, litTok);
+        }
+
         // Birinchi elementni parse qilib, ':' yoki ',' ga qarab tur aniqlanadi
         auto firstExpr = parseExpression();
 
@@ -1132,25 +1184,36 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
 
 std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     const Token ifToken = advance(); // consume 'agar'
-    
+
     bool isConstExpr = false;
+    bool isConsteval = false;
     if (checkKeyword("sobit_ifoda")) {
         isConstExpr = true;
         advance();
+    } else if (checkKeyword("sobit_baholash")) {
+        // C++23 `if consteval { ... }` — no condition!
+        isConsteval = true;
+        advance();
     }
 
-    if (isAtEnd() || peek().value != "(") {
-        throw ParseError("Kutilgan '(' agar ifodasidan keyin " + formatLocation(peek()));
+    // `if consteval` has no parenthesised condition — go straight to body.
+    std::unique_ptr<Expression> condition;
+    if (isConsteval) {
+        // Build a dummy "true" literal as a placeholder condition.
+        Token dummyTrue = ifToken; dummyTrue.value = "true";
+        condition = std::make_unique<LiteralExpression>(
+            LiteralExpression::LiteralType::Boolean, "rost", dummyTrue);
+    } else {
+        if (isAtEnd() || peek().value != "(") {
+            throw ParseError("Kutilgan '(' agar ifodasidan keyin " + formatLocation(peek()));
+        }
+        advance(); // consume '('
+        condition = parseExpression();
+        if (isAtEnd() || peek().value != ")") {
+            throw ParseError("Kutilgan ')' " + formatLocation(peek()));
+        }
+        advance(); // consume ')'
     }
-    
-    advance(); // consume '('
-    auto condition = parseExpression();
-    
-    if (isAtEnd() || peek().value != ")") {
-        throw ParseError("Kutilgan ')' " + formatLocation(peek()));
-    }
-    
-    advance(); // consume ')'
 
     // C++20 branch hints on the then-branch: agar (cond) @bashqarib { ... }
     // (@bashqarib = "обычно/чаще всего" → [[likely]], @kamdan_kam = "редко" → [[unlikely]])
@@ -1198,6 +1261,7 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     auto ifStmt = std::make_unique<IfStatement>(std::move(condition), std::move(thenBranch),
                                         std::move(elseBranch), ifToken);
     ifStmt->setConstExpr(isConstExpr);
+    ifStmt->setConsteval(isConsteval);
     if (thenLikely) ifStmt->setThenLikely(true);
     if (thenUnlikely) ifStmt->setThenUnlikely(true);
     if (elseLikely) ifStmt->setElseLikely(true);
@@ -1855,21 +1919,27 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
 
 std::unique_ptr<NamespaceDeclaration> Parser::parseNamespaceDeclaration() {
     const Token token = advance(); // past 'nomlar_fazosi'
-    std::string name = advance().value;
-    
-    // Support C++ style nested namespaces (e.g. uzpp::Xavfsizlik)
-    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
-        advance();
-        name += "::" + advance().value;
+
+    // Anonymous namespace: `nomlar_fazosi { ... }` — empty name = file-scope privacy
+    std::string name;
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "{") {
+        // anonymous — leave name empty
+    } else {
+        name = advance().value;
+        // Support C++ style nested namespaces (e.g. uzpp::Xavfsizlik)
+        while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
+            advance();
+            name += "::" + advance().value;
+        }
     }
-    
+
     if (peek().type == TokenType::Symbol && peek().value == ";") {
         advance(); // "nomlar_fazosi X;" -> "using namespace X;"
         Token usingTok = token;
         usingTok.value = "using namespace " + name + ";";
         return std::make_unique<NamespaceDeclaration>(name, std::vector<std::unique_ptr<ASTNode>>{}, token);
     }
-    
+
     // Traditional bracketed namespace
     if (peek().value != "{") throw ParseError("Kutilgan '{' " + formatLocation(peek()));
     advance();
@@ -2025,20 +2095,28 @@ std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration(const std:
     funcToken.type = TokenType::Identifier;
     
     std::vector<FunctionDeclaration::Parameter> params = parseFunctionParameters();
-    
+
+    // C++11 trailing return type: funksiya foo(...) -> butun { ... }
+    // Also works for auto-deduced abbreviated function templates.
+    std::string finalReturnType = returnType;
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "->") {
+        advance(); // consume '->'
+        finalReturnType = parseTypeString();
+    }
+
     bool isNoExcept = false;
     if (checkKeyword("xato_tashlamaydi")) {
         isNoExcept = true;
         advance();
     }
-    
+
     if (isAtEnd() || peek().value != "{") {
         throw ParseError("Kutilgan funktsiya tanasi '{' " + formatLocation(peek()));
     }
-    
+
     auto body = parseBlock();
-    
-    auto funcDecl = std::make_unique<FunctionDeclaration>(funcName, returnType, std::move(params), 
+
+    auto funcDecl = std::make_unique<FunctionDeclaration>(funcName, finalReturnType, std::move(params),
                                                  std::move(body), funcToken, false, false, false, isConstExpr, isConstEval);
     funcDecl->setNoExcept(isNoExcept);
     return funcDecl;
@@ -2133,26 +2211,38 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
 
 
 std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
-    const Token classToken = advance(); // consume 'sinf'
-    
-    if (isAtEnd() || peek().type != TokenType::Identifier) {
-        throw ParseError("Kutilgan sinf nomi " + formatLocation(peek()));
+    const Token classToken = advance(); // consume 'sinf' / 'tuzilma' / 'birlashma'
+
+    // Anonymous union/struct allowed: `birlashma { butun i; haqiqiy f; };`
+    std::string className;
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "{") {
+        // anonymous — no name; codegen emits `union { ... };` without a tag
+    } else {
+        if (isAtEnd() || peek().type != TokenType::Identifier) {
+            throw ParseError("Kutilgan sinf nomi " + formatLocation(peek()));
+        }
+        className = peek().value;
+        advance();
     }
     
-    const std::string className = peek().value;
-    advance();
-    
     std::string baseClass;
+    std::vector<std::string> interfaces;
     if (matchKeyword("meros") || (peek().type == TokenType::Symbol && peek().value == ":")) {
         if (peek().value == ":") advance(); // consume ':'
         if (isAtEnd() || peek().type != TokenType::Identifier) {
             throw ParseError("Kutilgan asosiy sinf yoki interfeys nomi " + formatLocation(peek()));
         }
-        baseClass = peek().value;
-        advance();
+        baseClass = advance().value;
+        // Multiple inheritance: meros A, B, C { ... }  → first is base, rest are interfaces.
+        while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
+            advance(); // ','
+            if (isAtEnd() || peek().type != TokenType::Identifier) {
+                throw ParseError("Kutilgan keyingi asosiy sinf nomi " + formatLocation(peek()));
+            }
+            interfaces.push_back(advance().value);
+        }
     }
-    
-    std::vector<std::string> interfaces;
+
     if (matchKeyword("amalga_oshirish")) {
         do {
             if (isAtEnd() || peek().type != TokenType::Identifier) {

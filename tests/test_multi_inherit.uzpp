@@ -1,0 +1,33 @@
+// uz++ — Multiple inheritance
+
+ulash "uzpp_runtime.hpp"
+
+sinf Yozuvchi {
+ochiq:
+    bosh yoz(matn s) {
+        yozish << "Yozildi: " << s << qator_oxiri;
+    }
+}
+
+sinf O'quvchi {
+ochiq:
+    bosh oqi(matn s) {
+        yozish << "O'qildi: " << s << qator_oxiri;
+    }
+}
+
+sinf Tahrirchi meros Yozuvchi, O'quvchi {
+ochiq:
+    bosh tahrirla(matn s) {
+        oqi(s);
+        yoz(s + " (tahrirlangan)");
+    }
+}
+
+butun asosiy() {
+    Tahrirchi t;
+    t.tahrirla("Salom");
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

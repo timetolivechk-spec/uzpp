@@ -302,6 +302,26 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"belgi", "char"},
         {"bosh", "void"},
         {"butun", "int"},
+        // Unsigned variants ("musbat" = positive)
+        {"musbat_butun",   "unsigned int"},
+        {"musbat_qisqa",   "unsigned short"},
+        {"musbat_uzun",    "unsigned long"},
+        {"musbat_uzun_uzun", "unsigned long long"},
+        {"musbat_belgi",   "unsigned char"},
+        // Signed sized variants
+        {"qisqa",          "short"},
+        {"uzun",           "long"},
+        {"uzun_uzun",      "long long"},
+        // Fixed-width
+        {"butun8",         "std::int8_t"},
+        {"butun16",        "std::int16_t"},
+        {"butun32",        "std::int32_t"},
+        {"butun64",        "std::int64_t"},
+        {"musbat_butun8",  "std::uint8_t"},
+        {"musbat_butun16", "std::uint16_t"},
+        {"musbat_butun32", "std::uint32_t"},
+        {"musbat_butun64", "std::uint64_t"},
+        {"hajm_turi",      "std::size_t"},
         {"chiqarish", "std::cout"},
         {"filtr", "std::views::filter"},
         {"filter", "std::views::filter"},
@@ -607,6 +627,23 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
     static const std::unordered_map<std::string, std::string> typeMap = {
         {"bosh", "void"},
         {"butun", "int"},
+        {"musbat_butun", "unsigned int"},
+        {"musbat_qisqa", "unsigned short"},
+        {"musbat_uzun", "unsigned long"},
+        {"musbat_uzun_uzun", "unsigned long long"},
+        {"musbat_belgi", "unsigned char"},
+        {"qisqa", "short"},
+        {"uzun", "long"},
+        {"uzun_uzun", "long long"},
+        {"butun8", "std::int8_t"},
+        {"butun16", "std::int16_t"},
+        {"butun32", "std::int32_t"},
+        {"butun64", "std::int64_t"},
+        {"musbat_butun8", "std::uint8_t"},
+        {"musbat_butun16", "std::uint16_t"},
+        {"musbat_butun32", "std::uint32_t"},
+        {"musbat_butun64", "std::uint64_t"},
+        {"hajm_turi", "std::size_t"},
         {"ozgaruvchan", "auto"},
         {"o'zgaruvchan", "auto"},
         {"ozgarmas", "const auto"},
@@ -1158,14 +1195,19 @@ void CodeGen::visitIfStatement(const IfStatement* stmt) {
     }
 
     writeIndentIfNeeded();
-    if (stmt->isConstExpr()) {
-        emitRawToken("if constexpr");
+    if (stmt->isConsteval()) {
+        // C++23 `if consteval` — no parens, no condition
+        emitRawToken("if consteval");
     } else {
-        emitRawToken("if");
+        if (stmt->isConstExpr()) {
+            emitRawToken("if constexpr");
+        } else {
+            emitRawToken("if");
+        }
+        emitRawToken("(");
+        visitExpression(stmt->getCondition());
+        emitRawToken(")");
     }
-    emitRawToken("(");
-    visitExpression(stmt->getCondition());
-    emitRawToken(")");
     // C++20 branch hint on then-branch: if (cond) [[likely]] { ... }
     if (stmt->isThenLikely()) emitRawToken("[[likely]]");
     else if (stmt->isThenUnlikely()) emitRawToken("[[unlikely]]");
@@ -1599,13 +1641,13 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
         bool first = true;
         if (!decl->getBaseClass().empty()) {
             emitRawToken("public");
-            emitRawToken(decl->getBaseClass());
+            emitRawToken(safeIdent(decl->getBaseClass()));
             first = false;
         }
         for (const auto& iface : decl->getInterfaces()) {
             if (!first) emitRawToken(",");
             emitRawToken("public");
-            emitRawToken(iface);
+            emitRawToken(safeIdent(iface));
             first = false;
         }
     }

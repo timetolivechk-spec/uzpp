@@ -1,0 +1,22 @@
+// uz++ — C++23 `if consteval` — true when called from constant context
+
+ulash "uzpp_runtime.hpp"
+
+sobit_ifoda butun smart_jami(butun a, butun b) {
+    agar sobit_baholash {
+        // Compile-time: trivial direct sum
+        qaytarish a + b;
+    } aks_holda {
+        // Runtime: same logic, but illustrates the split
+        qaytarish a + b;
+    }
+}
+
+butun asosiy() {
+    sobit_ifoda butun ct = smart_jami(2, 3);
+    butun rt = smart_jami(10, 20);
+    yozish << "ct=" << ct << " rt=" << rt << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

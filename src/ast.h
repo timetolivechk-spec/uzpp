@@ -576,6 +576,9 @@ public:
     
     bool isConstExpr() const { return isConstExpr_; }
     void setConstExpr(bool val) { isConstExpr_ = val; }
+    // C++23 `if consteval { ... }` — no condition, true in constant context
+    bool isConsteval() const { return isConsteval_; }
+    void setConsteval(bool val) { isConsteval_ = val; }
 
     // C++20 branch-prediction hints on the then-branch
     bool isThenLikely() const { return isThenLikely_; }
@@ -594,6 +597,7 @@ private:
     std::unique_ptr<Statement> elseBranch_;
     Token ifToken_;
     bool isConstExpr_ = false;
+    bool isConsteval_ = false;
     bool isThenLikely_ = false;
     bool isThenUnlikely_ = false;
     bool isElseLikely_ = false;

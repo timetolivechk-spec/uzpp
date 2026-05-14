@@ -1,0 +1,25 @@
+// uz++ — C++20 designated initializers
+
+ulash "uzpp_runtime.hpp"
+
+tuzilma Nuqta {
+    butun x;
+    butun y;
+}
+
+tuzilma Sozlama {
+    matn nom;
+    butun maks;
+    mantiqiy ochiq;
+}
+
+butun asosiy() {
+    Nuqta n = {.x = 10, .y = 20};
+    yozish << "Nuqta: (" << n.x << ", " << n.y << ")" << qator_oxiri;
+
+    Sozlama s = {.nom = "test", .maks = 100, .ochiq = rost};
+    yozish << "Sozlama: " << s.nom << ", maks=" << s.maks << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

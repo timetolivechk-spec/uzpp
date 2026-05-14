@@ -1,0 +1,17 @@
+// uz++ — Unsigned types: musbat_butun va boshqalar
+
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    musbat_butun u = 4000000000;  // > INT_MAX, only fits in unsigned
+    yozish << "musbat_butun = " << u << qator_oxiri;
+
+    musbat_butun32 mb32 = 100;
+    yozish << "musbat_butun32 = " << mb32 << qator_oxiri;
+
+    hajm_turi h = 1024;
+    yozish << "hajm_turi = " << h << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

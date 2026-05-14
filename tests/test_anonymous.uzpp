@@ -1,0 +1,17 @@
+// uz++ — Anonymous namespace + anonymous union
+
+ulash "uzpp_runtime.hpp"
+
+// File-scope private (anonymous namespace)
+nomlar_fazosi {
+    butun yashirin = 42;
+    butun yashirin_funk() { qaytarish 7; }
+}
+
+butun asosiy() {
+    yozish << "yashirin = " << yashirin << qator_oxiri;
+    yozish << "yashirin_funk = " << yashirin_funk() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
