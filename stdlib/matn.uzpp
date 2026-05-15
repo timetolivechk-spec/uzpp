@@ -1,9 +1,10 @@
-// uz++ — Matn (string) kutubxonasi, uz++ tilida qayta yozilgan
-// Bu fayl `stdlib/matn.hpp` ning sof uz++ analogi: barcha funksiyalar
-// uzpp::Matn nomlar fazosida o'rniga, bu yerda mahalliy `Matn` nomlar
-// fazosida joylashgan. Quyidagi `asosiy()` har bir funksiyani sinab ko'radi.
+// uz++ — Matn (string) kutubxonasi, uz++ tilida qayta yozilgan.
+// Bu fayl `stdlib/matn.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+// Joriy `asosiy()` har bir funksiyani sinab ko'radi; header-mode generatsiya
+// uni avtomatik chiqaradi (yuqori darajadagi `funksiya` va `butun` tuguni
+// chiqarilmaydi — faqat namespace ichidagi declarations qoladi).
 
-ulash "uzpp_runtime.hpp"
 ulash <regex>
 ulash <cctype>
 ulash <algorithm>
@@ -11,8 +12,9 @@ ulash <optional>
 ulash <sstream>
 ulash <stdexcept>
 ulash <string>
+ulash <utility>
 
-nomlar_fazosi Matn {
+nomlar_fazosi uzpp::Matn {
 
 // ===== UZUNLIK / BO'SHLIQ TEKSHIRUVI =====
 
@@ -109,7 +111,7 @@ funksiya birinchi_harfni_katta(matn s) -> matn {
     qaytarish s;
 }
 
-funksiya teskari_qilish(matn s) -> matn {
+funksiya teskari(matn s) -> matn {
     std::reverse(s.begin(), s.end());
     qaytarish s;
 }
@@ -620,187 +622,5 @@ yopiq:
     std::regex regex_;
 };
 
-} // nomlar_fazosi Matn
+} // nomlar_fazosi uzpp::Matn
 
-// ===== O'Z-O'ZINI SINASH =====
-
-funksiya tasdiqlash(o'zgarmas matn& nom, mantiqiy shart) -> bosh {
-    agar (!shart) {
-        yozish << "[XATO] " << nom << qator_oxiri;
-        irgitish std::runtime_error("Sinov muvaffaqiyatsiz: " + nom);
-    }
-}
-
-butun asosiy() {
-    // uzunlik / bo'shliq
-    tasdiqlash("uzunlik", Matn::uzunlik("salom") == 5);
-    tasdiqlash("boshmi-bo'sh", Matn::boshmi(""));
-    tasdiqlash("boshmi-toliq", !Matn::boshmi("x"));
-    tasdiqlash("bosh_emasmi", Matn::bosh_emasmi("x"));
-
-    // qidirish
-    tasdiqlash("boshlanganda", Matn::boshlanganda("salomat", "salom"));
-    tasdiqlash("boshlanganda-yo'q", !Matn::boshlanganda("salomat", "xayr"));
-    tasdiqlash("tugaganda", Matn::tugaganda("salomat", "mat"));
-    tasdiqlash("ichida", Matn::ichida("salomat", "loma"));
-    tasdiqlash("ichida-yo'q", !Matn::ichida("salomat", "xyz"));
-
-    o'zgaruvchan top = Matn::topish("salomat", "lo");
-    tasdiqlash("topish-bor", top.has_value() && top.value() == 2);
-    o'zgaruvchan top_yoq = Matn::topish("salomat", "xyz");
-    tasdiqlash("topish-yo'q", !top_yoq.has_value());
-
-    tasdiqlash("hisoblash", Matn::hisoblash("ababab", "ab") == 3);
-    tasdiqlash("hisoblash-yo'q", Matn::hisoblash("xyz", "ab") == 0);
-
-    // kesish
-    tasdiqlash("qism_matn", Matn::qism_matn("salomat", 1, 4) == "alom");
-    tasdiqlash("chapdan", Matn::chapdan("salomat", 3) == "sal");
-    tasdiqlash("ongdan", Matn::ongdan("salomat", 3) == "mat");
-    tasdiqlash("chapdan-uzun", Matn::chapdan("ab", 99) == "ab");
-
-    // o'zgartirish
-    tasdiqlash("kichik_harfga", Matn::kichik_harfga("SaLoM") == "salom");
-    tasdiqlash("katta_harfga", Matn::katta_harfga("SaLoM") == "SALOM");
-    tasdiqlash("birinchi_harfni_katta", Matn::birinchi_harfni_katta("salom") == "Salom");
-    tasdiqlash("teskari", Matn::teskari_qilish("abc") == "cba");
-    tasdiqlash("takrorlash", Matn::takrorlash("ab", 3) == "ababab");
-    tasdiqlash("takrorlash-nol", Matn::takrorlash("ab", 0) == "");
-    tasdiqlash("almashtirish", Matn::almashtirish("ababab", "a", "X") == "XbXbXb");
-    tasdiqlash("birinchi_almashtirish", Matn::birinchi_almashtirish("ababab", "a", "X") == "Xbabab");
-
-    // qirqish
-    tasdiqlash("chapdan_qirqish", Matn::chapdan_qirqish("   hello") == "hello");
-    tasdiqlash("ongdan_qirqish", Matn::ongdan_qirqish("hello   ") == "hello");
-    tasdiqlash("qirqish", Matn::qirqish("   hello   ") == "hello");
-
-    // tekshirish
-    tasdiqlash("raqammi-musbat", Matn::raqammi("42"));
-    tasdiqlash("raqammi-manfiy", Matn::raqammi("-42"));
-    tasdiqlash("raqammi-kasr", Matn::raqammi("3.14"));
-    tasdiqlash("raqammi-yo'q", !Matn::raqammi("abc"));
-    tasdiqlash("raqammi-bo'sh", !Matn::raqammi(""));
-    tasdiqlash("harflarmi", Matn::harflarmi("abc"));
-    tasdiqlash("harflarmi-yo'q", !Matn::harflarmi("a1b"));
-    tasdiqlash("harf_raqamlami", Matn::harf_raqamlami("abc123"));
-    tasdiqlash("harf_raqamlami-yo'q", !Matn::harf_raqamlami("abc 123"));
-
-    // ajratish / birlashtirish
-    o'zgaruvchan qismlar = Matn::ajratish("a,b,c", ",");
-    tasdiqlash("ajratish-soni", qismlar.size() == 3);
-    tasdiqlash("ajratish-mazmun", qismlar[0] == "a" && qismlar[1] == "b" && qismlar[2] == "c");
-
-    o'zgaruvchan qatorlar = Matn::qatorlarga_ajratish("bir\nikki\nuch");
-    tasdiqlash("qatorlarga_ajratish", qatorlar.size() == 3 && qatorlar[1] == "ikki");
-
-    tasdiqlash("birlashtirish", Matn::birlashtirish(qismlar, "-") == "a-b-c");
-
-    // to'ldirish
-    tasdiqlash("chapdan_toldirish", Matn::chapdan_toldirish("5", 3, '0') == "005");
-    tasdiqlash("ongdan_toldirish", Matn::ongdan_toldirish("5", 3, '0') == "500");
-    tasdiqlash("markazga_toldirish", Matn::markazga_toldirish("ab", 6, '-') == "--ab--");
-
-    // konversiya
-    tasdiqlash("butun_songa", Matn::butun_songa("42") == 42);
-    o'zgaruvchan kasrli = Matn::kasr_songa("3.14");
-    tasdiqlash("kasr_songa", kasrli.has_value() && kasrli.value() > 3.13 && kasrli.value() < 3.15);
-    o'zgaruvchan kasrli_yoq = Matn::kasr_songa("xyz");
-    tasdiqlash("kasr_songa-yo'q", !kasrli_yoq.has_value());
-    tasdiqlash("songa_aylantirish-butun", Matn::songa_aylantirish(42) == "42");
-
-    // RegEx
-    Matn::RegEx re("[0-9]+");
-    tasdiqlash("regex-mos", re.mos("12345"));
-    tasdiqlash("regex-qidirish", re.qidirish("abc 42 xyz"));
-    tasdiqlash("regex-mos-yo'q", !re.mos("abc"));
-
-    Matn::RegEx re_alm("[0-9]+");
-    tasdiqlash("regex-almashtirish", re_alm.almashtirish("a1b22c333", "N") == "aNbNcN");
-
-    Matn::RegEx re_top("[0-9]+");
-    o'zgaruvchan barchasi = re_top.topish_hammasi("a1b22c333");
-    tasdiqlash("regex-topish_hammasi-soni", barchasi.size() == 3);
-    tasdiqlash("regex-topish_hammasi-mazmun", barchasi[0] == "1" && barchasi[1] == "22" && barchasi[2] == "333");
-
-    Matn::RegEx re_case("HELLO", rost);
-    tasdiqlash("regex-case-insensitive", re_case.qidirish("say hello world"));
-
-    // ===== Yangi kengaytirilgan funksiyalar =====
-
-    // qadar_qirqish
-    tasdiqlash("qadar_qirqish-uzun", Matn::qadar_qirqish("Salom dunyo!", 8) == "Salom...");
-    tasdiqlash("qadar_qirqish-qisqa", Matn::qadar_qirqish("Sa", 8) == "Sa");
-    tasdiqlash("qadar_qirqish-aniq", Matn::qadar_qirqish("Salom", 5) == "Salom");
-    tasdiqlash("qadar_qirqish-belgisiz", Matn::qadar_qirqish("Salomat", 10, "") == "Salomat");
-
-    // qator_son
-    tasdiqlash("qator_son-bosh", Matn::qator_son("") == 0);
-    tasdiqlash("qator_son-bir", Matn::qator_son("salom") == 1);
-    tasdiqlash("qator_son-uch", Matn::qator_son("a\nb\nc") == 3);
-    tasdiqlash("qator_son-tugaganda", Matn::qator_son("a\nb\n") == 2);
-
-    // belgi_almashtirish
-    tasdiqlash("belgi_almashtirish", Matn::belgi_almashtirish("salom dunyo", ' ', '_') == "salom_dunyo");
-    tasdiqlash("belgi_almashtirish-yo'q", Matn::belgi_almashtirish("abc", 'x', 'y') == "abc");
-
-    // bosh_belgi / oxir_belgi
-    tasdiqlash("bosh_belgi", Matn::bosh_belgi("Salom") == 'S');
-    tasdiqlash("oxir_belgi", Matn::oxir_belgi("Salom") == 'm');
-
-    // katta_yokib / kichik_yokib
-    tasdiqlash("katta_yokib-rost", Matn::katta_yokib("SALOM"));
-    tasdiqlash("katta_yokib-aralash", !Matn::katta_yokib("Salom"));
-    tasdiqlash("katta_yokib-raqam", Matn::katta_yokib("ABC123"));
-    tasdiqlash("katta_yokib-faqat-raqam", !Matn::katta_yokib("123"));
-    tasdiqlash("kichik_yokib-rost", Matn::kichik_yokib("salom"));
-    tasdiqlash("kichik_yokib-aralash", !Matn::kichik_yokib("Salom"));
-
-    // formatlash_indeksli
-    vektor<matn> arglar = {"Olim", "42"};
-    tasdiqlash("formatlash_indeksli", Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar) == "Salom, Olim! Yosh: 42.");
-    tasdiqlash("formatlash_indeksli-takror", Matn::formatlash_indeksli("{0} {0}", arglar) == "Olim Olim");
-    vektor<matn> bo'sh;
-    tasdiqlash("formatlash_indeksli-bo'sh", Matn::formatlash_indeksli("hech", bo'sh) == "hech");
-    tasdiqlash("formatlash_indeksli-qavslar", Matn::formatlash_indeksli("{{x}}", bo'sh) == "{x}");
-
-    // oxir_topish
-    o'zgaruvchan ot = Matn::oxir_topish("ababab", "ab");
-    tasdiqlash("oxir_topish-bor", ot.has_value() && ot.value() == 4);
-    o'zgaruvchan ot_yoq = Matn::oxir_topish("xyz", "ab");
-    tasdiqlash("oxir_topish-yo'q", !ot_yoq.has_value());
-
-    // bir_marta_ajratish
-    o'zgaruvchan jufti = Matn::bir_marta_ajratish("kalit=qiymat=qo'shimcha", "=");
-    tasdiqlash("bir_marta_ajratish-chap", jufti.first == "kalit");
-    tasdiqlash("bir_marta_ajratish-ong", jufti.second == "qiymat=qo'shimcha");
-    o'zgaruvchan jufti_yoq = Matn::bir_marta_ajratish("kalitsiz", "=");
-    tasdiqlash("bir_marta_ajratish-yo'q-chap", jufti_yoq.first == "kalitsiz");
-    tasdiqlash("bir_marta_ajratish-yo'q-ong", jufti_yoq.second == "");
-
-    // ===== UTF-8 / Unicode =====
-    // "Салом" — 5 kirillcha belgi, 10 bayt (har biri 2 bayt UTF-8 da)
-    matn rus = "Салом";
-    tasdiqlash("uzunlik-baytda", Matn::uzunlik(rus) == 10);
-    tasdiqlash("belgilar_soni-kirillcha", Matn::belgilar_soni(rus) == 5);
-    tasdiqlash("belgilar_soni-aralash", Matn::belgilar_soni("a Я b") == 5);
-    tasdiqlash("belgilar_soni-ascii", Matn::belgilar_soni("hello") == 5);
-    tasdiqlash("belgilar_soni-bo'sh", Matn::belgilar_soni("") == 0);
-
-    tasdiqlash("chapdan_belgi-kirillcha", Matn::chapdan_belgi_bo'yicha(rus, 3) == "Сал");
-    tasdiqlash("chapdan_belgi-bo'sh", Matn::chapdan_belgi_bo'yicha("", 5) == "");
-    tasdiqlash("chapdan_belgi-uzun", Matn::chapdan_belgi_bo'yicha("ab", 99) == "ab");
-
-    tasdiqlash("ongdan_belgi-kirillcha", Matn::ongdan_belgi_bo'yicha(rus, 2) == "ом");
-    tasdiqlash("ongdan_belgi-uzun", Matn::ongdan_belgi_bo'yicha("ab", 99) == "ab");
-
-    matn rus_jumla = "Салом, дунё";
-    tasdiqlash("qism_matn_belgi", Matn::qism_matn_belgi_bo'yicha(rus_jumla, 7, 3) == "дун");
-    tasdiqlash("belgi_olish-kirillcha", Matn::belgi_olish(rus_jumla, 0) == "С");
-    tasdiqlash("belgi_olish-ascii", Matn::belgi_olish("hello", 1) == "e");
-
-    tasdiqlash("belgi_uzunligi-ascii", Matn::belgi_uzunligi('a') == 1);
-    tasdiqlash("belgi_uzunligi-2byte", Matn::belgi_uzunligi(statik_otkazish<belgi>(0xD0)) == 2);
-
-    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
-    qaytarish 0;
-}

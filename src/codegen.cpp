@@ -1,5 +1,7 @@
 #include "codegen.h"
 
+#include <cctype>
+#include <filesystem>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -20,9 +22,28 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
     testMode_ = testMode;
     benchMode_ = benchMode;
     if (headerMode_) {
-        // Minimal header-mode preamble: pragma once + #line. The rest of the
-        // headers come from explicit `ulash <X>` statements in the body.
+        // Module-level include guard derived from the source filename. We
+        // need both `#pragma once` AND a textual guard: the same .uzpp can
+        // be transpiled into multiple build dirs (e.g. stdlib/matn.hpp + a
+        // freshly-regenerated build/matn.hpp). `#pragma once` keys on
+        // inode/path so both copies slip through; the textual guard catches
+        // the duplicate inclusion at the macro level.
+        std::string baseName;
+        {
+            const std::filesystem::path p(sourceName);
+            baseName = p.stem().string();
+            for (char& c : baseName) {
+                if (!std::isalnum(static_cast<unsigned char>(c))) c = '_';
+                else c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            }
+        }
+        // Avoid a leading underscore: identifiers like `_FOO` followed by an
+        // uppercase letter are reserved for the implementation, and some
+        // toolchains drop them silently — defeating the guard.
+        const std::string guard = "UZPP_GEN_" + baseName + "_HPP_";
         output_ << "#pragma once\n";
+        output_ << "#ifndef " << guard << "\n";
+        output_ << "#define " << guard << "\n";
         output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
         lineStart_ = true;
         // In header mode, only emit declarations that make sense at namespace
@@ -53,6 +74,7 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
 
     if (headerMode_) {
         if (!lineStart_) emitNewline();
+        output_ << "#endif\n";
         return output_.str();
     }
 
@@ -444,7 +466,9 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"tartibla", "std::sort"},
         {"qidirish", "std::find"},
         {"saralash", "std::sort"},
-        {"teskari", "std::reverse"},
+        // `teskari` is intentionally NOT mapped to `std::reverse` here:
+        // uzpp::Matn::teskari (string reversal) needs an unambiguous name.
+        // Callers that want std::reverse should write it directly.
         // Casting operators
         {"statik_otkazish",   "static_cast"},
         {"dinamik_otkazish",  "dynamic_cast"},
@@ -784,7 +808,6 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"tartibla", "std::sort"},
         {"saralash", "std::sort"},
         {"qidirish", "std::find"},
-        {"teskari", "std::reverse"},
         {"manba_joyi", "std::source_location"},
     };
 

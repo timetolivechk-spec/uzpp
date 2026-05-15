@@ -7,14 +7,14 @@ ulash "matn.uzpp"
 butun asosiy() {
     matn s = "Salom, dunyo!";
 
-    yozish << "Matn uzunligi (bayt): " << Matn::uzunlik(s) << qator_oxiri;
-    yozish << "Belgilar soni:        " << Matn::belgilar_soni(s) << qator_oxiri;
-    yozish << "Kichik harfga:        " << Matn::kichik_harfga(s) << qator_oxiri;
-    yozish << "Katta harfga:         " << Matn::katta_harfga(s) << qator_oxiri;
-    yozish << "Teskari:              " << Matn::teskari_qilish(s) << qator_oxiri;
-    yozish << "Qisqartirilgan(8):    " << Matn::qadar_qirqish(s, 8) << qator_oxiri;
+    yozish << "Matn uzunligi (bayt): " << uzpp::Matn::uzunlik(s) << qator_oxiri;
+    yozish << "Belgilar soni:        " << uzpp::Matn::belgilar_soni(s) << qator_oxiri;
+    yozish << "Kichik harfga:        " << uzpp::Matn::kichik_harfga(s) << qator_oxiri;
+    yozish << "Katta harfga:         " << uzpp::Matn::katta_harfga(s) << qator_oxiri;
+    yozish << "Teskari:              " << uzpp::Matn::teskari(s) << qator_oxiri;
+    yozish << "Qisqartirilgan(8):    " << uzpp::Matn::qadar_qirqish(s, 8) << qator_oxiri;
 
-    o'zgaruvchan qismlar = Matn::ajratish(s, ", ");
+    o'zgaruvchan qismlar = uzpp::Matn::ajratish(s, ", ");
     yozish << "Bo'laklari:           ";
     uchun (o'zgarmas matn& q : qismlar) {
         yozish << "[" << q << "] ";
@@ -23,10 +23,10 @@ butun asosiy() {
 
     vektor<matn> arglar = {"Olim", "42"};
     yozish << "Format:               "
-           << Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar)
+           << uzpp::Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar)
            << qator_oxiri;
 
-    Matn::RegEx raqamlar("[0-9]+");
+    uzpp::Matn::RegEx raqamlar("[0-9]+");
     yozish << "Raqam topildimi:      "
            << (raqamlar.qidirish("yil 2026da") ? "rost" : "yolg'on") << qator_oxiri;
 
