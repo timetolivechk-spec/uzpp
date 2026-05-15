@@ -485,6 +485,47 @@ int main() {
         assert(actions == "[]");
     }
 
+    {
+        // Scope shadowing: a local named `yangi` should NOT emit `new` when
+        // referenced — the local-name table introduced for keyword-alias
+        // collisions is what makes natural variable names work in uz++.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun yangi = 5; qaytarish yangi; }");
+        assert(cpp.find("return yangi") != std::string::npos);
+        assert(cpp.find("return new") == std::string::npos);
+    }
+
+    {
+        // Same shadowing protection for `bor`, `kasr`, `uzun` (all of which
+        // are listed in identifierTranslations / typeMap).
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun bor = 1; butun kasr = 2; butun uzun = 3; "
+            "qaytarish bor + kasr + uzun; }");
+        assert(cpp.find("return((bor + kasr) + uzun)") != std::string::npos);
+        assert(cpp.find("uzpp::bor") == std::string::npos);
+        assert(cpp.find("float") == std::string::npos);
+    }
+
+    {
+        // `funksiya X(...) o'zgarmas -> T { ... }` — const method with
+        // funksiya keyword AND trailing return type, previously rejected.
+        const std::string cpp = transpileSnippet(
+            "sinf Hisoblagich { ochiq: funksiya hisobla() o'zgarmas -> butun { qaytarish 42; } };");
+        // Class methods emit return-type-first (not trailing) form, but
+        // the trailing-return after `o'zgarmas` must still be honoured.
+        assert(cpp.find("int hisobla() const") != std::string::npos);
+    }
+
+    {
+        // `agar (...) { ... } yoki { ... }` — `yoki` after if-then must be
+        // recognised as `else`, not as a stray binary operator that emits
+        // `else; { ... }` (orphan compound statement).
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { agar (1) { } yoki { } qaytarish 0; }");
+        assert(cpp.find("else;") == std::string::npos);
+        assert(cpp.find("else") != std::string::npos);
+    }
+
     std::cout << "uzpp frontend smoke tests passed\n";
     return 0;
 }

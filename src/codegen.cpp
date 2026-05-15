@@ -1026,9 +1026,17 @@ void CodeGen::visitLiteralExpression(const LiteralExpression* expr) {
 
 void CodeGen::visitIdentifierExpression(const IdentifierExpression* expr) {
     if (expr == nullptr) return;
+    // A user-declared local shadows any keyword alias of the same name —
+    // emit the raw identifier so `yozish << yangi << ...` after
+    // `butun yangi = 5;` actually references the variable, not `new`.
+    const std::string& name = expr->getName();
+    if (isLocalName(name)) {
+        emitRawToken(safeIdent(name));
+        return;
+    }
     Token dummyToken;
     dummyToken.type = TokenType::Identifier;
-    dummyToken.value = expr->getName();
+    dummyToken.value = name;
     emitRawToken(translateToken(dummyToken, nullptr));
 }
 
@@ -1392,6 +1400,9 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
     emitRawToken("for");
     emitRawToken("(");
 
+    // The for-init declares a name visible in cond/incr/body — open a scope.
+    pushLocalScope();
+
     if (stmt->isRangeBased()) {
         // Range-based for: uchun (tur nom : to'plam)
         if (stmt->getInit() != nullptr) {
@@ -1400,6 +1411,7 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                 if (varDecl->isConst()) emitRawToken("const");
                 emitRawToken(getCppType(varDecl->getTypeName()));
                 emitRawToken(safeIdent(varDecl->getName()));
+                declareLocal(varDecl->getName());
             } else {
                 visitStatement(stmt->getInit());
             }
@@ -1416,6 +1428,7 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                 if (varDecl->isConst()) emitRawToken("const");
                 emitRawToken(getCppType(varDecl->getTypeName()));
                 emitRawToken(safeIdent(varDecl->getName()));
+                declareLocal(varDecl->getName());
                 if (varDecl->getInitializer() != nullptr) {
                     emitRawToken("=");
                     visitExpression(varDecl->getInitializer());
@@ -1442,21 +1455,24 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
     indentMore();
     visitStatement(stmt->getBody());
     indentLess();
+    popLocalScope();
 }
 
 void CodeGen::visitBlock(const Block* stmt) {
     if (stmt == nullptr) return;
-    
+
     writeIndentIfNeeded();
     emitRawToken("{");
     emitNewline();
-    
+
     indentMore();
+    pushLocalScope();
     for (const auto& s : stmt->getStatements()) {
         visitStatement(s.get());
     }
+    popLocalScope();
     indentLess();
-    
+
     writeIndentIfNeeded();
     emitRawToken("}");
     emitNewline();
@@ -1570,6 +1586,7 @@ void CodeGen::visitExpressionStatement(const ExpressionStatement* stmt) {
 
 void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt == nullptr) return;
+    declareLocal(stmt->getName());
     writeIndentIfNeeded();
 
     // Storage classes — emit BEFORE 'inline' so they don't get swallowed
@@ -1698,7 +1715,12 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
     bool oldAsyncState = currentFunctionIsAsync_;
     currentFunctionIsAsync_ = decl->isAsync();
 
+    pushLocalScope();
+    for (const auto& p : decl->getParameters()) {
+        declareLocal(p.name);
+    }
     visitBlock(decl->getBody());
+    popLocalScope();
 
     currentFunctionIsAsync_ = oldAsyncState;
 }
@@ -1913,7 +1935,10 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
                 emitNewline();
             } else {
                 emitNewline();
+                pushLocalScope();
+                for (const auto& p : method->params) declareLocal(p.name);
                 visitBlock(method->body.get());
+                popLocalScope();
             }
         }
         

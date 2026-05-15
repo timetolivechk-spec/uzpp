@@ -4,6 +4,8 @@
 
 #include <sstream>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace uzpp {
 
@@ -69,6 +71,24 @@ private:
     bool userMainHasArgs_ = false;
     bool headerMode_ = false;
     std::vector<std::string> uzppDependencies_;
+
+    // Stack of local-name scopes used to suppress keyword translation when a
+    // user-declared identifier shadows a uz++ alias (e.g. `butun yangi = 5;
+    // yozish << yangi;` — without this, the second `yangi` would emit `new`).
+    // Each scope holds the simple names declared in it.
+    std::vector<std::unordered_set<std::string>> localScopes_;
+
+    void pushLocalScope() { localScopes_.emplace_back(); }
+    void popLocalScope() { if (!localScopes_.empty()) localScopes_.pop_back(); }
+    void declareLocal(const std::string& name) {
+        if (!localScopes_.empty()) localScopes_.back().insert(name);
+    }
+    bool isLocalName(const std::string& name) const {
+        for (auto it = localScopes_.rbegin(); it != localScopes_.rend(); ++it) {
+            if (it->contains(name)) return true;
+        }
+        return false;
+    }
 
     void reset();
     void writePreamble(const std::string& sourceName);
