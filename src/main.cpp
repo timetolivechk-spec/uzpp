@@ -1,4 +1,5 @@
 #include "codegen.h"
+#include "error_remap.h"
 #include "lexer.h"
 #include "package_manager.h"
 #include "parser.h"
@@ -276,10 +277,21 @@ public:
             return true;
         }
 
+        std::string remappedOutput = compilerOutput;
+        {
+            std::ifstream in(cppFile);
+            if (in.good()) {
+                std::stringstream buf;
+                buf << in.rdbuf();
+                remappedOutput = uzpp::ErrorRemap::remapPositions(
+                    std::move(remappedOutput), buf.str(), cppFile.filename().string());
+            }
+        }
+
         std::cerr << "\n=============================================\n";
         std::cerr << "          DASTURDA XATOLIK TOPILDI!          \n";
         std::cerr << "=============================================\n\n";
-        std::cerr << translateErrors(compilerOutput);
+        std::cerr << translateErrors(remappedOutput);
         std::cerr << "\nKompilyatorni yoki uz++ kodini tekshirib qayta urinib ko'ring.\n";
         return false;
     }

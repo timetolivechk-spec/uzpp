@@ -41,6 +41,9 @@ private:
     std::unordered_map<std::string, ClassInfo> classes_;
     std::unordered_map<std::string, std::string> typeAliases_; // tur X = Y
     std::unordered_set<std::string> templateFunctions_;
+    // For LSP inlay hints: maps `o'zgaruvchan x = ...` declarations to the
+    // inferred type of the initializer (only set when inference succeeded).
+    std::unordered_map<const VariableDeclaration*, std::string> inferredAutoTypes_;
     std::string currentReturnType_ = "";
     bool reachable_ = true;
     bool reportedUnreachable_ = false;
@@ -324,6 +327,15 @@ public:
     const std::unordered_map<std::string, std::vector<std::string>>& getFunctionParams() const { return functionParams_; }
     const std::unordered_map<std::string, std::string>& getFunctionReturns() const { return functionReturns_; }
 
+    // Returns the inferred type for an `o'zgaruvchan`/`o'zgarmas` (auto) variable
+    // declaration with an initializer, recorded during check(). Returns nullptr
+    // if the variable was not declared with auto-type or its initializer's type
+    // could not be inferred.
+    const std::string* getInferredAutoType(const VariableDeclaration* var) const {
+        const auto it = inferredAutoTypes_.find(var);
+        return it != inferredAutoTypes_.end() ? &it->second : nullptr;
+    }
+
     bool check(const Program* program) {
         if (!program) return false;
         for (const auto& node : program->getChildren()) {
@@ -356,8 +368,11 @@ private:
                 if (var->getInitializer()) {
                     checkExpr(var->getInitializer());
                     std::string inferredType = inferType(var->getInitializer());
-                    
+
                     if (declaredType == "ozgaruvchan" || declaredType == "o'zgaruvchan" || declaredType == "ozgarmas") {
+                        if (inferredType != "noma'lum") {
+                            inferredAutoTypes_[var] = inferredType;
+                        }
                         declaredType = inferredType; // Type inference
                     } else if (inferredType != "noma'lum" && declaredType != "noma'lum" && inferredType != declaredType) {
                         if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiqiy" || declaredType == "haqiqiy") &&

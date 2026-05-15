@@ -1,5 +1,7 @@
 #include "codegen.h"
+#include "error_remap.h"
 #include "lexer.h"
+#include "lsp_server.h"
 #include "package_manager.h"
 #include "parser.h"
 #include "type_checker.hpp"
@@ -386,6 +388,101 @@ int main() {
         const std::string cpp = transpileSnippet(
             "sinf Util { ochiq: statik butun ikki(butun x) { qaytarish x * 2; } };");
         assert(cpp.find("static") != std::string::npos);
+    }
+
+    {
+        // ErrorRemap: position inside an active #line region — translate to .uzpp
+        const std::string cpp =
+            "#include <iostream>\n"          // cpp line 1
+            "using namespace std;\n"          // cpp line 2
+            "#line 1 \"hello.uzpp\"\n"        // cpp line 3 — directive
+            "int main() {\n"                  // cpp line 4 → uzpp 1
+            "    nomavjud();\n"               // cpp line 5 → uzpp 2
+            "    return 0;\n"                 // cpp line 6 → uzpp 3
+            "}\n";                            // cpp line 7 → uzpp 4
+        const std::string err =
+            "hello.generated.cpp:5:5: error: 'nomavjud' was not declared\n"
+            "    5 |     nomavjud();\n"
+            "      |     ^~~~~~~~\n";
+        const std::string out = uzpp::ErrorRemap::remapPositions(
+            err, cpp, "hello.generated.cpp");
+        assert(out.find("hello.uzpp:2:") != std::string::npos);
+        assert(out.find("hello.generated.cpp:5:") == std::string::npos);
+    }
+
+    {
+        // ErrorRemap: position outside any #line region — pass through, do not crash
+        const std::string cpp =
+            "#include <iostream>\n"
+            "int boot() { return 0; }\n"
+            "#line 1 \"x.uzpp\"\n"
+            "int main() { return 0; }\n";
+        const std::string err =
+            "x.generated.cpp:2:6: error: redefinition of boot\n";
+        const std::string out = uzpp::ErrorRemap::remapPositions(
+            err, cpp, "x.generated.cpp");
+        // line 2 is BEFORE any #line directive — must be left untouched
+        assert(out.find("x.generated.cpp:2:") != std::string::npos);
+    }
+
+    {
+        // ErrorRemap: ignores files we did not generate
+        const std::string cpp = "#line 1 \"x.uzpp\"\nint main(){}\n";
+        const std::string err = "/usr/include/c++/15/format:99:1: note: candidate\n";
+        const std::string out = uzpp::ErrorRemap::remapPositions(
+            err, cpp, "x.generated.cpp");
+        assert(out == err);
+    }
+
+    {
+        // Inlay hints: `o'zgaruvchan x = 42` should produce `: butun` after `x`.
+        const std::string src =
+            "butun asosiy() {\n"
+            "    o'zgaruvchan x = 42;\n"
+            "    o'zgaruvchan s = \"salom\";\n"
+            "    qaytarish 0;\n"
+            "}\n";
+        const std::string hints = uzpp::LspServer::computeInlayHints(src);
+        assert(hints.find(": butun") != std::string::npos);
+        assert(hints.find(": matn") != std::string::npos);
+    }
+
+    {
+        // Inlay hints: explicitly-typed declarations should NOT get a hint.
+        const std::string src =
+            "butun asosiy() {\n"
+            "    butun y = 1;\n"
+            "    qaytarish y;\n"
+            "}\n";
+        const std::string hints = uzpp::LspServer::computeInlayHints(src);
+        assert(hints == "[]");
+    }
+
+    {
+        // Code actions: unused variable warning yields both quick-fixes.
+        const std::string src =
+            "butun asosiy() {\n"
+            "    butun foydalanilmagan = 5;\n"
+            "    qaytarish 0;\n"
+            "}\n";
+        // Range covers line 1 (the unused decl) entirely.
+        const std::string actions = uzpp::LspServer::computeCodeActions(
+            src, "file:///t.uzpp", 0, 0, 3, 0);
+        assert(actions.find("_foydalanilmagan") != std::string::npos);
+        assert(actions.find("E'lonni o'chirish") != std::string::npos);
+        assert(actions.find("file:///t.uzpp") != std::string::npos);
+    }
+
+    {
+        // Code actions: range that misses the warning line yields no actions.
+        const std::string src =
+            "butun asosiy() {\n"
+            "    butun foydalanilmagan = 5;\n"
+            "    qaytarish 0;\n"
+            "}\n";
+        const std::string actions = uzpp::LspServer::computeCodeActions(
+            src, "file:///t.uzpp", 2, 0, 3, 0);
+        assert(actions == "[]");
     }
 
     std::cout << "uzpp frontend smoke tests passed\n";

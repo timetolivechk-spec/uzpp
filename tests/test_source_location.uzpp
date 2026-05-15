@@ -1,0 +1,21 @@
+// uz++ — C++20 std::source_location alias (manba_joyi)
+
+ulash "uzpp_runtime.hpp"
+
+funksiya log(o'zgarmas matn& xabar,
+             manba_joyi joy = manba_joyi::current()) -> bosh {
+    yozish << "[" << joy.file_name() << ":" << joy.line()
+           << " (" << joy.function_name() << ")] "
+           << xabar << qator_oxiri;
+}
+
+butun asosiy() {
+    log("birinchi xabar");
+    log("ikkinchi xabar");
+
+    o'zgaruvchan joy = manba_joyi::current();
+    yozish << "qator: " << joy.line() << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

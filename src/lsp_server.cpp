@@ -4,6 +4,7 @@
 #include "type_checker.hpp"
 #include "formatter.h"
 
+#include <functional>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
@@ -88,7 +89,10 @@ void LspServer::handleMessage(const std::string& content) {
                                    "},"
                                    "\"range\":false,"
                                    "\"full\":true"
-                               "}}}}";
+                               "},"
+                               "\"inlayHintProvider\":true,"
+                               "\"codeActionProvider\":{\"codeActionKinds\":[\"quickfix\"]}"
+                               "}}}";
         sendMessage(response);
     }
     else if (method == "textDocument/didChange" || method == "textDocument/didOpen") {
@@ -357,6 +361,32 @@ void LspServer::handleMessage(const std::string& content) {
         std::string response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":{\"data\":[" + data + "]}}";
         sendMessage(response);
     }
+    else if (method == "textDocument/inlayHint") {
+        std::string idStr = extractId(content);
+        std::string uri = extractJsonString(content, "uri");
+        std::string hints = buildInlayHints(uri);
+        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + hints + "}");
+    }
+    else if (method == "textDocument/codeAction") {
+        std::string idStr = extractId(content);
+        std::string uri = extractJsonString(content, "uri");
+        // Parse the request's range — two "line"/"character" pairs in order.
+        auto findIntAfter = [&](const std::string& key, std::size_t from) -> std::pair<int, std::size_t> {
+            std::size_t kpos = content.find("\"" + key + "\":", from);
+            if (kpos == std::string::npos) return {0, from};
+            kpos += key.size() + 3;
+            while (kpos < content.size() && (content[kpos] == ' ' || content[kpos] == '\t')) ++kpos;
+            std::size_t end = kpos;
+            while (end < content.size() && (isdigit(static_cast<unsigned char>(content[end])) || content[end] == '-')) ++end;
+            return {kpos == end ? 0 : std::stoi(content.substr(kpos, end - kpos)), end};
+        };
+        auto [sLine, p1] = findIntAfter("line", 0);
+        auto [sChar, p2] = findIntAfter("character", p1);
+        auto [eLine, p3] = findIntAfter("line", p2);
+        auto [eChar, _] = findIntAfter("character", p3);
+        std::string actions = buildCodeActions(uri, sLine, sChar, eLine, eChar);
+        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + actions + "}");
+    }
     else if (method == "shutdown") {
         std::string idStr = extractId(content);
         sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":null}");
@@ -547,6 +577,8 @@ std::string LspServer::buildCompletions() {
         // Pipeline and lambda
         {"|>",              14, "Quvur operatori: qiymat |> funksiya == funksiya(qiymat)"},
         {"=>",              14, "Lambda strelka: |x| => x * 2 — Rust uslubidagi lambda"},
+        // C++20 source_location
+        {"manba_joyi",       7, "uzpp::manba_joyi (std::source_location) — Joriy chaqiriq joyi (fayl, qator, funksiya)"},
     };
 
     std::ostringstream ss;
@@ -954,6 +986,185 @@ std::string LspServer::buildDocumentSymbols(const Program* program) {
     }
     ss << "]";
     return ss.str();
+}
+
+std::string LspServer::buildInlayHints(const std::string& uri) {
+    if (!documentCache_.contains(uri)) return "[]";
+    return computeInlayHints(documentCache_[uri]);
+}
+
+// Walks the AST and emits LSP `InlayHint` items showing the inferred type for
+// each `o'zgaruvchan x = ...` declaration. The position is placed right after
+// the variable name; the IDE renders it as a faded `: <type>` annotation.
+std::string LspServer::computeInlayHints(const std::string& text) {
+    std::unique_ptr<Program> program;
+    TypeChecker checker;
+    try {
+        Lexer lexer(text);
+        const auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        program = parser.parse();
+        checker.check(program.get());
+    } catch (...) {
+        return "[]";
+    }
+    if (!program) return "[]";
+
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+
+    auto emit = [&](const VariableDeclaration* var) {
+        const std::string* inferred = checker.getInferredAutoType(var);
+        if (inferred == nullptr || inferred->empty() || *inferred == "noma'lum") return;
+        const Token& tok = var->getDeclToken();
+        if (tok.line <= 0) return;
+        const int line = tok.line - 1;
+        const int character = std::max(0, tok.column - 1)
+                            + static_cast<int>(var->getName().size());
+        if (!first) ss << ",";
+        ss << "{\"position\":{\"line\":" << line
+           << ",\"character\":" << character
+           << "},\"label\":\": " << *inferred
+           << "\",\"kind\":1,\"paddingLeft\":false}";
+        first = false;
+    };
+
+    std::function<void(const ASTNode*)> walk = [&](const ASTNode* node) {
+        if (node == nullptr) return;
+        switch (node->getType()) {
+            case ASTNodeType::VariableDeclaration:
+                emit(static_cast<const VariableDeclaration*>(node));
+                return;
+            case ASTNodeType::Block:
+                for (const auto& s : static_cast<const Block*>(node)->getStatements()) walk(s.get());
+                return;
+            case ASTNodeType::StatementList:
+                for (const auto& s : static_cast<const StatementList*>(node)->getStatements()) walk(s.get());
+                return;
+            case ASTNodeType::IfStatement: {
+                const auto* ifs = static_cast<const IfStatement*>(node);
+                walk(ifs->getThenBranch());
+                walk(ifs->getElseBranch());
+                return;
+            }
+            case ASTNodeType::WhileStatement:
+                walk(static_cast<const WhileStatement*>(node)->getBody());
+                return;
+            case ASTNodeType::ForStatement: {
+                const auto* fs = static_cast<const ForStatement*>(node);
+                walk(fs->getInit());
+                walk(fs->getBody());
+                return;
+            }
+            case ASTNodeType::TryStatement: {
+                const auto* ts = static_cast<const TryStatement*>(node);
+                walk(ts->getTryBlock());
+                for (const auto& cc : ts->getCatchClauses()) walk(cc->block.get());
+                return;
+            }
+            case ASTNodeType::FunctionDeclaration:
+                walk(static_cast<const FunctionDeclaration*>(node)->getBody());
+                return;
+            case ASTNodeType::ClassDeclaration:
+                for (const auto& m : static_cast<const ClassDeclaration*>(node)->getMethods()) {
+                    walk(m->body.get());
+                }
+                return;
+            default:
+                return;
+        }
+    };
+
+    for (const auto& child : program->getChildren()) walk(child.get());
+
+    ss << "]";
+    return ss.str();
+}
+
+std::string LspServer::buildCodeActions(const std::string& uri,
+                                        int rangeStartLine, int rangeStartChar,
+                                        int rangeEndLine, int rangeEndChar) {
+    if (!documentCache_.contains(uri)) return "[]";
+    return computeCodeActions(documentCache_[uri], uri,
+                              rangeStartLine, rangeStartChar,
+                              rangeEndLine, rangeEndChar);
+}
+
+// Emits quick-fix CodeActions for TypeChecker warnings whose line is inside
+// the request range. Currently handles the "unused variable" warning with two
+// fixes: prefix with `_` (mark intentional) or remove the declaration line.
+std::string LspServer::computeCodeActions(const std::string& text,
+                                          const std::string& uri,
+                                          int rangeStartLine, int /*rangeStartChar*/,
+                                          int rangeEndLine, int /*rangeEndChar*/) {
+    std::unique_ptr<Program> program;
+    TypeChecker checker;
+    try {
+        Lexer lexer(text);
+        const auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        program = parser.parse();
+        checker.check(program.get());
+    } catch (...) {
+        return "[]";
+    }
+    if (!program) return "[]";
+
+    // Split text into lines for "remove declaration" edits.
+    std::vector<std::string> lines;
+    {
+        std::string cur;
+        for (char c : text) {
+            if (c == '\n') { lines.push_back(std::move(cur)); cur.clear(); }
+            else if (c != '\r') cur += c;
+        }
+        lines.push_back(std::move(cur));
+    }
+
+    static const std::string kUnusedPrefix = "O'zgaruvchi '";
+    static const std::string kUnusedSuffix = "' e'lon qilingan, lekin ishlatilmagan.";
+
+    std::ostringstream out;
+    out << "[";
+    bool first = true;
+
+    for (const auto& w : checker.getWarnings()) {
+        if (w.message.size() < kUnusedPrefix.size() + kUnusedSuffix.size()) continue;
+        if (w.message.compare(0, kUnusedPrefix.size(), kUnusedPrefix) != 0) continue;
+        if (w.message.compare(w.message.size() - kUnusedSuffix.size(),
+                              kUnusedSuffix.size(), kUnusedSuffix) != 0) continue;
+        const std::string name = w.message.substr(
+            kUnusedPrefix.size(),
+            w.message.size() - kUnusedPrefix.size() - kUnusedSuffix.size());
+        if (w.line <= 0) continue;
+        const int lineIdx = w.line - 1;
+        if (lineIdx < rangeStartLine || lineIdx > rangeEndLine) continue;
+        if (lineIdx >= static_cast<int>(lines.size())) continue;
+        const int col = std::max(0, w.column - 1);
+
+        // Quick-fix 1: prefix with `_`
+        if (!first) out << ",";
+        out << "{\"title\":\"O'zgaruvchini '_" << name
+            << "' deb belgilash (ishlatilmaganini ko'rsatish)\",\"kind\":\"quickfix\","
+            << "\"edit\":{\"changes\":{\"" << uri << "\":["
+            << "{\"range\":{\"start\":{\"line\":" << lineIdx
+            << ",\"character\":" << col
+            << "},\"end\":{\"line\":" << lineIdx
+            << ",\"character\":" << (col + static_cast<int>(name.size()))
+            << "}},\"newText\":\"_" << name << "\"}]}}}";
+        first = false;
+
+        // Quick-fix 2: remove the entire declaration line
+        out << ",{\"title\":\"E'lonni o'chirish (qator " << w.line
+            << ")\",\"kind\":\"quickfix\","
+            << "\"edit\":{\"changes\":{\"" << uri << "\":["
+            << "{\"range\":{\"start\":{\"line\":" << lineIdx
+            << ",\"character\":0},\"end\":{\"line\":" << (lineIdx + 1)
+            << ",\"character\":0}},\"newText\":\"\"}]}}}";
+    }
+    out << "]";
+    return out.str();
 }
 
 void LspServer::applyContentChanges(std::string& document, const std::string& contentChangesJson) {

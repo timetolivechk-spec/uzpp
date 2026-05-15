@@ -141,6 +141,7 @@ void CodeGen::writePreamble(const std::string& sourceName) {
     output_ << "#include <future>\n";
     output_ << "#include <unordered_map>\n";
     output_ << "#include <utility>\n";
+    output_ << "#include <source_location>\n";
     // Stdlib headers are resolved via -I<stdlib_dir> passed to g++ from
     // main.cpp::collectIncludeDirs(), so emitting just the bare name lets the
     // generated .cpp live anywhere on disk (random CWD, %TEMP%, network share).
@@ -422,6 +423,8 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"ochirish",          "delete"},
         // Compile-time assertion
         {"statik_tasdiqlash", "static_assert"},
+        // C++20 source_location (joriy chaqiriq joyi haqida ma'lumot)
+        {"manba_joyi",        "std::source_location"},
     };
 
     if (token.type == TokenType::Identifier) {
@@ -446,6 +449,16 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         const auto it = identifierTranslations.find(token.value);
         if (it != identifierTranslations.end()) {
             return it->second;
+        }
+
+        // Qualified-id (e.g. "manba_joyi::current") — translate the leading
+        // segment so type-aliases work as scope prefixes too.
+        if (const size_t scopePos = token.value.find("::"); scopePos != std::string::npos) {
+            const std::string prefix = token.value.substr(0, scopePos);
+            const auto pit = identifierTranslations.find(prefix);
+            if (pit != identifierTranslations.end()) {
+                return pit->second + token.value.substr(scopePos);
+            }
         }
         // O'zbek maxsus harflari: o' va g' (apostrof) C++ identifikatorida ruxsat etilmagan.
         // Ularni xavfsiz '_' belgisiga almashtirish.
@@ -536,10 +549,23 @@ std::string CodeGen::getOperatorSymbol(const std::string& op) const {
 }
 
 std::string CodeGen::translateDefaultValue(const std::string& val) const {
+    // String / character literals pass through unchanged — translating them
+    // through translateToken would mangle apostrophes (`' '` → `_ _`) via the
+    // identifier-safety path that strips Uzbek apostrophes.
+    if (!val.empty() && (val.front() == '\'' || val.front() == '"')) {
+        return val;
+    }
     // Uz++ kalit so'zlarini C++ ga tarjima qilish
     if (val == "rost" || val == "to'g'ri") return "true";
     if (val == "yolg'on" || val == "yolgon" || val == "noto'g'ri") return "false";
     if (val == "bosh" || val == "nullptr") return "nullptr";
+    // Qualified-id (e.g. "manba_joyi::current()") — translate the leading identifier
+    // so type aliases like `manba_joyi` become `std::source_location` here too.
+    if (const size_t scopePos = val.find("::"); scopePos != std::string::npos) {
+        const std::string prefix = val.substr(0, scopePos);
+        Token pt; pt.type = TokenType::Identifier; pt.value = prefix;
+        return translateToken(pt, nullptr) + val.substr(scopePos);
+    }
     // Boolean literals already translated above; numbers and strings pass through.
     // Translate keyword identifiers inside the value string using translateToken.
     Token t; t.type = TokenType::Identifier; t.value = val;
@@ -724,8 +750,9 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"saralash", "std::sort"},
         {"qidirish", "std::find"},
         {"teskari", "std::reverse"},
+        {"manba_joyi", "std::source_location"},
     };
-    
+
     const auto it = typeMap.find(uzppType);
     if (it != typeMap.end()) return it->second;
     // O'zbek harflari (o', g') turlar nomida bo'lishi mumkin — C++ uchun xavfsiz qilish
@@ -1118,9 +1145,16 @@ void CodeGen::visitAssignmentExpression(const AssignmentExpression* expr) {
         return;
     }
 
+    // Wrap the whole assignment in parens. Without this, an assignment used
+    // inside a larger expression — e.g. `(pos = s.find(x, pos)) != npos`
+    // emits `(pos = s.find(x, pos) != npos)`, which C++ parses as
+    // `pos = (s.find(x, pos) != npos)` because `!=` binds tighter than `=`.
+    // The user wrote parens; preserve their semantic intent.
+    emitRawToken("(");
     visitExpression(expr->getTarget());
     emitRawToken(expr->getOperator());
     visitExpression(expr->getValue());
+    emitRawToken(")");
 }
 
 // Statement visitors

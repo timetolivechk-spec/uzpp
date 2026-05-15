@@ -1,0 +1,475 @@
+// uz++ — Matn (string) kutubxonasi, uz++ tilida qayta yozilgan
+// Bu fayl `stdlib/matn.hpp` ning sof uz++ analogi: barcha funksiyalar
+// uzpp::Matn nomlar fazosida o'rniga, bu yerda mahalliy `Matn` nomlar
+// fazosida joylashgan. Quyidagi `asosiy()` har bir funksiyani sinab ko'radi.
+
+ulash "uzpp_runtime.hpp"
+ulash <regex>
+ulash <cctype>
+ulash <algorithm>
+ulash <optional>
+ulash <sstream>
+ulash <stdexcept>
+ulash <string>
+
+nomlar_fazosi Matn {
+
+// ===== UZUNLIK / BO'SHLIQ TEKSHIRUVI =====
+
+funksiya uzunlik(o'zgarmas matn& s) -> hajm_turi {
+    qaytarish s.size();
+}
+
+funksiya boshmi(o'zgarmas matn& s) -> mantiq {
+    qaytarish s.empty();
+}
+
+funksiya bosh_emasmi(o'zgarmas matn& s) -> mantiq {
+    qaytarish !s.empty();
+}
+
+// ===== QIDIRISH =====
+
+funksiya boshlanganda(o'zgarmas matn& s, o'zgarmas matn& prefiks) -> mantiq {
+    qaytarish s.starts_with(prefiks);
+}
+
+funksiya tugaganda(o'zgarmas matn& s, o'zgarmas matn& sufiks) -> mantiq {
+    qaytarish s.ends_with(sufiks);
+}
+
+funksiya ichida(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> mantiq {
+    qaytarish s.find(qidiriluvchi) != matn::npos;
+}
+
+funksiya topish(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi, hajm_turi boshlanish = 0) -> ixtiyoriy<hajm_turi> {
+    o'zgaruvchan p = s.find(qidiriluvchi, boshlanish);
+    agar (p == matn::npos) {
+        qaytarish std::nullopt;
+    }
+    qaytarish p;
+}
+
+funksiya hisoblash(o'zgarmas matn& s, o'zgarmas matn& naqsh) -> butun {
+    agar (naqsh.empty()) {
+        qaytarish 0;
+    }
+    butun adad = 0;
+    hajm_turi pos = 0;
+    toki ((pos = s.find(naqsh, pos)) != matn::npos) {
+        adad = adad + 1;
+        pos = pos + naqsh.size();
+    }
+    qaytarish adad;
+}
+
+// ===== KESISH =====
+
+funksiya qism_matn(o'zgarmas matn& s, hajm_turi boshlanish, hajm_turi uzunlik = matn::npos) -> matn {
+    agar (boshlanish >= s.size()) {
+        qaytarish "";
+    }
+    qaytarish s.substr(boshlanish, uzunlik);
+}
+
+funksiya chapdan(o'zgarmas matn& s, hajm_turi n) -> matn {
+    agar (n >= s.size()) {
+        qaytarish s;
+    }
+    qaytarish s.substr(0, n);
+}
+
+funksiya ongdan(o'zgarmas matn& s, hajm_turi n) -> matn {
+    agar (n >= s.size()) {
+        qaytarish s;
+    }
+    qaytarish s.substr(s.size() - n);
+}
+
+// ===== O'ZGARTIRISH =====
+
+funksiya kichik_harfga(matn s) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        s[i] = statik_otkazish<belgi>(std::tolower(statik_otkazish<musbat_belgi>(s[i])));
+    }
+    qaytarish s;
+}
+
+funksiya katta_harfga(matn s) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        s[i] = statik_otkazish<belgi>(std::toupper(statik_otkazish<musbat_belgi>(s[i])));
+    }
+    qaytarish s;
+}
+
+funksiya birinchi_harfni_katta(matn s) -> matn {
+    agar (!s.empty()) {
+        s[0] = statik_otkazish<belgi>(std::toupper(statik_otkazish<musbat_belgi>(s[0])));
+    }
+    qaytarish s;
+}
+
+funksiya teskari_qilish(matn s) -> matn {
+    std::reverse(s.begin(), s.end());
+    qaytarish s;
+}
+
+funksiya takrorlash(o'zgarmas matn& s, butun marotaba) -> matn {
+    agar (marotaba <= 0) {
+        qaytarish "";
+    }
+    matn natija;
+    natija.reserve(s.size() * statik_otkazish<hajm_turi>(marotaba));
+    uchun (butun i = 0; i < marotaba; i = i + 1) {
+        natija = natija + s;
+    }
+    qaytarish natija;
+}
+
+funksiya almashtirish(matn s, o'zgarmas matn& eski, o'zgarmas matn& yangisi) -> matn {
+    agar (eski.empty()) {
+        qaytarish s;
+    }
+    hajm_turi pos = 0;
+    toki ((pos = s.find(eski, pos)) != matn::npos) {
+        s.replace(pos, eski.size(), yangisi);
+        pos = pos + yangisi.size();
+    }
+    qaytarish s;
+}
+
+funksiya birinchi_almashtirish(o'zgarmas matn& s, o'zgarmas matn& eski, o'zgarmas matn& yangisi) -> matn {
+    matn natija = s;
+    o'zgaruvchan p = natija.find(eski);
+    agar (p != matn::npos) {
+        natija.replace(p, eski.size(), yangisi);
+    }
+    qaytarish natija;
+}
+
+// ===== TOZALASH / QIRQISH =====
+
+funksiya chapdan_qirqish(o'zgarmas matn& s) -> matn {
+    hajm_turi i = 0;
+    toki (i < s.size() && std::isspace(statik_otkazish<musbat_belgi>(s[i]))) {
+        i = i + 1;
+    }
+    qaytarish s.substr(i);
+}
+
+funksiya ongdan_qirqish(o'zgarmas matn& s) -> matn {
+    agar (s.empty()) {
+        qaytarish s;
+    }
+    hajm_turi i = s.size();
+    toki (i > 0 && std::isspace(statik_otkazish<musbat_belgi>(s[i - 1]))) {
+        i = i - 1;
+    }
+    qaytarish s.substr(0, i);
+}
+
+funksiya qirqish(o'zgarmas matn& s) -> matn {
+    qaytarish chapdan_qirqish(ongdan_qirqish(s));
+}
+
+// ===== TEKSHIRISH =====
+
+funksiya raqammi(o'zgarmas matn& s) -> mantiq {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    hajm_turi i = 0;
+    agar (s[i] == '-' || s[i] == '+') {
+        i = i + 1;
+    }
+    mantiq raqam_bor = yolg'on;
+    toki (i < s.size() && std::isdigit(statik_otkazish<musbat_belgi>(s[i]))) {
+        i = i + 1;
+        raqam_bor = rost;
+    }
+    agar (i < s.size() && s[i] == '.') {
+        i = i + 1;
+        toki (i < s.size() && std::isdigit(statik_otkazish<musbat_belgi>(s[i]))) {
+            i = i + 1;
+            raqam_bor = rost;
+        }
+    }
+    qaytarish raqam_bor && i == s.size();
+}
+
+funksiya harflarmi(o'zgarmas matn& s) -> mantiq {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (!std::isalpha(statik_otkazish<musbat_belgi>(s[i]))) {
+            qaytarish yolg'on;
+        }
+    }
+    qaytarish rost;
+}
+
+funksiya harf_raqamlami(o'zgarmas matn& s) -> mantiq {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (!std::isalnum(statik_otkazish<musbat_belgi>(s[i]))) {
+            qaytarish yolg'on;
+        }
+    }
+    qaytarish rost;
+}
+
+// ===== BO'LISH / BIRLASHTIRISH =====
+
+funksiya ajratish(o'zgarmas matn& s, o'zgarmas matn& ajratuvchi) -> vektor<matn> {
+    vektor<matn> natija;
+    agar (ajratuvchi.empty()) {
+        uchun (belgi c : s) {
+            natija.push_back(matn(1, c));
+        }
+        qaytarish natija;
+    }
+    hajm_turi boshi = 0;
+    hajm_turi oxir = s.find(ajratuvchi);
+    toki (oxir != matn::npos) {
+        natija.push_back(s.substr(boshi, oxir - boshi));
+        boshi = oxir + ajratuvchi.size();
+        oxir = s.find(ajratuvchi, boshi);
+    }
+    natija.push_back(s.substr(boshi));
+    qaytarish natija;
+}
+
+funksiya qatorlarga_ajratish(o'zgarmas matn& s) -> vektor<matn> {
+    vektor<matn> natija;
+    matn joriy;
+    uchun (belgi c : s) {
+        agar (c == '\n') {
+            agar (!joriy.empty() && joriy.back() == '\r') {
+                joriy.pop_back();
+            }
+            natija.push_back(joriy);
+            joriy.clear();
+        } aks {
+            joriy = joriy + matn(1, c);
+        }
+    }
+    agar (!joriy.empty() && joriy.back() == '\r') {
+        joriy.pop_back();
+    }
+    agar (!joriy.empty()) {
+        natija.push_back(joriy);
+    }
+    qaytarish natija;
+}
+
+funksiya birlashtirish(o'zgarmas vektor<matn>& massiv, o'zgarmas matn& biriktiruvchi) -> matn {
+    agar (massiv.empty()) {
+        qaytarish "";
+    }
+    matn natija = massiv[0];
+    uchun (hajm_turi i = 1; i < massiv.size(); i = i + 1) {
+        natija = natija + biriktiruvchi + massiv[i];
+    }
+    qaytarish natija;
+}
+
+// ===== TO'LDIRISH =====
+
+funksiya chapdan_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    qaytarish matn(kenglik - s.size(), toldiruvchi) + s;
+}
+
+funksiya ongdan_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    qaytarish s + matn(kenglik - s.size(), toldiruvchi);
+}
+
+funksiya markazga_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    hajm_turi chap = (kenglik - s.size()) / 2;
+    hajm_turi ong = kenglik - s.size() - chap;
+    qaytarish matn(chap, toldiruvchi) + s + matn(ong, toldiruvchi);
+}
+
+// ===== KONVERSIYA =====
+
+funksiya butun_songa(o'zgarmas matn& s) -> butun {
+    urinish {
+        qaytarish std::stoi(s);
+    } ushlash (...) {
+        irgitish std::invalid_argument("Matn butun songa aylantirib bo'lmadi: " + s);
+    }
+}
+
+funksiya kasr_songa(o'zgarmas matn& s) -> ixtiyoriy<haqiqiy> {
+    urinish {
+        qaytarish std::stod(s);
+    } ushlash (...) {
+        qaytarish std::nullopt;
+    }
+}
+
+funksiya songa_aylantirish(butun n) -> matn {
+    qaytarish std::to_string(n);
+}
+
+funksiya songa_aylantirish(haqiqiy d) -> matn {
+    qaytarish std::to_string(d);
+}
+
+funksiya songa_aylantirish(uzun_uzun n) -> matn {
+    qaytarish std::to_string(n);
+}
+
+// ===== REGEX =====
+
+sinf RegEx {
+ochiq:
+    RegEx(o'zgarmas matn& naqsh, mantiq katta_kichik_farqsiz = yolg'on)
+        : regex_(naqsh, katta_kichik_farqsiz ? std::regex::icase : std::regex::ECMAScript) {}
+
+    mantiq mos(o'zgarmas matn& s) o'zgarmas {
+        qaytarish std::regex_match(s, regex_);
+    }
+
+    mantiq qidirish(o'zgarmas matn& s) o'zgarmas {
+        qaytarish std::regex_search(s, regex_);
+    }
+
+    matn almashtirish(o'zgarmas matn& s, o'zgarmas matn& yangisi) o'zgarmas {
+        qaytarish std::regex_replace(s, regex_, yangisi);
+    }
+
+    vektor<matn> topish_hammasi(o'zgarmas matn& s) o'zgarmas {
+        vektor<matn> natija;
+        o'zgaruvchan it = std::sregex_iterator(s.begin(), s.end(), regex_);
+        o'zgaruvchan oxir = std::sregex_iterator();
+        toki (it != oxir) {
+            natija.push_back((*it)[0].str());
+            ++it;
+        }
+        qaytarish natija;
+    }
+
+yopiq:
+    std::regex regex_;
+};
+
+} // nomlar_fazosi Matn
+
+// ===== O'Z-O'ZINI SINASH =====
+
+funksiya tasdiqlash(o'zgarmas matn& nom, mantiq shart) -> bosh {
+    agar (!shart) {
+        yozish << "[XATO] " << nom << qator_oxiri;
+        irgitish std::runtime_error("Sinov muvaffaqiyatsiz: " + nom);
+    }
+}
+
+butun asosiy() {
+    // uzunlik / bo'shliq
+    tasdiqlash("uzunlik", Matn::uzunlik("salom") == 5);
+    tasdiqlash("boshmi-bo'sh", Matn::boshmi(""));
+    tasdiqlash("boshmi-toliq", !Matn::boshmi("x"));
+    tasdiqlash("bosh_emasmi", Matn::bosh_emasmi("x"));
+
+    // qidirish
+    tasdiqlash("boshlanganda", Matn::boshlanganda("salomat", "salom"));
+    tasdiqlash("boshlanganda-yo'q", !Matn::boshlanganda("salomat", "xayr"));
+    tasdiqlash("tugaganda", Matn::tugaganda("salomat", "mat"));
+    tasdiqlash("ichida", Matn::ichida("salomat", "loma"));
+    tasdiqlash("ichida-yo'q", !Matn::ichida("salomat", "xyz"));
+
+    o'zgaruvchan top = Matn::topish("salomat", "lo");
+    tasdiqlash("topish-bor", top.has_value() && top.value() == 2);
+    o'zgaruvchan top_yoq = Matn::topish("salomat", "xyz");
+    tasdiqlash("topish-yo'q", !top_yoq.has_value());
+
+    tasdiqlash("hisoblash", Matn::hisoblash("ababab", "ab") == 3);
+    tasdiqlash("hisoblash-yo'q", Matn::hisoblash("xyz", "ab") == 0);
+
+    // kesish
+    tasdiqlash("qism_matn", Matn::qism_matn("salomat", 1, 4) == "alom");
+    tasdiqlash("chapdan", Matn::chapdan("salomat", 3) == "sal");
+    tasdiqlash("ongdan", Matn::ongdan("salomat", 3) == "mat");
+    tasdiqlash("chapdan-uzun", Matn::chapdan("ab", 99) == "ab");
+
+    // o'zgartirish
+    tasdiqlash("kichik_harfga", Matn::kichik_harfga("SaLoM") == "salom");
+    tasdiqlash("katta_harfga", Matn::katta_harfga("SaLoM") == "SALOM");
+    tasdiqlash("birinchi_harfni_katta", Matn::birinchi_harfni_katta("salom") == "Salom");
+    tasdiqlash("teskari", Matn::teskari_qilish("abc") == "cba");
+    tasdiqlash("takrorlash", Matn::takrorlash("ab", 3) == "ababab");
+    tasdiqlash("takrorlash-nol", Matn::takrorlash("ab", 0) == "");
+    tasdiqlash("almashtirish", Matn::almashtirish("ababab", "a", "X") == "XbXbXb");
+    tasdiqlash("birinchi_almashtirish", Matn::birinchi_almashtirish("ababab", "a", "X") == "Xbabab");
+
+    // qirqish
+    tasdiqlash("chapdan_qirqish", Matn::chapdan_qirqish("   hello") == "hello");
+    tasdiqlash("ongdan_qirqish", Matn::ongdan_qirqish("hello   ") == "hello");
+    tasdiqlash("qirqish", Matn::qirqish("   hello   ") == "hello");
+
+    // tekshirish
+    tasdiqlash("raqammi-musbat", Matn::raqammi("42"));
+    tasdiqlash("raqammi-manfiy", Matn::raqammi("-42"));
+    tasdiqlash("raqammi-kasr", Matn::raqammi("3.14"));
+    tasdiqlash("raqammi-yo'q", !Matn::raqammi("abc"));
+    tasdiqlash("raqammi-bo'sh", !Matn::raqammi(""));
+    tasdiqlash("harflarmi", Matn::harflarmi("abc"));
+    tasdiqlash("harflarmi-yo'q", !Matn::harflarmi("a1b"));
+    tasdiqlash("harf_raqamlami", Matn::harf_raqamlami("abc123"));
+    tasdiqlash("harf_raqamlami-yo'q", !Matn::harf_raqamlami("abc 123"));
+
+    // ajratish / birlashtirish
+    o'zgaruvchan qismlar = Matn::ajratish("a,b,c", ",");
+    tasdiqlash("ajratish-soni", qismlar.size() == 3);
+    tasdiqlash("ajratish-mazmun", qismlar[0] == "a" && qismlar[1] == "b" && qismlar[2] == "c");
+
+    o'zgaruvchan qatorlar = Matn::qatorlarga_ajratish("bir\nikki\nuch");
+    tasdiqlash("qatorlarga_ajratish", qatorlar.size() == 3 && qatorlar[1] == "ikki");
+
+    tasdiqlash("birlashtirish", Matn::birlashtirish(qismlar, "-") == "a-b-c");
+
+    // to'ldirish
+    tasdiqlash("chapdan_toldirish", Matn::chapdan_toldirish("5", 3, '0') == "005");
+    tasdiqlash("ongdan_toldirish", Matn::ongdan_toldirish("5", 3, '0') == "500");
+    tasdiqlash("markazga_toldirish", Matn::markazga_toldirish("ab", 6, '-') == "--ab--");
+
+    // konversiya
+    tasdiqlash("butun_songa", Matn::butun_songa("42") == 42);
+    o'zgaruvchan kasrli = Matn::kasr_songa("3.14");
+    tasdiqlash("kasr_songa", kasrli.has_value() && kasrli.value() > 3.13 && kasrli.value() < 3.15);
+    o'zgaruvchan kasrli_yoq = Matn::kasr_songa("xyz");
+    tasdiqlash("kasr_songa-yo'q", !kasrli_yoq.has_value());
+    tasdiqlash("songa_aylantirish-butun", Matn::songa_aylantirish(42) == "42");
+
+    // RegEx
+    Matn::RegEx re("[0-9]+");
+    tasdiqlash("regex-mos", re.mos("12345"));
+    tasdiqlash("regex-qidirish", re.qidirish("abc 42 xyz"));
+    tasdiqlash("regex-mos-yo'q", !re.mos("abc"));
+
+    Matn::RegEx re_alm("[0-9]+");
+    tasdiqlash("regex-almashtirish", re_alm.almashtirish("a1b22c333", "N") == "aNbNcN");
+
+    Matn::RegEx re_top("[0-9]+");
+    o'zgaruvchan barchasi = re_top.topish_hammasi("a1b22c333");
+    tasdiqlash("regex-topish_hammasi-soni", barchasi.size() == 3);
+    tasdiqlash("regex-topish_hammasi-mazmun", barchasi[0] == "1" && barchasi[1] == "22" && barchasi[2] == "333");
+
+    Matn::RegEx re_case("HELLO", rost);
+    tasdiqlash("regex-case-insensitive", re_case.qidirish("say hello world"));
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
