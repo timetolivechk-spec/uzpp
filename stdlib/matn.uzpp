@@ -20,25 +20,25 @@ funksiya uzunlik(o'zgarmas matn& s) -> hajm_turi {
     qaytarish s.size();
 }
 
-funksiya boshmi(o'zgarmas matn& s) -> mantiq {
+funksiya boshmi(o'zgarmas matn& s) -> mantiqiy {
     qaytarish s.empty();
 }
 
-funksiya bosh_emasmi(o'zgarmas matn& s) -> mantiq {
+funksiya bosh_emasmi(o'zgarmas matn& s) -> mantiqiy {
     qaytarish !s.empty();
 }
 
 // ===== QIDIRISH =====
 
-funksiya boshlanganda(o'zgarmas matn& s, o'zgarmas matn& prefiks) -> mantiq {
+funksiya boshlanganda(o'zgarmas matn& s, o'zgarmas matn& prefiks) -> mantiqiy {
     qaytarish s.starts_with(prefiks);
 }
 
-funksiya tugaganda(o'zgarmas matn& s, o'zgarmas matn& sufiks) -> mantiq {
+funksiya tugaganda(o'zgarmas matn& s, o'zgarmas matn& sufiks) -> mantiqiy {
     qaytarish s.ends_with(sufiks);
 }
 
-funksiya ichida(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> mantiq {
+funksiya ichida(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> mantiqiy {
     qaytarish s.find(qidiriluvchi) != matn::npos;
 }
 
@@ -174,7 +174,7 @@ funksiya qirqish(o'zgarmas matn& s) -> matn {
 
 // ===== TEKSHIRISH =====
 
-funksiya raqammi(o'zgarmas matn& s) -> mantiq {
+funksiya raqammi(o'zgarmas matn& s) -> mantiqiy {
     agar (s.empty()) {
         qaytarish yolg'on;
     }
@@ -182,7 +182,7 @@ funksiya raqammi(o'zgarmas matn& s) -> mantiq {
     agar (s[i] == '-' || s[i] == '+') {
         i = i + 1;
     }
-    mantiq raqam_bor = yolg'on;
+    mantiqiy raqam_bor = yolg'on;
     toki (i < s.size() && std::isdigit(statik_otkazish<musbat_belgi>(s[i]))) {
         i = i + 1;
         raqam_bor = rost;
@@ -197,7 +197,7 @@ funksiya raqammi(o'zgarmas matn& s) -> mantiq {
     qaytarish raqam_bor && i == s.size();
 }
 
-funksiya harflarmi(o'zgarmas matn& s) -> mantiq {
+funksiya harflarmi(o'zgarmas matn& s) -> mantiqiy {
     agar (s.empty()) {
         qaytarish yolg'on;
     }
@@ -209,7 +209,7 @@ funksiya harflarmi(o'zgarmas matn& s) -> mantiq {
     qaytarish rost;
 }
 
-funksiya harf_raqamlami(o'zgarmas matn& s) -> mantiq {
+funksiya harf_raqamlami(o'zgarmas matn& s) -> mantiqiy {
     agar (s.empty()) {
         qaytarish yolg'on;
     }
@@ -331,18 +331,273 @@ funksiya songa_aylantirish(uzun_uzun n) -> matn {
     qaytarish std::to_string(n);
 }
 
+// ===== QO'SHIMCHA YORDAMCHILAR =====
+
+// Matnni `maks_uzunlik` belgigacha qisqartiradi va kerak bo'lsa `ko'pnuqta`ni
+// (masalan "...") qo'shadi. Agar matn allaqachon qisqa bo'lsa, o'zgarishsiz qaytadi.
+funksiya qadar_qirqish(o'zgarmas matn& s, hajm_turi maks_uzunlik, o'zgarmas matn& ko'pnuqta = "...") -> matn {
+    agar (s.size() <= maks_uzunlik) {
+        qaytarish s;
+    }
+    agar (ko'pnuqta.size() >= maks_uzunlik) {
+        qaytarish ko'pnuqta.substr(0, maks_uzunlik);
+    }
+    qaytarish s.substr(0, maks_uzunlik - ko'pnuqta.size()) + ko'pnuqta;
+}
+
+// '\n' bo'yicha qatorlar sonini sanaydi (oxirgi qator '\n' bilan tugamasa ham
+// hisobga olinadi).
+funksiya qator_son(o'zgarmas matn& s) -> butun {
+    agar (s.empty()) {
+        qaytarish 0;
+    }
+    butun adad = 1;
+    uchun (belgi c : s) {
+        agar (c == '\n') {
+            adad = adad + 1;
+        }
+    }
+    agar (s.back() == '\n') {
+        adad = adad - 1;
+    }
+    qaytarish adad;
+}
+
+// Har bir `eski_belgi`ni `yangi_belgi`ga almashtiradi. Bu `almashtirish` ning
+// belgi-darajasidagi tezkor variantidir (substring-search siz).
+funksiya belgi_almashtirish(matn s, belgi eski_belgi, belgi yangi_belgi) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (s[i] == eski_belgi) {
+            s[i] = yangi_belgi;
+        }
+    }
+    qaytarish s;
+}
+
+// Birinchi belgini qaytaradi. Matn bo'sh bo'lsa, std::out_of_range otiladi.
+funksiya bosh_belgi(o'zgarmas matn& s) -> belgi {
+    agar (s.empty()) {
+        irgitish std::out_of_range("bosh_belgi: matn bo'sh");
+    }
+    qaytarish s.front();
+}
+
+// Oxirgi belgini qaytaradi. Matn bo'sh bo'lsa, std::out_of_range otiladi.
+funksiya oxir_belgi(o'zgarmas matn& s) -> belgi {
+    agar (s.empty()) {
+        irgitish std::out_of_range("oxir_belgi: matn bo'sh");
+    }
+    qaytarish s.back();
+}
+
+// Matnda kamida bitta harf bor va barcha harflar katta (uppercase) bo'lsa rost.
+// Raqamlar va belgilar tekshirilmaydi.
+funksiya katta_yokib(o'zgarmas matn& s) -> mantiqiy {
+    mantiqiy harf_bor = yolg'on;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan c = statik_otkazish<musbat_belgi>(s[i]);
+        agar (std::isalpha(c)) {
+            harf_bor = rost;
+            agar (!std::isupper(c)) {
+                qaytarish yolg'on;
+            }
+        }
+    }
+    qaytarish harf_bor;
+}
+
+// Matnda kamida bitta harf bor va barcha harflar kichik (lowercase) bo'lsa rost.
+funksiya kichik_yokib(o'zgarmas matn& s) -> mantiqiy {
+    mantiqiy harf_bor = yolg'on;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan c = statik_otkazish<musbat_belgi>(s[i]);
+        agar (std::isalpha(c)) {
+            harf_bor = rost;
+            agar (!std::islower(c)) {
+                qaytarish yolg'on;
+            }
+        }
+    }
+    qaytarish harf_bor;
+}
+
+// Pozitsion `{0}`, `{1}` ... `{N}` joy egalaridan iborat naqshni argumentlar
+// bilan to'ldiradi. `{{` va `}}` bitta qavs sifatida chiqariladi.
+//   formatlash_indeksli("Salom, {0}! Sizga {1} yoshda.", {"Olim", "42"})
+//   → "Salom, Olim! Sizga 42 yoshda."
+funksiya formatlash_indeksli(o'zgarmas matn& naqsh, o'zgarmas vektor<matn>& argumentlar) -> matn {
+    matn natija;
+    natija.reserve(naqsh.size());
+    hajm_turi i = 0;
+    toki (i < naqsh.size()) {
+        belgi c = naqsh[i];
+        agar (c == '{') {
+            agar (i + 1 < naqsh.size() && naqsh[i + 1] == '{') {
+                natija = natija + matn(1, '{');
+                i = i + 2;
+                davom_etish;
+            }
+            // Indeksni o'qish
+            hajm_turi j = i + 1;
+            butun indeks = 0;
+            mantiqiy indeks_bor = yolg'on;
+            toki (j < naqsh.size() && std::isdigit(statik_otkazish<musbat_belgi>(naqsh[j]))) {
+                indeks = indeks * 10 + (naqsh[j] - '0');
+                j = j + 1;
+                indeks_bor = rost;
+            }
+            agar (!indeks_bor || j >= naqsh.size() || naqsh[j] != '}') {
+                irgitish std::invalid_argument(
+                    "formatlash_indeksli: noto'g'ri joy egasi pozitsiya " +
+                    std::to_string(i));
+            }
+            agar (statik_otkazish<hajm_turi>(indeks) >= argumentlar.size()) {
+                irgitish std::out_of_range(
+                    "formatlash_indeksli: argument indeksi {" +
+                    std::to_string(indeks) + "} chegaradan tashqari");
+            }
+            natija = natija + argumentlar[statik_otkazish<hajm_turi>(indeks)];
+            i = j + 1;
+            davom_etish;
+        }
+        agar (c == '}') {
+            agar (i + 1 < naqsh.size() && naqsh[i + 1] == '}') {
+                natija = natija + matn(1, '}');
+                i = i + 2;
+                davom_etish;
+            }
+            irgitish std::invalid_argument(
+                "formatlash_indeksli: yopish qavs '}' bo'sh joy egasi pozitsiya " +
+                std::to_string(i));
+        }
+        natija = natija + matn(1, c);
+        i = i + 1;
+    }
+    qaytarish natija;
+}
+
+// Naqshni oxiridan boshlab izlash (right-find). Topilmasa nullopt.
+funksiya oxir_topish(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> ixtiyoriy<hajm_turi> {
+    o'zgaruvchan p = s.rfind(qidiriluvchi);
+    agar (p == matn::npos) {
+        qaytarish std::nullopt;
+    }
+    qaytarish p;
+}
+
+// Matnni `bo'luvchi` bo'yicha birinchi marta uchragan joyida ikkiga bo'ladi.
+// Bo'luvchi topilmasa, juftlikning birinchi qismi = s, ikkinchisi = "".
+funksiya bir_marta_ajratish(o'zgarmas matn& s, o'zgarmas matn& bo'luvchi) -> juftlik<matn, matn> {
+    agar (bo'luvchi.empty()) {
+        qaytarish std::make_pair(s, matn(""));
+    }
+    o'zgaruvchan p = s.find(bo'luvchi);
+    agar (p == matn::npos) {
+        qaytarish std::make_pair(s, matn(""));
+    }
+    qaytarish std::make_pair(s.substr(0, p), s.substr(p + bo'luvchi.size()));
+}
+
+// ===== UNICODE (UTF-8) =====
+// Bu funksiyalar matnni UTF-8 belgilar (kodli nuqtalar) bo'yicha hisoblaydi.
+// "salom" — 5 bayt, 5 belgi. "Салом" — 10 bayt, 5 belgi.
+// `uzunlik`/`qism_matn` baytlar bo'yicha; bu funksiyalar — belgilarda.
+
+// UTF-8 ning birinchi (boshlovchi) baytlarini sanaydi.
+// Continuation baytlar (`10xx_xxxx`) hisoblanmaydi.
+funksiya belgilar_soni(o'zgarmas matn& s) -> hajm_turi {
+    hajm_turi adad = 0;
+    uchun (belgi c : s) {
+        o'zgaruvchan b = statik_otkazish<musbat_belgi>(c);
+        agar ((b & 0xC0) != 0x80) {
+            adad = adad + 1;
+        }
+    }
+    qaytarish adad;
+}
+
+// Belgi indeksini UTF-8 baytlar bo'yicha pozitsiyaga aylantiradi.
+// Indeks belgilar sonidan kattaroq bo'lsa, matn uzunligi qaytariladi.
+funksiya belgi_pozitsiyasi(o'zgarmas matn& s, hajm_turi belgi_indeks) -> hajm_turi {
+    hajm_turi joriy_belgi = 0;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan b = statik_otkazish<musbat_belgi>(s[i]);
+        agar ((b & 0xC0) != 0x80) {
+            agar (joriy_belgi == belgi_indeks) {
+                qaytarish i;
+            }
+            joriy_belgi = joriy_belgi + 1;
+        }
+    }
+    qaytarish s.size();
+}
+
+// Matnning birinchi `n` belgisini (UTF-8 codepoints) qaytaradi.
+funksiya chapdan_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi n) -> matn {
+    hajm_turi oxir = belgi_pozitsiyasi(s, n);
+    qaytarish s.substr(0, oxir);
+}
+
+// Matnning oxirgi `n` belgisini (UTF-8 codepoints) qaytaradi.
+funksiya ongdan_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi n) -> matn {
+    hajm_turi jami = belgilar_soni(s);
+    agar (n >= jami) {
+        qaytarish s;
+    }
+    hajm_turi boshi = belgi_pozitsiyasi(s, jami - n);
+    qaytarish s.substr(boshi);
+}
+
+// Belgilar (codepoints) bo'yicha qism-matn.
+//   qism_matn_belgi_bo'yicha("Салом, дунё", 2, 3) → "лом"
+funksiya qism_matn_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi boshlanish, hajm_turi uzunlik = matn::npos) -> matn {
+    hajm_turi bayt_boshi = belgi_pozitsiyasi(s, boshlanish);
+    agar (bayt_boshi >= s.size()) {
+        qaytarish "";
+    }
+    agar (uzunlik == matn::npos) {
+        qaytarish s.substr(bayt_boshi);
+    }
+    hajm_turi bayt_oxiri = belgi_pozitsiyasi(s, boshlanish + uzunlik);
+    qaytarish s.substr(bayt_boshi, bayt_oxiri - bayt_boshi);
+}
+
+// Berilgan UTF-8 belgini ko'pligini (byte length) qaytaradi. Buzilgan UTF-8 da 1.
+funksiya belgi_uzunligi(belgi boshlovchi_bayt) -> hajm_turi {
+    o'zgaruvchan b = statik_otkazish<musbat_belgi>(boshlovchi_bayt);
+    agar ((b & 0x80) == 0x00) qaytarish 1;
+    agar ((b & 0xE0) == 0xC0) qaytarish 2;
+    agar ((b & 0xF0) == 0xE0) qaytarish 3;
+    agar ((b & 0xF8) == 0xF0) qaytarish 4;
+    qaytarish 1; // buzilgan kodlash — bir bayt sifatida muomala qilamiz
+}
+
+// Indeks bo'yicha bitta UTF-8 belgini matn sifatida qaytaradi
+// (1-4 baytdan iborat bo'lishi mumkin).
+funksiya belgi_olish(o'zgarmas matn& s, hajm_turi belgi_indeks) -> matn {
+    hajm_turi p = belgi_pozitsiyasi(s, belgi_indeks);
+    agar (p >= s.size()) {
+        qaytarish "";
+    }
+    hajm_turi bayt_uzunligi = belgi_uzunligi(s[p]);
+    agar (p + bayt_uzunligi > s.size()) {
+        bayt_uzunligi = s.size() - p;
+    }
+    qaytarish s.substr(p, bayt_uzunligi);
+}
+
 // ===== REGEX =====
 
 sinf RegEx {
 ochiq:
-    RegEx(o'zgarmas matn& naqsh, mantiq katta_kichik_farqsiz = yolg'on)
+    RegEx(o'zgarmas matn& naqsh, mantiqiy katta_kichik_farqsiz = yolg'on)
         : regex_(naqsh, katta_kichik_farqsiz ? std::regex::icase : std::regex::ECMAScript) {}
 
-    mantiq mos(o'zgarmas matn& s) o'zgarmas {
+    mantiqiy mos(o'zgarmas matn& s) o'zgarmas {
         qaytarish std::regex_match(s, regex_);
     }
 
-    mantiq qidirish(o'zgarmas matn& s) o'zgarmas {
+    mantiqiy qidirish(o'zgarmas matn& s) o'zgarmas {
         qaytarish std::regex_search(s, regex_);
     }
 
@@ -369,7 +624,7 @@ yopiq:
 
 // ===== O'Z-O'ZINI SINASH =====
 
-funksiya tasdiqlash(o'zgarmas matn& nom, mantiq shart) -> bosh {
+funksiya tasdiqlash(o'zgarmas matn& nom, mantiqiy shart) -> bosh {
     agar (!shart) {
         yozish << "[XATO] " << nom << qator_oxiri;
         irgitish std::runtime_error("Sinov muvaffaqiyatsiz: " + nom);
@@ -469,6 +724,82 @@ butun asosiy() {
 
     Matn::RegEx re_case("HELLO", rost);
     tasdiqlash("regex-case-insensitive", re_case.qidirish("say hello world"));
+
+    // ===== Yangi kengaytirilgan funksiyalar =====
+
+    // qadar_qirqish
+    tasdiqlash("qadar_qirqish-uzun", Matn::qadar_qirqish("Salom dunyo!", 8) == "Salom...");
+    tasdiqlash("qadar_qirqish-qisqa", Matn::qadar_qirqish("Sa", 8) == "Sa");
+    tasdiqlash("qadar_qirqish-aniq", Matn::qadar_qirqish("Salom", 5) == "Salom");
+    tasdiqlash("qadar_qirqish-belgisiz", Matn::qadar_qirqish("Salomat", 10, "") == "Salomat");
+
+    // qator_son
+    tasdiqlash("qator_son-bosh", Matn::qator_son("") == 0);
+    tasdiqlash("qator_son-bir", Matn::qator_son("salom") == 1);
+    tasdiqlash("qator_son-uch", Matn::qator_son("a\nb\nc") == 3);
+    tasdiqlash("qator_son-tugaganda", Matn::qator_son("a\nb\n") == 2);
+
+    // belgi_almashtirish
+    tasdiqlash("belgi_almashtirish", Matn::belgi_almashtirish("salom dunyo", ' ', '_') == "salom_dunyo");
+    tasdiqlash("belgi_almashtirish-yo'q", Matn::belgi_almashtirish("abc", 'x', 'y') == "abc");
+
+    // bosh_belgi / oxir_belgi
+    tasdiqlash("bosh_belgi", Matn::bosh_belgi("Salom") == 'S');
+    tasdiqlash("oxir_belgi", Matn::oxir_belgi("Salom") == 'm');
+
+    // katta_yokib / kichik_yokib
+    tasdiqlash("katta_yokib-rost", Matn::katta_yokib("SALOM"));
+    tasdiqlash("katta_yokib-aralash", !Matn::katta_yokib("Salom"));
+    tasdiqlash("katta_yokib-raqam", Matn::katta_yokib("ABC123"));
+    tasdiqlash("katta_yokib-faqat-raqam", !Matn::katta_yokib("123"));
+    tasdiqlash("kichik_yokib-rost", Matn::kichik_yokib("salom"));
+    tasdiqlash("kichik_yokib-aralash", !Matn::kichik_yokib("Salom"));
+
+    // formatlash_indeksli
+    vektor<matn> arglar = {"Olim", "42"};
+    tasdiqlash("formatlash_indeksli", Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar) == "Salom, Olim! Yosh: 42.");
+    tasdiqlash("formatlash_indeksli-takror", Matn::formatlash_indeksli("{0} {0}", arglar) == "Olim Olim");
+    vektor<matn> bo'sh;
+    tasdiqlash("formatlash_indeksli-bo'sh", Matn::formatlash_indeksli("hech", bo'sh) == "hech");
+    tasdiqlash("formatlash_indeksli-qavslar", Matn::formatlash_indeksli("{{x}}", bo'sh) == "{x}");
+
+    // oxir_topish
+    o'zgaruvchan ot = Matn::oxir_topish("ababab", "ab");
+    tasdiqlash("oxir_topish-bor", ot.has_value() && ot.value() == 4);
+    o'zgaruvchan ot_yoq = Matn::oxir_topish("xyz", "ab");
+    tasdiqlash("oxir_topish-yo'q", !ot_yoq.has_value());
+
+    // bir_marta_ajratish
+    o'zgaruvchan jufti = Matn::bir_marta_ajratish("kalit=qiymat=qo'shimcha", "=");
+    tasdiqlash("bir_marta_ajratish-chap", jufti.first == "kalit");
+    tasdiqlash("bir_marta_ajratish-ong", jufti.second == "qiymat=qo'shimcha");
+    o'zgaruvchan jufti_yoq = Matn::bir_marta_ajratish("kalitsiz", "=");
+    tasdiqlash("bir_marta_ajratish-yo'q-chap", jufti_yoq.first == "kalitsiz");
+    tasdiqlash("bir_marta_ajratish-yo'q-ong", jufti_yoq.second == "");
+
+    // ===== UTF-8 / Unicode =====
+    // "Салом" — 5 kirillcha belgi, 10 bayt (har biri 2 bayt UTF-8 da)
+    matn rus = "Салом";
+    tasdiqlash("uzunlik-baytda", Matn::uzunlik(rus) == 10);
+    tasdiqlash("belgilar_soni-kirillcha", Matn::belgilar_soni(rus) == 5);
+    tasdiqlash("belgilar_soni-aralash", Matn::belgilar_soni("a Я b") == 5);
+    tasdiqlash("belgilar_soni-ascii", Matn::belgilar_soni("hello") == 5);
+    tasdiqlash("belgilar_soni-bo'sh", Matn::belgilar_soni("") == 0);
+
+    tasdiqlash("chapdan_belgi-kirillcha", Matn::chapdan_belgi_bo'yicha(rus, 3) == "Сал");
+    tasdiqlash("chapdan_belgi-bo'sh", Matn::chapdan_belgi_bo'yicha("", 5) == "");
+    tasdiqlash("chapdan_belgi-uzun", Matn::chapdan_belgi_bo'yicha("ab", 99) == "ab");
+
+    tasdiqlash("ongdan_belgi-kirillcha", Matn::ongdan_belgi_bo'yicha(rus, 2) == "ом");
+    tasdiqlash("ongdan_belgi-uzun", Matn::ongdan_belgi_bo'yicha("ab", 99) == "ab");
+
+    matn rus_jumla = "Салом, дунё";
+    tasdiqlash("qism_matn_belgi", Matn::qism_matn_belgi_bo'yicha(rus_jumla, 7, 3) == "дун");
+    tasdiqlash("belgi_olish-kirillcha", Matn::belgi_olish(rus_jumla, 0) == "С");
+    tasdiqlash("belgi_olish-ascii", Matn::belgi_olish("hello", 1) == "e");
+
+    tasdiqlash("belgi_uzunligi-ascii", Matn::belgi_uzunligi('a') == 1);
+    tasdiqlash("belgi_uzunligi-2byte", Matn::belgi_uzunligi(statik_otkazish<belgi>(0xD0)) == 2);
 
     yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;

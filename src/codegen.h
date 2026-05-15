@@ -43,6 +43,18 @@ public:
     // Legacy token-based generation
     std::string generate(const Program* program, const std::string& sourceName = "input.uzpp", bool testMode = false, bool benchMode = false);
 
+    // Header mode: omit the standard preamble (#include <iostream>, using
+    // namespace std, main wrapper) so a .uzpp file can be transpiled into a
+    // standalone .hpp that another .uzpp can `ulash`-include. The caller is
+    // responsible for `ulash <X>` statements that pull in any std headers the
+    // body actually needs.
+    void setHeaderMode(bool value) { headerMode_ = value; }
+    // Returns the list of `ulash "X.uzpp"` dependencies discovered while
+    // emitting (populated after generate()). Each entry is the raw module
+    // name as written (e.g. `matn.uzpp`). Useful for orchestrating recursive
+    // header builds from main.cpp.
+    const std::vector<std::string>& getUzppDependencies() const { return uzppDependencies_; }
+
 private:
     std::ostringstream output_;
     int indentLevel_;
@@ -55,6 +67,8 @@ private:
     std::vector<std::string> benchFunctions_;
     bool hasUserMain_ = false;
     bool userMainHasArgs_ = false;
+    bool headerMode_ = false;
+    std::vector<std::string> uzppDependencies_;
 
     void reset();
     void writePreamble(const std::string& sourceName);

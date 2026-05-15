@@ -45,6 +45,9 @@ private:
     std::unique_ptr<Expression> parseNullCoalescingExpression();
     std::unique_ptr<Expression> parseLogicalOrExpression();
     std::unique_ptr<Expression> parseLogicalAndExpression();
+    std::unique_ptr<Expression> parseBitwiseOrExpression();
+    std::unique_ptr<Expression> parseBitwiseXorExpression();
+    std::unique_ptr<Expression> parseBitwiseAndExpression();
     std::unique_ptr<Expression> parseEqualityExpression();
     std::unique_ptr<Expression> parseRelationalExpression();
     std::unique_ptr<Expression> parseAdditiveExpression();

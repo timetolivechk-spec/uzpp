@@ -19,8 +19,42 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
     reset();
     testMode_ = testMode;
     benchMode_ = benchMode;
-    writePreamble(sourceName);
-    emitNodes(program->getChildren());
+    if (headerMode_) {
+        // Minimal header-mode preamble: pragma once + #line. The rest of the
+        // headers come from explicit `ulash <X>` statements in the body.
+        output_ << "#pragma once\n";
+        output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
+        lineStart_ = true;
+        // In header mode, only emit declarations that make sense at namespace
+        // scope: includes, namespaces, classes, enums, type aliases, module
+        // exports. Drop top-level functions / globals / link statements —
+        // those are program-level (the self-test `asosiy()` and `tasdiqlash`
+        // helper that ship inside a .uzpp library file are a typical case).
+        for (const auto& child : program->getChildren()) {
+            switch (child->getType()) {
+                case ASTNodeType::IncludeStatement:
+                case ASTNodeType::ExportModuleStatement:
+                case ASTNodeType::NamespaceDeclaration:
+                case ASTNodeType::ClassDeclaration:
+                case ASTNodeType::EnumDeclaration:
+                case ASTNodeType::InterfaceDeclaration:
+                case ASTNodeType::TypeAlias:
+                    emitNode(child.get(), nullptr);
+                    break;
+                default:
+                    // skip top-level functions, vars, free statements
+                    break;
+            }
+        }
+    } else {
+        writePreamble(sourceName);
+        emitNodes(program->getChildren());
+    }
+
+    if (headerMode_) {
+        if (!lineStart_) emitNewline();
+        return output_.str();
+    }
 
     if (testMode_) {
         emitNewline();
@@ -128,6 +162,7 @@ void CodeGen::reset() {
     benchFunctions_.clear();
     hasUserMain_ = false;
     userMainHasArgs_ = false;
+    uzppDependencies_.clear();
 }
 
 void CodeGen::writePreamble(const std::string& sourceName) {
@@ -1908,8 +1943,18 @@ void CodeGen::visitIncludeStatement(const IncludeStatement* stmt) {
     if (mod.size() >= 2 && mod.front() == '"' && mod.back() == '"') {
         mod = mod.substr(1, mod.size() - 2);
     }
-    // Skip uzpp_runtime.hpp — already emitted in preamble
-    if (mod == "uzpp_runtime.hpp") {
+    // Skip uzpp_runtime.hpp — already emitted in preamble (program mode only;
+    // in header mode the user may genuinely want to depend on uzpp::* types).
+    if (mod == "uzpp_runtime.hpp" && !headerMode_) {
+        return;
+    }
+    // `ulash "foo.uzpp"` — record the dependency for the orchestrator
+    // (main.cpp transpiles the .uzpp source as a header) and emit an include
+    // of the matching .hpp artifact.
+    if (mod.size() > 5 && mod.compare(mod.size() - 5, 5, ".uzpp") == 0) {
+        uzppDependencies_.push_back(mod);
+        const std::string asHpp = mod.substr(0, mod.size() - 5) + ".hpp";
+        output_ << "#include \"" << asHpp << "\"\n";
         return;
     }
     if (mod.find(".hpp") != std::string::npos || mod.find(".h") != std::string::npos) {

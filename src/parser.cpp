@@ -435,14 +435,53 @@ std::unique_ptr<Expression> Parser::parseLogicalOrExpression() {
 }
 
 std::unique_ptr<Expression> Parser::parseLogicalAndExpression() {
-    auto left = parseEqualityExpression();
-    
+    auto left = parseBitwiseOrExpression();
+
     while (!isAtEnd() && isLogicalAndOperator(peek().value)) {
+        const Token opToken = advance();
+        auto right = parseBitwiseOrExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+// C-precedence bitwise-OR / XOR / AND, slotted between logical-AND and equality.
+// `&` is the trickiest — it doubles as address-of (unary), so we only consume
+// it here when the LHS is already complete (postfix returned an expression).
+std::unique_ptr<Expression> Parser::parseBitwiseOrExpression() {
+    auto left = parseBitwiseXorExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "|") {
+        const Token opToken = advance();
+        auto right = parseBitwiseXorExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expression> Parser::parseBitwiseXorExpression() {
+    auto left = parseBitwiseAndExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "^") {
+        const Token opToken = advance();
+        auto right = parseBitwiseAndExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expression> Parser::parseBitwiseAndExpression() {
+    auto left = parseEqualityExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "&") {
         const Token opToken = advance();
         auto right = parseEqualityExpression();
         left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
     }
-    
+
     return left;
 }
 
