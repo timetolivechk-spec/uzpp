@@ -1,4 +1,5 @@
 #include "codegen.h"
+#include "error_remap.h"
 #include "lexer.h"
 #include "package_manager.h"
 #include "parser.h"
@@ -9,13 +10,14 @@
 #include "dap_server.h"
 
 #include <cstdio>
-#include <cstdlib>                       
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -152,6 +154,109 @@ inline bool isValidPackageUrl(const std::string& url) {
 
 class UzppCompiler {
 public:
+    // Recursively transpiles every `ulash "X.uzpp"` dependency referenced
+    // (transitively) by `entryFile` into a sibling `X.hpp` in `headerOutDir`,
+    // skipping files already present in `visited`. Each dependency is parsed
+    // and emitted via CodeGen in header mode so it can be `#include`d from the
+    // generated .cpp of the main translation unit.
+    bool buildUzppHeaderDependencies(const fs::path& entryFile,
+                                     const std::vector<fs::path>& searchDirs,
+                                     const fs::path& headerOutDir,
+                                     std::unordered_set<std::string>* visited = nullptr) const {
+        std::unordered_set<std::string> localVisited;
+        if (visited == nullptr) visited = &localVisited;
+
+        std::ifstream input(entryFile, std::ios::binary);
+        if (!input.is_open()) return true; // nothing to do — caller handles missing
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+
+        Lexer lexer(buffer.str());
+        // Tokens must outlive Parser — Parser holds a const& to the vector.
+        const auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        std::unique_ptr<Program> program;
+        try {
+            program = parser.parse();
+        } catch (const std::exception& e) {
+            std::cerr << "XATO: bog'liqlikni tahlil qilib bo'lmadi (" << entryFile.string()
+                      << "): " << e.what() << '\n';
+            return false;
+        }
+
+        auto findUzpp = [&](const std::string& mod) -> fs::path {
+            const fs::path entryDir = entryFile.parent_path();
+            const std::vector<fs::path> tryDirs = [&]() {
+                std::vector<fs::path> v;
+                if (!entryDir.empty()) v.push_back(entryDir);
+                for (const auto& d : searchDirs) v.push_back(d);
+                return v;
+            }();
+            for (const auto& dir : tryDirs) {
+                const fs::path candidate = dir / mod;
+                if (fs::exists(candidate)) return candidate;
+            }
+            return {};
+        };
+
+        // Walk the AST's top-level children for IncludeStatement nodes.
+        for (const auto& child : program->getChildren()) {
+            if (child->getType() != ASTNodeType::IncludeStatement) continue;
+            const auto* inc = static_cast<const IncludeStatement*>(child.get());
+            std::string mod = inc->getModuleName();
+            if (mod.size() >= 2 && mod.front() == '"' && mod.back() == '"') {
+                mod = mod.substr(1, mod.size() - 2);
+            }
+            if (mod.size() < 5 || mod.compare(mod.size() - 5, 5, ".uzpp") != 0) continue;
+            if (visited->contains(mod)) continue;
+            visited->insert(mod);
+
+            const fs::path depPath = findUzpp(mod);
+            if (depPath.empty()) {
+                std::cerr << "XATO: ulash \"" << mod << "\" topilmadi (qidirilgan: "
+                          << entryFile.parent_path().string() << " va stdlib)\n";
+                return false;
+            }
+
+            // Recurse first so transitive deps land before this one.
+            if (!buildUzppHeaderDependencies(depPath, searchDirs, headerOutDir, visited)) {
+                return false;
+            }
+
+            // Now transpile this .uzpp into a .hpp in headerOutDir.
+            std::ifstream depInput(depPath, std::ios::binary);
+            std::ostringstream depBuf;
+            depBuf << depInput.rdbuf();
+
+            Lexer depLexer(depBuf.str());
+            const auto depTokens = depLexer.tokenize();
+            Parser depParser(depTokens);
+            std::unique_ptr<Program> depProgram;
+            try {
+                depProgram = depParser.parse();
+            } catch (const std::exception& e) {
+                std::cerr << "XATO: " << depPath.string() << " ni tahlil qilib bo'lmadi: "
+                          << e.what() << '\n';
+                return false;
+            }
+
+            CodeGen depGen;
+            depGen.setHeaderMode(true);
+            const std::string hppCode = depGen.generate(depProgram.get(), depPath.string());
+
+            const fs::path hppName = fs::path(mod).filename().replace_extension(".hpp");
+            fs::create_directories(headerOutDir);
+            const fs::path hppOut = headerOutDir / hppName;
+            std::ofstream out(hppOut, std::ios::binary);
+            if (!out.is_open()) {
+                std::cerr << "XATO: header faylini yaratib bo'lmadi -> " << hppOut.string() << '\n';
+                return false;
+            }
+            out << hppCode;
+        }
+        return true;
+    }
+
     bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false) const {
         std::ifstream input(inputFile, std::ios::binary);
         if (!input.is_open()) {
@@ -276,10 +381,21 @@ public:
             return true;
         }
 
+        std::string remappedOutput = compilerOutput;
+        {
+            std::ifstream in(cppFile);
+            if (in.good()) {
+                std::stringstream buf;
+                buf << in.rdbuf();
+                remappedOutput = uzpp::ErrorRemap::remapPositions(
+                    std::move(remappedOutput), buf.str(), cppFile.filename().string());
+            }
+        }
+
         std::cerr << "\n=============================================\n";
         std::cerr << "          DASTURDA XATOLIK TOPILDI!          \n";
         std::cerr << "=============================================\n\n";
-        std::cerr << translateErrors(compilerOutput);
+        std::cerr << translateErrors(remappedOutput);
         std::cerr << "\nKompilyatorni yoki uz++ kodini tekshirib qayta urinib ko'ring.\n";
         return false;
     }
@@ -1315,6 +1431,19 @@ int main(int argc, char* argv[]) {
             fs::create_directories(layout.binaryFile.parent_path());
 
             std::cout << ">>> Transpilatsiya boshlandi: " << layout.inputFile.string() << '\n';
+
+            // Build .hpp artifacts for every `ulash "X.uzpp"` dependency the
+            // entry point pulls in (transitively), then transpile the entry
+            // point. Headers land alongside the generated .cpp so the compiler
+            // picks them up via -I<build_dir>.
+            {
+                const std::vector<fs::path> searchDirs = collectIncludeDirs(layout);
+                if (!compiler.buildUzppHeaderDependencies(
+                        layout.inputFile, searchDirs, layout.cppFile.parent_path())) {
+                    return 1;
+                }
+            }
+
             if (!compiler.transpile(layout.inputFile, layout.cppFile, options.mode == CommandMode::Test, options.mode == CommandMode::Bench)) {
                 return 1;
             }
@@ -1329,7 +1458,12 @@ int main(int argc, char* argv[]) {
             return 0;
         }
 
-        const std::vector<fs::path> includeDirs = collectIncludeDirs(layout);
+        std::vector<fs::path> includeDirs = collectIncludeDirs(layout);
+        // The build directory holds the .hpp artifacts we just generated for
+        // `ulash "X.uzpp"` dependencies — surface it to the compiler too.
+        if (!layout.cppFile.parent_path().empty()) {
+            includeDirs.push_back(layout.cppFile.parent_path().lexically_normal());
+        }
         const std::optional<fs::path> dependencyBridge = writeDependencyBridge(layout);
 
         std::cout << ">>> C++ kompilyatsiyasi boshlandi...\n" << std::endl;

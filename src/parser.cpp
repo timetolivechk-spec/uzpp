@@ -435,14 +435,53 @@ std::unique_ptr<Expression> Parser::parseLogicalOrExpression() {
 }
 
 std::unique_ptr<Expression> Parser::parseLogicalAndExpression() {
-    auto left = parseEqualityExpression();
-    
+    auto left = parseBitwiseOrExpression();
+
     while (!isAtEnd() && isLogicalAndOperator(peek().value)) {
+        const Token opToken = advance();
+        auto right = parseBitwiseOrExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+// C-precedence bitwise-OR / XOR / AND, slotted between logical-AND and equality.
+// `&` is the trickiest — it doubles as address-of (unary), so we only consume
+// it here when the LHS is already complete (postfix returned an expression).
+std::unique_ptr<Expression> Parser::parseBitwiseOrExpression() {
+    auto left = parseBitwiseXorExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "|") {
+        const Token opToken = advance();
+        auto right = parseBitwiseXorExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expression> Parser::parseBitwiseXorExpression() {
+    auto left = parseBitwiseAndExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "^") {
+        const Token opToken = advance();
+        auto right = parseBitwiseAndExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+
+    return left;
+}
+
+std::unique_ptr<Expression> Parser::parseBitwiseAndExpression() {
+    auto left = parseEqualityExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "&") {
         const Token opToken = advance();
         auto right = parseEqualityExpression();
         left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
     }
-    
+
     return left;
 }
 
@@ -508,19 +547,39 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
         return std::make_unique<AwaitExpression>(std::move(expr), opToken, /*isYield=*/true);
     }
 
-    // yangi Tur(args)  →  new Type(args)
-    if (!isAtEnd() && peek().type == TokenType::Identifier && peek().value == "yangi") {
-        const Token opToken = advance(); // consume 'yangi'
-        auto expr = parseUnaryExpression();
-        return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(expr), opToken, true);
+    // yangi Tur(args)  →  new Type(args). `yangi` doubles as a valid Uzbek
+    // identifier ("new" in the everyday sense), so only consume it as the
+    // `new` operator when the following token can start a type expression —
+    // an identifier (possibly qualified) or `(` for placement-new. Otherwise
+    // fall through and let parsePrimary treat `yangi` as a regular name.
+    if (!isAtEnd() && peek().type == TokenType::Identifier && peek().value == "yangi" &&
+        current_ + 1 < tokens_.size()) {
+        const Token& nxt = tokens_[current_ + 1];
+        const bool looksLikeNew =
+            nxt.type == TokenType::Identifier ||
+            (nxt.type == TokenType::Symbol && nxt.value == "(");
+        if (looksLikeNew) {
+            const Token opToken = advance(); // consume 'yangi'
+            auto expr = parseUnaryExpression();
+            return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(expr), opToken, true);
+        }
     }
 
-    // o'chirish ptr  →  delete ptr
+    // o'chirish ptr  →  delete ptr. Same context-sensitivity as above —
+    // accept only when followed by something that could be an expression
+    // (identifier, `*`, `(`).
     if (!isAtEnd() && peek().type == TokenType::Identifier &&
-        (peek().value == "o'chirish" || peek().value == "ochirish")) {
-        const Token opToken = advance(); // consume 'o'chirish'
-        auto expr = parseUnaryExpression();
-        return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::Delete, std::move(expr), opToken, true);
+        (peek().value == "o'chirish" || peek().value == "ochirish") &&
+        current_ + 1 < tokens_.size()) {
+        const Token& nxt = tokens_[current_ + 1];
+        const bool looksLikeDelete =
+            nxt.type == TokenType::Identifier ||
+            (nxt.type == TokenType::Symbol && (nxt.value == "*" || nxt.value == "(" || nxt.value == "["));
+        if (looksLikeDelete) {
+            const Token opToken = advance(); // consume 'o'chirish'
+            auto expr = parseUnaryExpression();
+            return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::Delete, std::move(expr), opToken, true);
+        }
     }
     
     if (!isAtEnd() && peek().type == TokenType::Symbol && isUnaryOperator(peek().value)) {
@@ -1418,7 +1477,11 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
 
     std::unique_ptr<Statement> elseBranch;
     bool elseLikely = false, elseUnlikely = false;
-    if (matchKeyword("aks") || matchKeyword("aks_holda")) {
+    // `yoki` doubles as a logical-OR operator, but in this position (right
+    // after an if's then-branch) it can only be `else`. We accept it here so
+    // users writing `agar (...) { ... } yoki { ... }` get the natural meaning
+    // instead of an `else; { ... }` (empty-then-orphan-block) emit.
+    if (matchKeyword("aks") || matchKeyword("aks_holda") || matchKeyword("yoki")) {
         // else-if: aks agar (...) or aks_holda agar (...)
         parseBranchHint(elseLikely, elseUnlikely);
         if (checkKeyword("agar")) {
@@ -2729,6 +2792,66 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
             current_ + 1 < tokens_.size() && tokens_[current_ + 1].value == "noyob_manzil") {
             advance(); advance();
             hasNoUniqueAddr = true;
+        }
+
+        // `funksiya` keyword form: `funksiya name(params) [modifiers] [-> T] { ... }`.
+        // This is the syntactic twin of free-function declarations and also
+        // supports `o'zgarmas`/`ustidan_yozish`/etc plus an optional C++11
+        // trailing return type — something the legacy `T name() o'zgarmas { ... }`
+        // shape can't express together with `-> T`.
+        if (checkKeyword("funksiya")) {
+            advance(); // consume `funksiya`
+            if (isAtEnd() || peek().type != TokenType::Identifier) {
+                throw ParseError("Kutilgan metod nomi `funksiya` dan keyin " + formatLocation(peek()));
+            }
+            const std::string name = advance().value;
+
+            auto method = std::make_unique<ClassDeclaration::Method>();
+            method->returnType = "void"; // default unless trailing-return specifies otherwise
+            method->name = name;
+            method->token = previous();
+            method->params = parseFunctionParameters();
+            method->isStatic = isStatic;
+
+            while (!isAtEnd() && (peek().value == "ustidan_yozish" || peek().value == "mavhum" ||
+                                  peek().value == "o'zgarmas"     || peek().value == "xato_tashlamaydi")) {
+                if (peek().value == "ustidan_yozish") method->isVirtual = true;
+                if (peek().value == "mavhum")        method->isPureVirtual = true;
+                if (peek().value == "o'zgarmas")     method->isConstMethod = true;
+                if (peek().value == "xato_tashlamaydi") method->isNoExcept = true;
+                advance();
+            }
+            if (!isAtEnd() && peek().type == TokenType::Symbol &&
+                (peek().value == "&" || peek().value == "&&")) {
+                method->refQualifier = advance().value;
+            }
+            if (!isAtEnd() && peek().value == "->") {
+                advance();
+                method->returnType = parseTypeString();
+            }
+            if (isMavhum) method->isPureVirtual = true;
+
+            if (!isAtEnd() && peek().value == "{") {
+                method->body = parseBlock();
+            } else if (!isAtEnd() && peek().value == "=") {
+                advance();
+                if (!isAtEnd() && peek().value == "0") {
+                    method->isPureVirtual = true;
+                    advance();
+                } else if (!isAtEnd() && peek().value == "default") {
+                    method->isDefaulted = true;
+                    advance();
+                } else if (!isAtEnd() && peek().value == "delete") {
+                    method->isDeleted = true;
+                    advance();
+                }
+                if (!isAtEnd() && peek().value == ";") advance();
+            } else if (!isAtEnd() && peek().value == ";") {
+                advance();
+            }
+            method->accessSpecifier = currentAccess;
+            methods.push_back(std::move(method));
+            continue;
         }
 
         // Method or Field: Type Name ...

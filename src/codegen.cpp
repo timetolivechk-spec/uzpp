@@ -1,5 +1,7 @@
 #include "codegen.h"
 
+#include <cctype>
+#include <filesystem>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,8 +21,62 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
     reset();
     testMode_ = testMode;
     benchMode_ = benchMode;
-    writePreamble(sourceName);
-    emitNodes(program->getChildren());
+    if (headerMode_) {
+        // Module-level include guard derived from the source filename. We
+        // need both `#pragma once` AND a textual guard: the same .uzpp can
+        // be transpiled into multiple build dirs (e.g. stdlib/matn.hpp + a
+        // freshly-regenerated build/matn.hpp). `#pragma once` keys on
+        // inode/path so both copies slip through; the textual guard catches
+        // the duplicate inclusion at the macro level.
+        std::string baseName;
+        {
+            const std::filesystem::path p(sourceName);
+            baseName = p.stem().string();
+            for (char& c : baseName) {
+                if (!std::isalnum(static_cast<unsigned char>(c))) c = '_';
+                else c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            }
+        }
+        // Avoid a leading underscore: identifiers like `_FOO` followed by an
+        // uppercase letter are reserved for the implementation, and some
+        // toolchains drop them silently — defeating the guard.
+        const std::string guard = "UZPP_GEN_" + baseName + "_HPP_";
+        output_ << "#pragma once\n";
+        output_ << "#ifndef " << guard << "\n";
+        output_ << "#define " << guard << "\n";
+        output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
+        lineStart_ = true;
+        // In header mode, only emit declarations that make sense at namespace
+        // scope: includes, namespaces, classes, enums, type aliases, module
+        // exports. Drop top-level functions / globals / link statements —
+        // those are program-level (the self-test `asosiy()` and `tasdiqlash`
+        // helper that ship inside a .uzpp library file are a typical case).
+        for (const auto& child : program->getChildren()) {
+            switch (child->getType()) {
+                case ASTNodeType::IncludeStatement:
+                case ASTNodeType::ExportModuleStatement:
+                case ASTNodeType::NamespaceDeclaration:
+                case ASTNodeType::ClassDeclaration:
+                case ASTNodeType::EnumDeclaration:
+                case ASTNodeType::InterfaceDeclaration:
+                case ASTNodeType::TypeAlias:
+                    emitNode(child.get(), nullptr);
+                    break;
+                default:
+                    // skip top-level functions, vars, free statements
+                    break;
+            }
+        }
+    } else {
+        writePreamble(sourceName);
+        emitNodes(program->getChildren());
+    }
+
+    if (headerMode_) {
+        if (!lineStart_) emitNewline();
+        output_ << "#endif\n";
+        return output_.str();
+    }
 
     if (testMode_) {
         emitNewline();
@@ -128,6 +184,7 @@ void CodeGen::reset() {
     benchFunctions_.clear();
     hasUserMain_ = false;
     userMainHasArgs_ = false;
+    uzppDependencies_.clear();
 }
 
 void CodeGen::writePreamble(const std::string& sourceName) {
@@ -141,6 +198,7 @@ void CodeGen::writePreamble(const std::string& sourceName) {
     output_ << "#include <future>\n";
     output_ << "#include <unordered_map>\n";
     output_ << "#include <utility>\n";
+    output_ << "#include <source_location>\n";
     // Stdlib headers are resolved via -I<stdlib_dir> passed to g++ from
     // main.cpp::collectIncludeDirs(), so emitting just the bare name lets the
     // generated .cpp live anywhere on disk (random CWD, %TEMP%, network share).
@@ -408,7 +466,9 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"tartibla", "std::sort"},
         {"qidirish", "std::find"},
         {"saralash", "std::sort"},
-        {"teskari", "std::reverse"},
+        // `teskari` is intentionally NOT mapped to `std::reverse` here:
+        // uzpp::Matn::teskari (string reversal) needs an unambiguous name.
+        // Callers that want std::reverse should write it directly.
         // Casting operators
         {"statik_otkazish",   "static_cast"},
         {"dinamik_otkazish",  "dynamic_cast"},
@@ -422,6 +482,8 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"ochirish",          "delete"},
         // Compile-time assertion
         {"statik_tasdiqlash", "static_assert"},
+        // C++20 source_location (joriy chaqiriq joyi haqida ma'lumot)
+        {"manba_joyi",        "std::source_location"},
     };
 
     if (token.type == TokenType::Identifier) {
@@ -447,12 +509,23 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         if (it != identifierTranslations.end()) {
             return it->second;
         }
-        // O'zbek maxsus harflari: o' va g' (apostrof) C++ identifikatorida ruxsat etilmagan.
-        // Ularni xavfsiz '_' belgisiga almashtirish.
+
+        // Qualified-id (e.g. "manba_joyi::current") — translate the leading
+        // segment so type-aliases work as scope prefixes too.
+        if (const size_t scopePos = token.value.find("::"); scopePos != std::string::npos) {
+            const std::string prefix = token.value.substr(0, scopePos);
+            const auto pit = identifierTranslations.find(prefix);
+            if (pit != identifierTranslations.end()) {
+                return pit->second + token.value.substr(scopePos);
+            }
+        }
+        // O'zbek apostrof — `safeIdent` orqali U+02BC MODIFIER LETTER APOSTROPHE
+        // ga o'tkazadi (ASCII '\'' C++ identifier ichida noqonuniy, lekin
+        // U+02BC C++23 da XID_Continue sifatida qabul qilinadi). Bu `o'lcham`
+        // kabi nomlarni `oʼlcham` qilib qoldiradi — `o_lcham` qilib mangle
+        // qilish o'rniga.
         if (token.value.find('\'') != std::string::npos) {
-            std::string safe = token.value;
-            for (char& c : safe) if (c == '\'') c = '_';
-            return safe;
+            return safeIdent(token.value);
         }
     } else if (token.type == TokenType::Symbol) {
         if (token.value == "??") {
@@ -536,10 +609,23 @@ std::string CodeGen::getOperatorSymbol(const std::string& op) const {
 }
 
 std::string CodeGen::translateDefaultValue(const std::string& val) const {
+    // String / character literals pass through unchanged — translating them
+    // through translateToken would mangle apostrophes (`' '` → `_ _`) via the
+    // identifier-safety path that strips Uzbek apostrophes.
+    if (!val.empty() && (val.front() == '\'' || val.front() == '"')) {
+        return val;
+    }
     // Uz++ kalit so'zlarini C++ ga tarjima qilish
     if (val == "rost" || val == "to'g'ri") return "true";
     if (val == "yolg'on" || val == "yolgon" || val == "noto'g'ri") return "false";
     if (val == "bosh" || val == "nullptr") return "nullptr";
+    // Qualified-id (e.g. "manba_joyi::current()") — translate the leading identifier
+    // so type aliases like `manba_joyi` become `std::source_location` here too.
+    if (const size_t scopePos = val.find("::"); scopePos != std::string::npos) {
+        const std::string prefix = val.substr(0, scopePos);
+        Token pt; pt.type = TokenType::Identifier; pt.value = prefix;
+        return translateToken(pt, nullptr) + val.substr(scopePos);
+    }
     // Boolean literals already translated above; numbers and strings pass through.
     // Translate keyword identifiers inside the value string using translateToken.
     Token t; t.type = TokenType::Identifier; t.value = val;
@@ -723,9 +809,9 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"tartibla", "std::sort"},
         {"saralash", "std::sort"},
         {"qidirish", "std::find"},
-        {"teskari", "std::reverse"},
+        {"manba_joyi", "std::source_location"},
     };
-    
+
     const auto it = typeMap.find(uzppType);
     if (it != typeMap.end()) return it->second;
     // O'zbek harflari (o', g') turlar nomida bo'lishi mumkin — C++ uchun xavfsiz qilish
@@ -941,9 +1027,17 @@ void CodeGen::visitLiteralExpression(const LiteralExpression* expr) {
 
 void CodeGen::visitIdentifierExpression(const IdentifierExpression* expr) {
     if (expr == nullptr) return;
+    // A user-declared local shadows any keyword alias of the same name —
+    // emit the raw identifier so `yozish << yangi << ...` after
+    // `butun yangi = 5;` actually references the variable, not `new`.
+    const std::string& name = expr->getName();
+    if (isLocalName(name)) {
+        emitRawToken(safeIdent(name));
+        return;
+    }
     Token dummyToken;
     dummyToken.type = TokenType::Identifier;
-    dummyToken.value = expr->getName();
+    dummyToken.value = name;
     emitRawToken(translateToken(dummyToken, nullptr));
 }
 
@@ -1118,9 +1212,16 @@ void CodeGen::visitAssignmentExpression(const AssignmentExpression* expr) {
         return;
     }
 
+    // Wrap the whole assignment in parens. Without this, an assignment used
+    // inside a larger expression — e.g. `(pos = s.find(x, pos)) != npos`
+    // emits `(pos = s.find(x, pos) != npos)`, which C++ parses as
+    // `pos = (s.find(x, pos) != npos)` because `!=` binds tighter than `=`.
+    // The user wrote parens; preserve their semantic intent.
+    emitRawToken("(");
     visitExpression(expr->getTarget());
     emitRawToken(expr->getOperator());
     visitExpression(expr->getValue());
+    emitRawToken(")");
 }
 
 // Statement visitors
@@ -1300,6 +1401,9 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
     emitRawToken("for");
     emitRawToken("(");
 
+    // The for-init declares a name visible in cond/incr/body — open a scope.
+    pushLocalScope();
+
     if (stmt->isRangeBased()) {
         // Range-based for: uchun (tur nom : to'plam)
         if (stmt->getInit() != nullptr) {
@@ -1308,6 +1412,7 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                 if (varDecl->isConst()) emitRawToken("const");
                 emitRawToken(getCppType(varDecl->getTypeName()));
                 emitRawToken(safeIdent(varDecl->getName()));
+                declareLocal(varDecl->getName());
             } else {
                 visitStatement(stmt->getInit());
             }
@@ -1324,6 +1429,7 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                 if (varDecl->isConst()) emitRawToken("const");
                 emitRawToken(getCppType(varDecl->getTypeName()));
                 emitRawToken(safeIdent(varDecl->getName()));
+                declareLocal(varDecl->getName());
                 if (varDecl->getInitializer() != nullptr) {
                     emitRawToken("=");
                     visitExpression(varDecl->getInitializer());
@@ -1350,21 +1456,24 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
     indentMore();
     visitStatement(stmt->getBody());
     indentLess();
+    popLocalScope();
 }
 
 void CodeGen::visitBlock(const Block* stmt) {
     if (stmt == nullptr) return;
-    
+
     writeIndentIfNeeded();
     emitRawToken("{");
     emitNewline();
-    
+
     indentMore();
+    pushLocalScope();
     for (const auto& s : stmt->getStatements()) {
         visitStatement(s.get());
     }
+    popLocalScope();
     indentLess();
-    
+
     writeIndentIfNeeded();
     emitRawToken("}");
     emitNewline();
@@ -1478,6 +1587,7 @@ void CodeGen::visitExpressionStatement(const ExpressionStatement* stmt) {
 
 void CodeGen::visitVariableDeclaration(const VariableDeclaration* stmt) {
     if (stmt == nullptr) return;
+    declareLocal(stmt->getName());
     writeIndentIfNeeded();
 
     // Storage classes — emit BEFORE 'inline' so they don't get swallowed
@@ -1606,7 +1716,12 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
     bool oldAsyncState = currentFunctionIsAsync_;
     currentFunctionIsAsync_ = decl->isAsync();
 
+    pushLocalScope();
+    for (const auto& p : decl->getParameters()) {
+        declareLocal(p.name);
+    }
     visitBlock(decl->getBody());
+    popLocalScope();
 
     currentFunctionIsAsync_ = oldAsyncState;
 }
@@ -1821,7 +1936,10 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
                 emitNewline();
             } else {
                 emitNewline();
+                pushLocalScope();
+                for (const auto& p : method->params) declareLocal(p.name);
                 visitBlock(method->body.get());
+                popLocalScope();
             }
         }
         
@@ -1874,8 +1992,18 @@ void CodeGen::visitIncludeStatement(const IncludeStatement* stmt) {
     if (mod.size() >= 2 && mod.front() == '"' && mod.back() == '"') {
         mod = mod.substr(1, mod.size() - 2);
     }
-    // Skip uzpp_runtime.hpp — already emitted in preamble
-    if (mod == "uzpp_runtime.hpp") {
+    // Skip uzpp_runtime.hpp — already emitted in preamble (program mode only;
+    // in header mode the user may genuinely want to depend on uzpp::* types).
+    if (mod == "uzpp_runtime.hpp" && !headerMode_) {
+        return;
+    }
+    // `ulash "foo.uzpp"` — record the dependency for the orchestrator
+    // (main.cpp transpiles the .uzpp source as a header) and emit an include
+    // of the matching .hpp artifact.
+    if (mod.size() > 5 && mod.compare(mod.size() - 5, 5, ".uzpp") == 0) {
+        uzppDependencies_.push_back(mod);
+        const std::string asHpp = mod.substr(0, mod.size() - 5) + ".hpp";
+        output_ << "#include \"" << asHpp << "\"\n";
         return;
     }
     if (mod.find(".hpp") != std::string::npos || mod.find(".h") != std::string::npos) {

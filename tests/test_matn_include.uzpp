@@ -1,0 +1,35 @@
+// uz++ — uz++ tilida yozilgan `matn` kutubxonasini boshqa .uzpp fayl
+// `ulash "matn.uzpp"` orqali ishlatishi mumkinligini sinaydi.
+
+ulash "uzpp_runtime.hpp"
+ulash "matn.uzpp"
+
+butun asosiy() {
+    matn s = "Salom, dunyo!";
+
+    yozish << "Matn uzunligi (bayt): " << uzpp::Matn::uzunlik(s) << qator_oxiri;
+    yozish << "Belgilar soni:        " << uzpp::Matn::belgilar_soni(s) << qator_oxiri;
+    yozish << "Kichik harfga:        " << uzpp::Matn::kichik_harfga(s) << qator_oxiri;
+    yozish << "Katta harfga:         " << uzpp::Matn::katta_harfga(s) << qator_oxiri;
+    yozish << "Teskari:              " << uzpp::Matn::teskari(s) << qator_oxiri;
+    yozish << "Qisqartirilgan(8):    " << uzpp::Matn::qadar_qirqish(s, 8) << qator_oxiri;
+
+    o'zgaruvchan qismlar = uzpp::Matn::ajratish(s, ", ");
+    yozish << "Bo'laklari:           ";
+    uchun (o'zgarmas matn& q : qismlar) {
+        yozish << "[" << q << "] ";
+    }
+    yozish << qator_oxiri;
+
+    vektor<matn> arglar = {"Olim", "42"};
+    yozish << "Format:               "
+           << uzpp::Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar)
+           << qator_oxiri;
+
+    uzpp::Matn::RegEx raqamlar("[0-9]+");
+    yozish << "Raqam topildimi:      "
+           << (raqamlar.qidirish("yil 2026da") ? "rost" : "yolg'on") << qator_oxiri;
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,0 +1,189 @@
+// uz++ — uzpp::Matn kutubxonasi to'liq sinov to'plami.
+// Bu test (matn.uzpp dan boshqacha) — `ulash`-orqali olingan kutubxonani
+// chinakam consumer pozitsiyasidan tekshiradi.
+
+ulash "uzpp_runtime.hpp"
+
+
+// ===== O'Z-O'ZINI SINASH =====
+
+funksiya tasdiqlash(o'zgarmas matn& nom, mantiqiy shart) -> bosh {
+    agar (!shart) {
+        yozish << "[XATO] " << nom << qator_oxiri;
+        irgitish std::runtime_error("Sinov muvaffaqiyatsiz: " + nom);
+    }
+}
+
+butun asosiy() {
+    // uzunlik / bo'shliq
+    tasdiqlash("uzunlik", uzpp::Matn::uzunlik("salom") == 5);
+    tasdiqlash("boshmi-bo'sh", uzpp::Matn::boshmi(""));
+    tasdiqlash("boshmi-toliq", !uzpp::Matn::boshmi("x"));
+    tasdiqlash("bosh_emasmi", uzpp::Matn::bosh_emasmi("x"));
+
+    // qidirish
+    tasdiqlash("boshlanganda", uzpp::Matn::boshlanganda("salomat", "salom"));
+    tasdiqlash("boshlanganda-yo'q", !uzpp::Matn::boshlanganda("salomat", "xayr"));
+    tasdiqlash("tugaganda", uzpp::Matn::tugaganda("salomat", "mat"));
+    tasdiqlash("ichida", uzpp::Matn::ichida("salomat", "loma"));
+    tasdiqlash("ichida-yo'q", !uzpp::Matn::ichida("salomat", "xyz"));
+
+    o'zgaruvchan top = uzpp::Matn::topish("salomat", "lo");
+    tasdiqlash("topish-bor", top.has_value() && top.value() == 2);
+    o'zgaruvchan top_yoq = uzpp::Matn::topish("salomat", "xyz");
+    tasdiqlash("topish-yo'q", !top_yoq.has_value());
+
+    tasdiqlash("hisoblash", uzpp::Matn::hisoblash("ababab", "ab") == 3);
+    tasdiqlash("hisoblash-yo'q", uzpp::Matn::hisoblash("xyz", "ab") == 0);
+
+    // kesish
+    tasdiqlash("qism_matn", uzpp::Matn::qism_matn("salomat", 1, 4) == "alom");
+    tasdiqlash("chapdan", uzpp::Matn::chapdan("salomat", 3) == "sal");
+    tasdiqlash("ongdan", uzpp::Matn::ongdan("salomat", 3) == "mat");
+    tasdiqlash("chapdan-uzun", uzpp::Matn::chapdan("ab", 99) == "ab");
+
+    // o'zgartirish
+    tasdiqlash("kichik_harfga", uzpp::Matn::kichik_harfga("SaLoM") == "salom");
+    tasdiqlash("katta_harfga", uzpp::Matn::katta_harfga("SaLoM") == "SALOM");
+    tasdiqlash("birinchi_harfni_katta", uzpp::Matn::birinchi_harfni_katta("salom") == "Salom");
+    tasdiqlash("teskari", uzpp::Matn::teskari("abc") == "cba");
+    tasdiqlash("takrorlash", uzpp::Matn::takrorlash("ab", 3) == "ababab");
+    tasdiqlash("takrorlash-nol", uzpp::Matn::takrorlash("ab", 0) == "");
+    tasdiqlash("almashtirish", uzpp::Matn::almashtirish("ababab", "a", "X") == "XbXbXb");
+    tasdiqlash("birinchi_almashtirish", uzpp::Matn::birinchi_almashtirish("ababab", "a", "X") == "Xbabab");
+
+    // qirqish
+    tasdiqlash("chapdan_qirqish", uzpp::Matn::chapdan_qirqish("   hello") == "hello");
+    tasdiqlash("ongdan_qirqish", uzpp::Matn::ongdan_qirqish("hello   ") == "hello");
+    tasdiqlash("qirqish", uzpp::Matn::qirqish("   hello   ") == "hello");
+
+    // tekshirish
+    tasdiqlash("raqammi-musbat", uzpp::Matn::raqammi("42"));
+    tasdiqlash("raqammi-manfiy", uzpp::Matn::raqammi("-42"));
+    tasdiqlash("raqammi-kasr", uzpp::Matn::raqammi("3.14"));
+    tasdiqlash("raqammi-yo'q", !uzpp::Matn::raqammi("abc"));
+    tasdiqlash("raqammi-bo'sh", !uzpp::Matn::raqammi(""));
+    tasdiqlash("harflarmi", uzpp::Matn::harflarmi("abc"));
+    tasdiqlash("harflarmi-yo'q", !uzpp::Matn::harflarmi("a1b"));
+    tasdiqlash("harf_raqamlami", uzpp::Matn::harf_raqamlami("abc123"));
+    tasdiqlash("harf_raqamlami-yo'q", !uzpp::Matn::harf_raqamlami("abc 123"));
+
+    // ajratish / birlashtirish
+    o'zgaruvchan qismlar = uzpp::Matn::ajratish("a,b,c", ",");
+    tasdiqlash("ajratish-soni", qismlar.size() == 3);
+    tasdiqlash("ajratish-mazmun", qismlar[0] == "a" && qismlar[1] == "b" && qismlar[2] == "c");
+
+    o'zgaruvchan qatorlar = uzpp::Matn::qatorlarga_ajratish("bir\nikki\nuch");
+    tasdiqlash("qatorlarga_ajratish", qatorlar.size() == 3 && qatorlar[1] == "ikki");
+
+    tasdiqlash("birlashtirish", uzpp::Matn::birlashtirish(qismlar, "-") == "a-b-c");
+
+    // to'ldirish
+    tasdiqlash("chapdan_toldirish", uzpp::Matn::chapdan_toldirish("5", 3, '0') == "005");
+    tasdiqlash("ongdan_toldirish", uzpp::Matn::ongdan_toldirish("5", 3, '0') == "500");
+    tasdiqlash("markazga_toldirish", uzpp::Matn::markazga_toldirish("ab", 6, '-') == "--ab--");
+
+    // konversiya
+    tasdiqlash("butun_songa", uzpp::Matn::butun_songa("42") == 42);
+    o'zgaruvchan kasrli = uzpp::Matn::kasr_songa("3.14");
+    tasdiqlash("kasr_songa", kasrli.has_value() && kasrli.value() > 3.13 && kasrli.value() < 3.15);
+    o'zgaruvchan kasrli_yoq = uzpp::Matn::kasr_songa("xyz");
+    tasdiqlash("kasr_songa-yo'q", !kasrli_yoq.has_value());
+    tasdiqlash("songa_aylantirish-butun", uzpp::Matn::songa_aylantirish(42) == "42");
+
+    // RegEx
+    uzpp::Matn::RegEx re("[0-9]+");
+    tasdiqlash("regex-mos", re.mos("12345"));
+    tasdiqlash("regex-qidirish", re.qidirish("abc 42 xyz"));
+    tasdiqlash("regex-mos-yo'q", !re.mos("abc"));
+
+    uzpp::Matn::RegEx re_alm("[0-9]+");
+    tasdiqlash("regex-almashtirish", re_alm.almashtirish("a1b22c333", "N") == "aNbNcN");
+
+    uzpp::Matn::RegEx re_top("[0-9]+");
+    o'zgaruvchan barchasi = re_top.topish_hammasi("a1b22c333");
+    tasdiqlash("regex-topish_hammasi-soni", barchasi.size() == 3);
+    tasdiqlash("regex-topish_hammasi-mazmun", barchasi[0] == "1" && barchasi[1] == "22" && barchasi[2] == "333");
+
+    uzpp::Matn::RegEx re_case("HELLO", rost);
+    tasdiqlash("regex-case-insensitive", re_case.qidirish("say hello world"));
+
+    // ===== Yangi kengaytirilgan funksiyalar =====
+
+    // qadar_qirqish
+    tasdiqlash("qadar_qirqish-uzun", uzpp::Matn::qadar_qirqish("Salom dunyo!", 8) == "Salom...");
+    tasdiqlash("qadar_qirqish-qisqa", uzpp::Matn::qadar_qirqish("Sa", 8) == "Sa");
+    tasdiqlash("qadar_qirqish-aniq", uzpp::Matn::qadar_qirqish("Salom", 5) == "Salom");
+    tasdiqlash("qadar_qirqish-belgisiz", uzpp::Matn::qadar_qirqish("Salomat", 10, "") == "Salomat");
+
+    // qator_son
+    tasdiqlash("qator_son-bosh", uzpp::Matn::qator_son("") == 0);
+    tasdiqlash("qator_son-bir", uzpp::Matn::qator_son("salom") == 1);
+    tasdiqlash("qator_son-uch", uzpp::Matn::qator_son("a\nb\nc") == 3);
+    tasdiqlash("qator_son-tugaganda", uzpp::Matn::qator_son("a\nb\n") == 2);
+
+    // belgi_almashtirish
+    tasdiqlash("belgi_almashtirish", uzpp::Matn::belgi_almashtirish("salom dunyo", ' ', '_') == "salom_dunyo");
+    tasdiqlash("belgi_almashtirish-yo'q", uzpp::Matn::belgi_almashtirish("abc", 'x', 'y') == "abc");
+
+    // bosh_belgi / oxir_belgi
+    tasdiqlash("bosh_belgi", uzpp::Matn::bosh_belgi("Salom") == 'S');
+    tasdiqlash("oxir_belgi", uzpp::Matn::oxir_belgi("Salom") == 'm');
+
+    // katta_yokib / kichik_yokib
+    tasdiqlash("katta_yokib-rost", uzpp::Matn::katta_yokib("SALOM"));
+    tasdiqlash("katta_yokib-aralash", !uzpp::Matn::katta_yokib("Salom"));
+    tasdiqlash("katta_yokib-raqam", uzpp::Matn::katta_yokib("ABC123"));
+    tasdiqlash("katta_yokib-faqat-raqam", !uzpp::Matn::katta_yokib("123"));
+    tasdiqlash("kichik_yokib-rost", uzpp::Matn::kichik_yokib("salom"));
+    tasdiqlash("kichik_yokib-aralash", !uzpp::Matn::kichik_yokib("Salom"));
+
+    // formatlash_indeksli
+    vektor<matn> arglar = {"Olim", "42"};
+    tasdiqlash("formatlash_indeksli", uzpp::Matn::formatlash_indeksli("Salom, {0}! Yosh: {1}.", arglar) == "Salom, Olim! Yosh: 42.");
+    tasdiqlash("formatlash_indeksli-takror", uzpp::Matn::formatlash_indeksli("{0} {0}", arglar) == "Olim Olim");
+    vektor<matn> bo'sh;
+    tasdiqlash("formatlash_indeksli-bo'sh", uzpp::Matn::formatlash_indeksli("hech", bo'sh) == "hech");
+    tasdiqlash("formatlash_indeksli-qavslar", uzpp::Matn::formatlash_indeksli("{{x}}", bo'sh) == "{x}");
+
+    // oxir_topish
+    o'zgaruvchan ot = uzpp::Matn::oxir_topish("ababab", "ab");
+    tasdiqlash("oxir_topish-bor", ot.has_value() && ot.value() == 4);
+    o'zgaruvchan ot_yoq = uzpp::Matn::oxir_topish("xyz", "ab");
+    tasdiqlash("oxir_topish-yo'q", !ot_yoq.has_value());
+
+    // bir_marta_ajratish
+    o'zgaruvchan jufti = uzpp::Matn::bir_marta_ajratish("kalit=qiymat=qo'shimcha", "=");
+    tasdiqlash("bir_marta_ajratish-chap", jufti.first == "kalit");
+    tasdiqlash("bir_marta_ajratish-ong", jufti.second == "qiymat=qo'shimcha");
+    o'zgaruvchan jufti_yoq = uzpp::Matn::bir_marta_ajratish("kalitsiz", "=");
+    tasdiqlash("bir_marta_ajratish-yo'q-chap", jufti_yoq.first == "kalitsiz");
+    tasdiqlash("bir_marta_ajratish-yo'q-ong", jufti_yoq.second == "");
+
+    // ===== UTF-8 / Unicode =====
+    // "Салом" — 5 kirillcha belgi, 10 bayt (har biri 2 bayt UTF-8 da)
+    matn rus = "Салом";
+    tasdiqlash("uzunlik-baytda", uzpp::Matn::uzunlik(rus) == 10);
+    tasdiqlash("belgilar_soni-kirillcha", uzpp::Matn::belgilar_soni(rus) == 5);
+    tasdiqlash("belgilar_soni-aralash", uzpp::Matn::belgilar_soni("a Я b") == 5);
+    tasdiqlash("belgilar_soni-ascii", uzpp::Matn::belgilar_soni("hello") == 5);
+    tasdiqlash("belgilar_soni-bo'sh", uzpp::Matn::belgilar_soni("") == 0);
+
+    tasdiqlash("chapdan_belgi-kirillcha", uzpp::Matn::chapdan_belgi_bo'yicha(rus, 3) == "Сал");
+    tasdiqlash("chapdan_belgi-bo'sh", uzpp::Matn::chapdan_belgi_bo'yicha("", 5) == "");
+    tasdiqlash("chapdan_belgi-uzun", uzpp::Matn::chapdan_belgi_bo'yicha("ab", 99) == "ab");
+
+    tasdiqlash("ongdan_belgi-kirillcha", uzpp::Matn::ongdan_belgi_bo'yicha(rus, 2) == "ом");
+    tasdiqlash("ongdan_belgi-uzun", uzpp::Matn::ongdan_belgi_bo'yicha("ab", 99) == "ab");
+
+    matn rus_jumla = "Салом, дунё";
+    tasdiqlash("qism_matn_belgi", uzpp::Matn::qism_matn_belgi_bo'yicha(rus_jumla, 7, 3) == "дун");
+    tasdiqlash("belgi_olish-kirillcha", uzpp::Matn::belgi_olish(rus_jumla, 0) == "С");
+    tasdiqlash("belgi_olish-ascii", uzpp::Matn::belgi_olish("hello", 1) == "e");
+
+    tasdiqlash("belgi_uzunligi-ascii", uzpp::Matn::belgi_uzunligi('a') == 1);
+    tasdiqlash("belgi_uzunligi-2byte", uzpp::Matn::belgi_uzunligi(statik_otkazish<belgi>(0xD0)) == 2);
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

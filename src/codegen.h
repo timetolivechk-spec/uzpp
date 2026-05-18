@@ -4,6 +4,8 @@
 
 #include <sstream>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 namespace uzpp {
 
@@ -43,6 +45,18 @@ public:
     // Legacy token-based generation
     std::string generate(const Program* program, const std::string& sourceName = "input.uzpp", bool testMode = false, bool benchMode = false);
 
+    // Header mode: omit the standard preamble (#include <iostream>, using
+    // namespace std, main wrapper) so a .uzpp file can be transpiled into a
+    // standalone .hpp that another .uzpp can `ulash`-include. The caller is
+    // responsible for `ulash <X>` statements that pull in any std headers the
+    // body actually needs.
+    void setHeaderMode(bool value) { headerMode_ = value; }
+    // Returns the list of `ulash "X.uzpp"` dependencies discovered while
+    // emitting (populated after generate()). Each entry is the raw module
+    // name as written (e.g. `matn.uzpp`). Useful for orchestrating recursive
+    // header builds from main.cpp.
+    const std::vector<std::string>& getUzppDependencies() const { return uzppDependencies_; }
+
 private:
     std::ostringstream output_;
     int indentLevel_;
@@ -55,6 +69,26 @@ private:
     std::vector<std::string> benchFunctions_;
     bool hasUserMain_ = false;
     bool userMainHasArgs_ = false;
+    bool headerMode_ = false;
+    std::vector<std::string> uzppDependencies_;
+
+    // Stack of local-name scopes used to suppress keyword translation when a
+    // user-declared identifier shadows a uz++ alias (e.g. `butun yangi = 5;
+    // yozish << yangi;` — without this, the second `yangi` would emit `new`).
+    // Each scope holds the simple names declared in it.
+    std::vector<std::unordered_set<std::string>> localScopes_;
+
+    void pushLocalScope() { localScopes_.emplace_back(); }
+    void popLocalScope() { if (!localScopes_.empty()) localScopes_.pop_back(); }
+    void declareLocal(const std::string& name) {
+        if (!localScopes_.empty()) localScopes_.back().insert(name);
+    }
+    bool isLocalName(const std::string& name) const {
+        for (auto it = localScopes_.rbegin(); it != localScopes_.rend(); ++it) {
+            if (it->contains(name)) return true;
+        }
+        return false;
+    }
 
     void reset();
     void writePreamble(const std::string& sourceName);
@@ -72,11 +106,25 @@ private:
     bool needsSpaceBefore(const std::string& previous, const std::string& current) const;
     void writeIndentIfNeeded();
     void emitRawToken(const std::string& token);
-    // O'zbek identifikatorlaridagi apostrof (o', g') ni C++ uchun xavfsiz qilish
+    // O'zbek identifikatorlaridagi apostrof (o', g') ni C++ uchun xavfsiz qilish.
+    // ASCII apostrof (U+0027) C++ identifikatorida ruxsat etilmagan, lekin
+    // U+02BC MODIFIER LETTER APOSTROPHE — bu XID_Continue belgisi va C++23
+    // standartida identifikator ichida qabul qilinadi. Bu o'zbek so'zlari
+    // (`o'lcham`, `g'oya`, `o'zgaruvchan` ...) ni C++ ga deyarli o'zgarmagan
+    // ko'rinishda olib o'tishga imkon beradi.
     static std::string safeIdent(const std::string& name) {
         if (name.find('\'') == std::string::npos) return name;
-        std::string safe = name;
-        for (char& c : safe) if (c == '\'') c = '_';
+        std::string safe;
+        safe.reserve(name.size() + 4);
+        for (char c : name) {
+            if (c == '\'') {
+                // U+02BC encoded as UTF-8: 0xCA 0xBC
+                safe += '\xCA';
+                safe += '\xBC';
+            } else {
+                safe += c;
+            }
+        }
         return safe;
     }
     void emitNewline();

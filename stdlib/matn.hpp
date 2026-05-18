@@ -1,275 +1,648 @@
 #pragma once
-
-#include "xavfsizlik.hpp"
-
-#include <string>
-#include <string_view>
-#include <vector>
+#ifndef UZPP_GEN_MATN_HPP_
+#define UZPP_GEN_MATN_HPP_
+#line 1 "C:\\Users\\MSN\\uz++\\.claude\\worktrees\\musing-satoshi-e40317\\stdlib\\matn.uzpp"
 #include <regex>
-#include <algorithm>
 #include <cctype>
-#include <charconv>
+#include <algorithm>
 #include <optional>
 #include <sstream>
-
-#if !defined(UZPP_EMBEDDED)
-#include <format>
-#endif
-
+#include <stdexcept>
+#include <string>
+#include <utility>
 namespace uzpp::Matn {
-
-// ===== BO'LISH / BIRLASHTIRISH =====
-
-[[nodiscard]] inline std::vector<std::string> ajratish(const std::string& matn, const std::string& ajratuvchi) {
-    std::vector<std::string> natija;
-    if (ajratuvchi.empty()) {
-        for (char c : matn) natija.push_back(std::string(1, c));
+    inline auto uzunlik(const std::string& s)->std::size_t
+    {
+        return s.size();
+    }
+    inline auto boshmi(const std::string& s)->bool
+    {
+        return s.empty();
+    }
+    inline auto bosh_emasmi(const std::string& s)->bool
+    {
+        return ! s.empty();
+    }
+    inline auto boshlanganda(const std::string& s, const std::string& prefiks)->bool
+    {
+        return s.starts_with(prefiks);
+    }
+    inline auto tugaganda(const std::string& s, const std::string& sufiks)->bool
+    {
+        return s.ends_with(sufiks);
+    }
+    inline auto ichida(const std::string& s, const std::string& qidiriluvchi)->bool
+    {
+        return(s.find(qidiriluvchi) != std::string::npos);
+    }
+    inline auto topish(const std::string& s, const std::string& qidiriluvchi, std::size_t boshlanish = 0)->std::optional<std::size_t>
+    {
+        auto p = s.find(qidiriluvchi, boshlanish);
+        if((p == std::string::npos))
+            {
+                return std::nullopt;
+            }
+        return p;
+    }
+    inline auto hisoblash(const std::string& s, const std::string& naqsh)->int
+    {
+        if(naqsh.empty())
+            {
+                return 0;
+            }
+        int adad = 0;
+        std::size_t pos = 0;
+        while(((pos = s.find(naqsh, pos)) != std::string::npos))
+            {
+                (adad =(adad + 1));
+                (pos =(pos + naqsh.size()));
+            }
+        return adad;
+    }
+    inline auto qism_matn(const std::string& s, std::size_t boshlanish, std::size_t uzunlik = std::string::npos)->std::string
+    {
+        if((boshlanish >= s.size()))
+            {
+                return "";
+            }
+        return s.substr(boshlanish, uzunlik);
+    }
+    inline auto chapdan(const std::string& s, std::size_t n)->std::string
+    {
+        if((n >= s.size()))
+            {
+                return s;
+            }
+        return s.substr(0, n);
+    }
+    inline auto ongdan(const std::string& s, std::size_t n)->std::string
+    {
+        if((n >= s.size()))
+            {
+                return s;
+            }
+        return s.substr((s.size() - n));
+    }
+    inline auto kichik_harfga(std::string s)->std::string
+    {
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                (s[i] = static_cast < char >(std::tolower(static_cast < unsigned char >(s[i]))));
+            }
+        return s;
+    }
+    inline auto katta_harfga(std::string s)->std::string
+    {
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                (s[i] = static_cast < char >(std::toupper(static_cast < unsigned char >(s[i]))));
+            }
+        return s;
+    }
+    inline auto birinchi_harfni_katta(std::string s)->std::string
+    {
+        if(! s.empty())
+            {
+                (s[0] = static_cast < char >(std::toupper(static_cast < unsigned char >(s[0]))));
+            }
+        return s;
+    }
+    inline auto teskari(std::string s)->std::string
+    {
+        std::reverse(s.begin(), s.end());
+        return s;
+    }
+    inline auto takrorlash(const std::string& s, int marotaba)->std::string
+    {
+        if((marotaba <= 0))
+            {
+                return "";
+            }
+        std::string natija;
+        natija.reserve((s.size() * static_cast < std::size_t >(marotaba)));
+        for(int i = 0;(i < marotaba);(i =(i + 1)))
+            {
+                (natija =(natija + s));
+            }
         return natija;
     }
-    std::size_t bosh = 0, oxir = matn.find(ajratuvchi);
-    while (oxir != std::string::npos) {
-        natija.push_back(matn.substr(bosh, oxir - bosh));
-        bosh = oxir + ajratuvchi.size();
-        oxir = matn.find(ajratuvchi, bosh);
+    inline auto almashtirish(std::string s, const std::string& eski, const std::string& yangisi)->std::string
+    {
+        if(eski.empty())
+            {
+                return s;
+            }
+        std::size_t pos = 0;
+        while(((pos = s.find(eski, pos)) != std::string::npos))
+            {
+                s.replace(pos, eski.size(), yangisi);
+                (pos =(pos + yangisi.size()));
+            }
+        return s;
     }
-    natija.push_back(matn.substr(bosh));
-    return natija;
-}
-
-[[nodiscard]] inline std::vector<std::string> qatorlarga_ajratish(const std::string& matn) {
-    std::vector<std::string> natija;
-    std::istringstream ss(matn);
-    std::string qator;
-    while (std::getline(ss, qator)) {
-        if (!qator.empty() && qator.back() == '\r') qator.pop_back();
-        natija.push_back(std::move(qator));
+    inline auto birinchi_almashtirish(const std::string& s, const std::string& eski, const std::string& yangisi)->std::string
+    {
+        std::string natija = s;
+        auto p = natija.find(eski);
+        if((p != std::string::npos))
+            {
+                natija.replace(p, eski.size(), yangisi);
+            }
+        return natija;
     }
-    return natija;
-}
-
-[[nodiscard]] inline std::string birlashtirish(const std::vector<std::string>& massiv, const std::string& biriktiruvchi) {
-    if (massiv.empty()) return "";
-    std::string natija = massiv[0];
-    for (std::size_t i = 1; i < massiv.size(); ++i) natija += biriktiruvchi + massiv[i];
-    return natija;
-}
-
-// ===== QIDIRISH =====
-
-[[nodiscard]] inline bool boshlanganda(const std::string& matn, const std::string& prefiks) noexcept {
-    return matn.starts_with(prefiks);
-}
-
-[[nodiscard]] inline bool tugaganda(const std::string& matn, const std::string& sufiks) noexcept {
-    return matn.ends_with(sufiks);
-}
-
-[[nodiscard]] inline bool ichida(const std::string& matn, const std::string& qidiriluvchi) noexcept {
-    return matn.find(qidiriluvchi) != std::string::npos;
-}
-
-[[nodiscard]] inline std::optional<std::size_t> topish(const std::string& matn, const std::string& qidiriluvchi, std::size_t boshlanish = 0) noexcept {
-    auto pos = matn.find(qidiriluvchi, boshlanish);
-    if (pos == std::string::npos) return std::nullopt;
-    return pos;
-}
-
-[[nodiscard]] inline int hisoblash(const std::string& matn, const std::string& naqsh) {
-    int son = 0;
-    std::size_t pos = 0;
-    while ((pos = matn.find(naqsh, pos)) != std::string::npos) { ++son; pos += naqsh.size(); }
-    return son;
-}
-
-// ===== O'ZGARTIRISH =====
-
-[[nodiscard]] inline std::string almashtirish(std::string matn, const std::string& eski, const std::string& yangi) {
-    if (eski.empty()) return matn;
-    std::size_t pos = 0;
-    while ((pos = matn.find(eski, pos)) != std::string::npos) {
-        matn.replace(pos, eski.size(), yangi);
-        pos += yangi.size();
+    inline auto chapdan_qirqish(const std::string& s)->std::string
+    {
+        std::size_t i = 0;
+        while(((i < s.size()) && std::isspace(static_cast < unsigned char >(s[i]))))
+            {
+                (i =(i + 1));
+            }
+        return s.substr(i);
     }
-    return matn;
-}
-
-[[nodiscard]] inline std::string birinchi_almashtirish(const std::string& matn, const std::string& eski, const std::string& yangi) {
-    std::string natija = matn;
-    auto pos = natija.find(eski);
-    if (pos != std::string::npos) natija.replace(pos, eski.size(), yangi);
-    return natija;
-}
-
-[[nodiscard]] inline std::string kichik_harfga(std::string matn) {
-    std::transform(matn.begin(), matn.end(), matn.begin(), [](unsigned char c) { return std::tolower(c); });
-    return matn;
-}
-
-[[nodiscard]] inline std::string katta_harfga(std::string matn) {
-    std::transform(matn.begin(), matn.end(), matn.begin(), [](unsigned char c) { return std::toupper(c); });
-    return matn;
-}
-
-[[nodiscard]] inline std::string birinchi_harfni_katta(std::string matn) {
-    if (!matn.empty()) matn[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(matn[0])));
-    return matn;
-}
-
-[[nodiscard]] inline std::string teskari(std::string matn) {
-    std::reverse(matn.begin(), matn.end());
-    return matn;
-}
-
-[[nodiscard]] inline std::string takrorlash(const std::string& matn, int bor) {
-    if (bor <= 0) return "";
-    std::string natija;
-    natija.reserve(matn.size() * static_cast<std::size_t>(bor));
-    for (int i = 0; i < bor; ++i) natija += matn;
-    return natija;
-}
-
-// ===== TOZALASH / QIRQISH =====
-
-[[nodiscard]] inline std::string chapdan_qirqish(std::string matn) {
-    auto it = std::find_if(matn.begin(), matn.end(), [](unsigned char c) { return !std::isspace(c); });
-    return std::string(it, matn.end());
-}
-
-[[nodiscard]] inline std::string ongdan_qirqish(std::string matn) {
-    auto it = std::find_if(matn.rbegin(), matn.rend(), [](unsigned char c) { return !std::isspace(c); });
-    return std::string(matn.begin(), it.base());
-}
-
-[[nodiscard]] inline std::string qirqish(std::string matn) {
-    return chapdan_qirqish(ongdan_qirqish(std::move(matn)));
-}
-
-// ===== TEKSHIRISH =====
-
-[[nodiscard]] inline bool raqammi(const std::string& matn) noexcept {
-    if (matn.empty()) return false;
-    std::size_t i = 0;
-    if (matn[i] == '-' || matn[i] == '+') ++i;
-    bool hasDigit = false;
-    while (i < matn.size() && std::isdigit(static_cast<unsigned char>(matn[i]))) { ++i; hasDigit = true; }
-    if (i < matn.size() && matn[i] == '.') {
-        ++i;
-        while (i < matn.size() && std::isdigit(static_cast<unsigned char>(matn[i]))) { ++i; hasDigit = true; }
+    inline auto ongdan_qirqish(const std::string& s)->std::string
+    {
+        if(s.empty())
+            {
+                return s;
+            }
+        std::size_t i = s.size();
+        while(((i > 0) && std::isspace(static_cast < unsigned char >(s[(i - 1)]))))
+            {
+                (i =(i - 1));
+            }
+        return s.substr(0, i);
     }
-    return hasDigit && i == matn.size();
-}
-
-[[nodiscard]] inline bool harflarmi(const std::string& matn) noexcept {
-    return !matn.empty() && std::all_of(matn.begin(), matn.end(), [](unsigned char c) { return std::isalpha(c); });
-}
-
-[[nodiscard]] inline bool harf_raqamlami(const std::string& matn) noexcept {
-    return !matn.empty() && std::all_of(matn.begin(), matn.end(), [](unsigned char c) { return std::isalnum(c); });
-}
-
-[[nodiscard]] inline bool boshmi(const std::string& matn) noexcept { return matn.empty(); }
-[[nodiscard]] inline bool bosh_emasmi(const std::string& matn) noexcept { return !matn.empty(); }
-
-// ===== KESISH =====
-
-[[nodiscard]] inline std::string qism_matn(const std::string& matn, std::size_t bosh, std::size_t uzunlik = std::string::npos) {
-    if (bosh >= matn.size()) return "";
-    return matn.substr(bosh, uzunlik);
-}
-
-[[nodiscard]] inline std::string chapdan(const std::string& matn, std::size_t n) {
-    return matn.substr(0, std::min(n, matn.size()));
-}
-
-[[nodiscard]] inline std::string ongdan(const std::string& matn, std::size_t n) {
-    if (n >= matn.size()) return matn;
-    return matn.substr(matn.size() - n);
-}
-
-// ===== KONVERSIYA =====
-
-[[nodiscard]] inline int butun_songa(const std::string& matn) {
-    int val;
-    auto [ptr, ec] = std::from_chars(matn.data(), matn.data() + matn.size(), val);
-    if (ec != std::errc{}) throw std::invalid_argument("Matn butun songa aylantirib bo'lmadi: " + matn);
-    return val;
-}
-
-[[nodiscard]] inline std::optional<double> kasr_songa(const std::string& matn) noexcept {
-    try { return std::stod(matn); } catch (...) { return std::nullopt; }
-}
-
-[[nodiscard]] inline std::string songa_aylantirish(int n)       { return std::to_string(n); }
-[[nodiscard]] inline std::string songa_aylantirish(double d)    { return std::to_string(d); }
-[[nodiscard]] inline std::string songa_aylantirish(long long n) { return std::to_string(n); }
-
-// ===== TO'LDIRISH =====
-
-[[nodiscard]] inline std::string chapdan_toldirish(const std::string& matn, std::size_t kenglik, char toldiruvchi = ' ') {
-    if (matn.size() >= kenglik) return matn;
-    return std::string(kenglik - matn.size(), toldiruvchi) + matn;
-}
-
-[[nodiscard]] inline std::string ongdan_toldirish(const std::string& matn, std::size_t kenglik, char toldiruvchi = ' ') {
-    if (matn.size() >= kenglik) return matn;
-    return matn + std::string(kenglik - matn.size(), toldiruvchi);
-}
-
-[[nodiscard]] inline std::string markazga_toldirish(const std::string& matn, std::size_t kenglik, char toldiruvchi = ' ') {
-    if (matn.size() >= kenglik) return matn;
-    std::size_t chap = (kenglik - matn.size()) / 2;
-    std::size_t ong  = kenglik - matn.size() - chap;
-    return std::string(chap, toldiruvchi) + matn + std::string(ong, toldiruvchi);
-}
-
-// ===== FORMAT (C++20) =====
-
-#if !defined(UZPP_EMBEDDED)
-template<typename... Args>
-[[nodiscard]] inline std::string formatlash(std::format_string<Args...> fmt, Args&&... args) {
-    return std::format(fmt, std::forward<Args>(args)...);
+    inline auto qirqish(const std::string& s)->std::string
+    {
+        return chapdan_qirqish(ongdan_qirqish(s));
+    }
+    inline auto raqammi(const std::string& s)->bool
+    {
+        if(s.empty())
+            {
+                return false;
+            }
+        std::size_t i = 0;
+        if(((s[i] == '-') ||(s[i] == '+')))
+            {
+                (i =(i + 1));
+            }
+        bool raqam_bor = false;
+        while(((i < s.size()) && std::isdigit(static_cast < unsigned char >(s[i]))))
+            {
+                (i =(i + 1));
+                (raqam_bor = true);
+            }
+        if(((i < s.size()) &&(s[i] == '.')))
+            {
+                (i =(i + 1));
+                while(((i < s.size()) && std::isdigit(static_cast < unsigned char >(s[i]))))
+                    {
+                        (i =(i + 1));
+                        (raqam_bor = true);
+                    }
+            }
+        return(raqam_bor &&(i == s.size()));
+    }
+    inline auto harflarmi(const std::string& s)->bool
+    {
+        if(s.empty())
+            {
+                return false;
+            }
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                if(! std::isalpha(static_cast < unsigned char >(s[i])))
+                    {
+                        return false;
+                    }
+            }
+        return true;
+    }
+    inline auto harf_raqamlami(const std::string& s)->bool
+    {
+        if(s.empty())
+            {
+                return false;
+            }
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                if(! std::isalnum(static_cast < unsigned char >(s[i])))
+                    {
+                        return false;
+                    }
+            }
+        return true;
+    }
+    inline auto ajratish(const std::string& s, const std::string& ajratuvchi)->std::vector<std::string>
+    {
+        std::vector<std::string> natija;
+        if(ajratuvchi.empty())
+            {
+                for(char c: s)
+                    {
+                        natija.push_back(std::string(1, c));
+                    }
+                return natija;
+            }
+        std::size_t boshi = 0;
+        std::size_t oxir = s.find(ajratuvchi);
+        while((oxir != std::string::npos))
+            {
+                natija.push_back(s.substr(boshi,(oxir - boshi)));
+                (boshi =(oxir + ajratuvchi.size()));
+                (oxir = s.find(ajratuvchi, boshi));
+            }
+        natija.push_back(s.substr(boshi));
+        return natija;
+    }
+    inline auto qatorlarga_ajratish(const std::string& s)->std::vector<std::string>
+    {
+        std::vector<std::string> natija;
+        std::string joriy;
+        for(char c: s)
+            {
+                if((c == '\n'))
+                    {
+                        if((! joriy.empty() &&(joriy.back() == '\r')))
+                            {
+                                joriy.pop_back();
+                            }
+                        natija.push_back(joriy);
+                        joriy.clear();
+                    }
+                else
+                    {
+                        (joriy =(joriy + std::string(1, c)));
+                    }
+            }
+        if((! joriy.empty() &&(joriy.back() == '\r')))
+            {
+                joriy.pop_back();
+            }
+        if(! joriy.empty())
+            {
+                natija.push_back(joriy);
+            }
+        return natija;
+    }
+    inline auto birlashtirish(const std::vector<std::string>& massiv, const std::string& biriktiruvchi)->std::string
+    {
+        if(massiv.empty())
+            {
+                return "";
+            }
+        std::string natija = massiv[0];
+        for(std::size_t i = 1;(i < massiv.size());(i =(i + 1)))
+            {
+                (natija =((natija + biriktiruvchi) + massiv[i]));
+            }
+        return natija;
+    }
+    inline auto chapdan_toldirish(const std::string& s, std::size_t kenglik, char toldiruvchi = ' ')->std::string
+    {
+        if((s.size() >= kenglik))
+            {
+                return s;
+            }
+        return(std::string((kenglik - s.size()), toldiruvchi) + s);
+    }
+    inline auto ongdan_toldirish(const std::string& s, std::size_t kenglik, char toldiruvchi = ' ')->std::string
+    {
+        if((s.size() >= kenglik))
+            {
+                return s;
+            }
+        return(s + std::string((kenglik - s.size()), toldiruvchi));
+    }
+    inline auto markazga_toldirish(const std::string& s, std::size_t kenglik, char toldiruvchi = ' ')->std::string
+    {
+        if((s.size() >= kenglik))
+            {
+                return s;
+            }
+        std::size_t chap =((kenglik - s.size()) / 2);
+        std::size_t ong =((kenglik - s.size()) - chap);
+        return((std::string(chap, toldiruvchi) + s) + std::string(ong, toldiruvchi));
+    }
+    inline auto butun_songa(const std::string& s)->int
+    {
+        try
+            {
+                return std::stoi(s);
+            }
+        catch(...)
+            {
+                throw std::invalid_argument(("Matn butun songa aylantirib bo'lmadi: " + s));
+            }
+    }
+    inline auto kasr_songa(const std::string& s)->std::optional<double>
+    {
+        try
+            {
+                return std::stod(s);
+            }
+        catch(...)
+            {
+                return std::nullopt;
+            }
+    }
+    inline auto songa_aylantirish(int n)->std::string
+    {
+        return std::to_string(n);
+    }
+    inline auto songa_aylantirish(double d)->std::string
+    {
+        return std::to_string(d);
+    }
+    inline auto songa_aylantirish(long long n)->std::string
+    {
+        return std::to_string(n);
+    }
+    inline auto qadar_qirqish(const std::string& s, std::size_t maks_uzunlik, const std::string& koʼpnuqta = "...")->std::string
+    {
+        if((s.size() <= maks_uzunlik))
+            {
+                return s;
+            }
+        if((koʼpnuqta.size() >= maks_uzunlik))
+            {
+                return koʼpnuqta.substr(0, maks_uzunlik);
+            }
+        return(s.substr(0,(maks_uzunlik - koʼpnuqta.size())) + koʼpnuqta);
+    }
+    inline auto qator_son(const std::string& s)->int
+    {
+        if(s.empty())
+            {
+                return 0;
+            }
+        int adad = 1;
+        for(char c: s)
+            {
+                if((c == '\n'))
+                    {
+                        (adad =(adad + 1));
+                    }
+            }
+        if((s.back() == '\n'))
+            {
+                (adad =(adad - 1));
+            }
+        return adad;
+    }
+    inline auto belgi_almashtirish(std::string s, char eski_belgi, char yangi_belgi)->std::string
+    {
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                if((s[i] == eski_belgi))
+                    {
+                        (s[i] = yangi_belgi);
+                    }
+            }
+        return s;
+    }
+    inline auto bosh_belgi(const std::string& s)->char
+    {
+        if(s.empty())
+            {
+                throw std::out_of_range("bosh_belgi: matn bo'sh");
+            }
+        return s.front();
+    }
+    inline auto oxir_belgi(const std::string& s)->char
+    {
+        if(s.empty())
+            {
+                throw std::out_of_range("oxir_belgi: matn bo'sh");
+            }
+        return s.back();
+    }
+    inline auto katta_yokib(const std::string& s)->bool
+    {
+        bool harf_bor = false;
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                auto c = static_cast < unsigned char >(s[i]);
+                if(std::isalpha(c))
+                    {
+                        (harf_bor = true);
+                        if(! std::isupper(c))
+                            {
+                                return false;
+                            }
+                    }
+            }
+        return harf_bor;
+    }
+    inline auto kichik_yokib(const std::string& s)->bool
+    {
+        bool harf_bor = false;
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                auto c = static_cast < unsigned char >(s[i]);
+                if(std::isalpha(c))
+                    {
+                        (harf_bor = true);
+                        if(! std::islower(c))
+                            {
+                                return false;
+                            }
+                    }
+            }
+        return harf_bor;
+    }
+    inline auto formatlash_indeksli(const std::string& naqsh, const std::vector<std::string>& argumentlar)->std::string
+    {
+        std::string natija;
+        natija.reserve(naqsh.size());
+        std::size_t i = 0;
+        while((i < naqsh.size()))
+            {
+                char c = naqsh[i];
+                if((c == '{'))
+                    {
+                        if((((i + 1) < naqsh.size()) &&(naqsh[(i + 1)] == '{')))
+                            {
+                                (natija =(natija + std::string(1, '{')));
+                                (i =(i + 2));
+                                continue;
+                            }
+                        std::size_t j =(i + 1);
+                        int indeks = 0;
+                        bool indeks_bor = false;
+                        while(((j < naqsh.size()) && std::isdigit(static_cast < unsigned char >(naqsh[j]))))
+                            {
+                                (indeks =((indeks * 10) +(naqsh[j] - '0')));
+                                (j =(j + 1));
+                                (indeks_bor = true);
+                            }
+                        if(((! indeks_bor ||(j >= naqsh.size())) ||(naqsh[j] != '}')))
+                            {
+                                throw std::invalid_argument(("formatlash_indeksli: noto'g'ri joy egasi pozitsiya " + std::to_string(i)));
+                            }
+                        if((static_cast < std::size_t >(indeks) >= argumentlar.size()))
+                            {
+                                throw std::out_of_range((("formatlash_indeksli: argument indeksi {" + std::to_string(indeks)) + "} chegaradan tashqari"));
+                            }
+                        (natija =(natija + argumentlar[static_cast < std::size_t >(indeks)]));
+                        (i =(j + 1));
+                        continue;
+                    }
+                if((c == '}'))
+                    {
+                        if((((i + 1) < naqsh.size()) &&(naqsh[(i + 1)] == '}')))
+                            {
+                                (natija =(natija + std::string(1, '}')));
+                                (i =(i + 2));
+                                continue;
+                            }
+                        throw std::invalid_argument(("formatlash_indeksli: yopish qavs '}' bo'sh joy egasi pozitsiya " + std::to_string(i)));
+                    }
+                (natija =(natija + std::string(1, c)));
+                (i =(i + 1));
+            }
+        return natija;
+    }
+    inline auto oxir_topish(const std::string& s, const std::string& qidiriluvchi)->std::optional<std::size_t>
+    {
+        auto p = s.rfind(qidiriluvchi);
+        if((p == std::string::npos))
+            {
+                return std::nullopt;
+            }
+        return p;
+    }
+    inline auto bir_marta_ajratish(const std::string& s, const std::string& boʼluvchi)->std::pair<std::string, std::string>
+    {
+        if(boʼluvchi.empty())
+            {
+                return std::make_pair(s, std::string(""));
+            }
+        auto p = s.find(boʼluvchi);
+        if((p == std::string::npos))
+            {
+                return std::make_pair(s, std::string(""));
+            }
+        return std::make_pair(s.substr(0, p), s.substr((p + boʼluvchi.size())));
+    }
+    inline auto belgilar_soni(const std::string& s)->std::size_t
+    {
+        std::size_t adad = 0;
+        for(char c: s)
+            {
+                auto b = static_cast < unsigned char >(c);
+                if(((b & 0xC0) != 0x80))
+                    {
+                        (adad =(adad + 1));
+                    }
+            }
+        return adad;
+    }
+    inline auto belgi_pozitsiyasi(const std::string& s, std::size_t belgi_indeks)->std::size_t
+    {
+        std::size_t joriy_belgi = 0;
+        for(std::size_t i = 0;(i < s.size());(i =(i + 1)))
+            {
+                auto b = static_cast < unsigned char >(s[i]);
+                if(((b & 0xC0) != 0x80))
+                    {
+                        if((joriy_belgi == belgi_indeks))
+                            {
+                                return i;
+                            }
+                        (joriy_belgi =(joriy_belgi + 1));
+                    }
+            }
+        return s.size();
+    }
+    inline auto chapdan_belgi_boʼyicha(const std::string& s, std::size_t n)->std::string
+    {
+        std::size_t oxir = belgi_pozitsiyasi(s, n);
+        return s.substr(0, oxir);
+    }
+    inline auto ongdan_belgi_boʼyicha(const std::string& s, std::size_t n)->std::string
+    {
+        std::size_t jami = belgilar_soni(s);
+        if((n >= jami))
+            {
+                return s;
+            }
+        std::size_t boshi = belgi_pozitsiyasi(s,(jami - n));
+        return s.substr(boshi);
+    }
+    inline auto qism_matn_belgi_boʼyicha(const std::string& s, std::size_t boshlanish, std::size_t uzunlik = std::string::npos)->std::string
+    {
+        std::size_t bayt_boshi = belgi_pozitsiyasi(s, boshlanish);
+        if((bayt_boshi >= s.size()))
+            {
+                return "";
+            }
+        if((uzunlik == std::string::npos))
+            {
+                return s.substr(bayt_boshi);
+            }
+        std::size_t bayt_oxiri = belgi_pozitsiyasi(s,(boshlanish + uzunlik));
+        return s.substr(bayt_boshi,(bayt_oxiri - bayt_boshi));
+    }
+    inline auto belgi_uzunligi(char boshlovchi_bayt)->std::size_t
+    {
+        auto b = static_cast < unsigned char >(boshlovchi_bayt);
+        if(((b & 0x80) == 0x00))
+            return 1;
+        if(((b & 0xE0) == 0xC0))
+            return 2;
+        if(((b & 0xF0) == 0xE0))
+            return 3;
+        if(((b & 0xF8) == 0xF0))
+            return 4;
+        return 1;
+    }
+    inline auto belgi_olish(const std::string& s, std::size_t belgi_indeks)->std::string
+    {
+        std::size_t p = belgi_pozitsiyasi(s, belgi_indeks);
+        if((p >= s.size()))
+            {
+                return "";
+            }
+        std::size_t bayt_uzunligi = belgi_uzunligi(s[p]);
+        if(((p + bayt_uzunligi) > s.size()))
+            {
+                (bayt_uzunligi =(s.size() - p));
+            }
+        return s.substr(p, bayt_uzunligi);
+    }
+    class RegEx {
+    private:
+        std::regex regex_;
+    public:
+        RegEx(const std::string& naqsh, bool katta_kichik_farqsiz = false) : regex_ ( naqsh , katta_kichik_farqsiz ? std :: regex :: icase : std :: regex :: ECMAScript )
+        {
+        }
+        bool mos(const std::string& s) const
+        {
+            return std::regex_match(s, regex_);
+        }
+        bool qidirish(const std::string& s) const
+        {
+            return std::regex_search(s, regex_);
+        }
+        std::string almashtirish(const std::string& s, const std::string& yangisi) const
+        {
+            return std::regex_replace(s, regex_, yangisi);
+        }
+        std::vector<std::string> topish_hammasi(const std::string& s) const
+        {
+            std::vector<std::string> natija;
+            auto it = std::sregex_iterator(s.begin(), s.end(), regex_);
+            auto oxir = std::sregex_iterator();
+            while((it != oxir))
+                {
+                    natija.push_back((* it)[0].str());
+                    ++ it;
+                }
+            return natija;
+        }
+    };
 }
 #endif
-
-// ===== REGEX =====
-
-class RegEx {
-public:
-    explicit RegEx(const std::string& naqsh, bool katta_kichik_farqsiz = false)
-        : regex_(naqsh, katta_kichik_farqsiz ? std::regex::icase : std::regex::ECMAScript) {}
-
-    [[nodiscard]] bool mos(const std::string& matn) const {
-        return std::regex_match(matn, regex_);
-    }
-    [[nodiscard]] bool qidirish(const std::string& matn) const {
-        return std::regex_search(matn, regex_);
-    }
-    [[nodiscard]] std::string almashtirish(const std::string& matn, const std::string& yangi) const {
-        return std::regex_replace(matn, regex_, yangi);
-    }
-    [[nodiscard]] std::vector<std::string> topish_hammasi(const std::string& matn) const {
-        std::vector<std::string> natija;
-        auto it  = std::sregex_iterator(matn.begin(), matn.end(), regex_);
-        auto end = std::sregex_iterator();
-        for (; it != end; ++it) natija.push_back((*it)[0].str());
-        return natija;
-    }
-    [[nodiscard]] std::vector<std::string> guruhlar(const std::string& matn) const {
-        std::smatch m;
-        if (!std::regex_search(matn, m, regex_)) return {};
-        std::vector<std::string> natija;
-        for (std::size_t i = 1; i < m.size(); ++i) natija.push_back(m[i].str());
-        return natija;
-    }
-
-private:
-    std::regex regex_;
-};
-
-// ===== UNICODE-YORDAMCHI =====
-
-[[nodiscard]] inline std::size_t uzunlik(const std::string& matn) noexcept {
-    return matn.size();
-}
-
-} // namespace uzpp::Matn

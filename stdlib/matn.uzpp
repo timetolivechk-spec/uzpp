@@ -1,0 +1,626 @@
+// uz++ — Matn (string) kutubxonasi, uz++ tilida qayta yozilgan.
+// Bu fayl `stdlib/matn.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+// Joriy `asosiy()` har bir funksiyani sinab ko'radi; header-mode generatsiya
+// uni avtomatik chiqaradi (yuqori darajadagi `funksiya` va `butun` tuguni
+// chiqarilmaydi — faqat namespace ichidagi declarations qoladi).
+
+ulash <regex>
+ulash <cctype>
+ulash <algorithm>
+ulash <optional>
+ulash <sstream>
+ulash <stdexcept>
+ulash <string>
+ulash <utility>
+
+nomlar_fazosi uzpp::Matn {
+
+// ===== UZUNLIK / BO'SHLIQ TEKSHIRUVI =====
+
+funksiya uzunlik(o'zgarmas matn& s) -> hajm_turi {
+    qaytarish s.size();
+}
+
+funksiya boshmi(o'zgarmas matn& s) -> mantiqiy {
+    qaytarish s.empty();
+}
+
+funksiya bosh_emasmi(o'zgarmas matn& s) -> mantiqiy {
+    qaytarish !s.empty();
+}
+
+// ===== QIDIRISH =====
+
+funksiya boshlanganda(o'zgarmas matn& s, o'zgarmas matn& prefiks) -> mantiqiy {
+    qaytarish s.starts_with(prefiks);
+}
+
+funksiya tugaganda(o'zgarmas matn& s, o'zgarmas matn& sufiks) -> mantiqiy {
+    qaytarish s.ends_with(sufiks);
+}
+
+funksiya ichida(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> mantiqiy {
+    qaytarish s.find(qidiriluvchi) != matn::npos;
+}
+
+funksiya topish(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi, hajm_turi boshlanish = 0) -> ixtiyoriy<hajm_turi> {
+    o'zgaruvchan p = s.find(qidiriluvchi, boshlanish);
+    agar (p == matn::npos) {
+        qaytarish std::nullopt;
+    }
+    qaytarish p;
+}
+
+funksiya hisoblash(o'zgarmas matn& s, o'zgarmas matn& naqsh) -> butun {
+    agar (naqsh.empty()) {
+        qaytarish 0;
+    }
+    butun adad = 0;
+    hajm_turi pos = 0;
+    toki ((pos = s.find(naqsh, pos)) != matn::npos) {
+        adad = adad + 1;
+        pos = pos + naqsh.size();
+    }
+    qaytarish adad;
+}
+
+// ===== KESISH =====
+
+funksiya qism_matn(o'zgarmas matn& s, hajm_turi boshlanish, hajm_turi uzunlik = matn::npos) -> matn {
+    agar (boshlanish >= s.size()) {
+        qaytarish "";
+    }
+    qaytarish s.substr(boshlanish, uzunlik);
+}
+
+funksiya chapdan(o'zgarmas matn& s, hajm_turi n) -> matn {
+    agar (n >= s.size()) {
+        qaytarish s;
+    }
+    qaytarish s.substr(0, n);
+}
+
+funksiya ongdan(o'zgarmas matn& s, hajm_turi n) -> matn {
+    agar (n >= s.size()) {
+        qaytarish s;
+    }
+    qaytarish s.substr(s.size() - n);
+}
+
+// ===== O'ZGARTIRISH =====
+
+funksiya kichik_harfga(matn s) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        s[i] = statik_otkazish<belgi>(std::tolower(statik_otkazish<musbat_belgi>(s[i])));
+    }
+    qaytarish s;
+}
+
+funksiya katta_harfga(matn s) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        s[i] = statik_otkazish<belgi>(std::toupper(statik_otkazish<musbat_belgi>(s[i])));
+    }
+    qaytarish s;
+}
+
+funksiya birinchi_harfni_katta(matn s) -> matn {
+    agar (!s.empty()) {
+        s[0] = statik_otkazish<belgi>(std::toupper(statik_otkazish<musbat_belgi>(s[0])));
+    }
+    qaytarish s;
+}
+
+funksiya teskari(matn s) -> matn {
+    std::reverse(s.begin(), s.end());
+    qaytarish s;
+}
+
+funksiya takrorlash(o'zgarmas matn& s, butun marotaba) -> matn {
+    agar (marotaba <= 0) {
+        qaytarish "";
+    }
+    matn natija;
+    natija.reserve(s.size() * statik_otkazish<hajm_turi>(marotaba));
+    uchun (butun i = 0; i < marotaba; i = i + 1) {
+        natija = natija + s;
+    }
+    qaytarish natija;
+}
+
+funksiya almashtirish(matn s, o'zgarmas matn& eski, o'zgarmas matn& yangisi) -> matn {
+    agar (eski.empty()) {
+        qaytarish s;
+    }
+    hajm_turi pos = 0;
+    toki ((pos = s.find(eski, pos)) != matn::npos) {
+        s.replace(pos, eski.size(), yangisi);
+        pos = pos + yangisi.size();
+    }
+    qaytarish s;
+}
+
+funksiya birinchi_almashtirish(o'zgarmas matn& s, o'zgarmas matn& eski, o'zgarmas matn& yangisi) -> matn {
+    matn natija = s;
+    o'zgaruvchan p = natija.find(eski);
+    agar (p != matn::npos) {
+        natija.replace(p, eski.size(), yangisi);
+    }
+    qaytarish natija;
+}
+
+// ===== TOZALASH / QIRQISH =====
+
+funksiya chapdan_qirqish(o'zgarmas matn& s) -> matn {
+    hajm_turi i = 0;
+    toki (i < s.size() && std::isspace(statik_otkazish<musbat_belgi>(s[i]))) {
+        i = i + 1;
+    }
+    qaytarish s.substr(i);
+}
+
+funksiya ongdan_qirqish(o'zgarmas matn& s) -> matn {
+    agar (s.empty()) {
+        qaytarish s;
+    }
+    hajm_turi i = s.size();
+    toki (i > 0 && std::isspace(statik_otkazish<musbat_belgi>(s[i - 1]))) {
+        i = i - 1;
+    }
+    qaytarish s.substr(0, i);
+}
+
+funksiya qirqish(o'zgarmas matn& s) -> matn {
+    qaytarish chapdan_qirqish(ongdan_qirqish(s));
+}
+
+// ===== TEKSHIRISH =====
+
+funksiya raqammi(o'zgarmas matn& s) -> mantiqiy {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    hajm_turi i = 0;
+    agar (s[i] == '-' || s[i] == '+') {
+        i = i + 1;
+    }
+    mantiqiy raqam_bor = yolg'on;
+    toki (i < s.size() && std::isdigit(statik_otkazish<musbat_belgi>(s[i]))) {
+        i = i + 1;
+        raqam_bor = rost;
+    }
+    agar (i < s.size() && s[i] == '.') {
+        i = i + 1;
+        toki (i < s.size() && std::isdigit(statik_otkazish<musbat_belgi>(s[i]))) {
+            i = i + 1;
+            raqam_bor = rost;
+        }
+    }
+    qaytarish raqam_bor && i == s.size();
+}
+
+funksiya harflarmi(o'zgarmas matn& s) -> mantiqiy {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (!std::isalpha(statik_otkazish<musbat_belgi>(s[i]))) {
+            qaytarish yolg'on;
+        }
+    }
+    qaytarish rost;
+}
+
+funksiya harf_raqamlami(o'zgarmas matn& s) -> mantiqiy {
+    agar (s.empty()) {
+        qaytarish yolg'on;
+    }
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (!std::isalnum(statik_otkazish<musbat_belgi>(s[i]))) {
+            qaytarish yolg'on;
+        }
+    }
+    qaytarish rost;
+}
+
+// ===== BO'LISH / BIRLASHTIRISH =====
+
+funksiya ajratish(o'zgarmas matn& s, o'zgarmas matn& ajratuvchi) -> vektor<matn> {
+    vektor<matn> natija;
+    agar (ajratuvchi.empty()) {
+        uchun (belgi c : s) {
+            natija.push_back(matn(1, c));
+        }
+        qaytarish natija;
+    }
+    hajm_turi boshi = 0;
+    hajm_turi oxir = s.find(ajratuvchi);
+    toki (oxir != matn::npos) {
+        natija.push_back(s.substr(boshi, oxir - boshi));
+        boshi = oxir + ajratuvchi.size();
+        oxir = s.find(ajratuvchi, boshi);
+    }
+    natija.push_back(s.substr(boshi));
+    qaytarish natija;
+}
+
+funksiya qatorlarga_ajratish(o'zgarmas matn& s) -> vektor<matn> {
+    vektor<matn> natija;
+    matn joriy;
+    uchun (belgi c : s) {
+        agar (c == '\n') {
+            agar (!joriy.empty() && joriy.back() == '\r') {
+                joriy.pop_back();
+            }
+            natija.push_back(joriy);
+            joriy.clear();
+        } aks {
+            joriy = joriy + matn(1, c);
+        }
+    }
+    agar (!joriy.empty() && joriy.back() == '\r') {
+        joriy.pop_back();
+    }
+    agar (!joriy.empty()) {
+        natija.push_back(joriy);
+    }
+    qaytarish natija;
+}
+
+funksiya birlashtirish(o'zgarmas vektor<matn>& massiv, o'zgarmas matn& biriktiruvchi) -> matn {
+    agar (massiv.empty()) {
+        qaytarish "";
+    }
+    matn natija = massiv[0];
+    uchun (hajm_turi i = 1; i < massiv.size(); i = i + 1) {
+        natija = natija + biriktiruvchi + massiv[i];
+    }
+    qaytarish natija;
+}
+
+// ===== TO'LDIRISH =====
+
+funksiya chapdan_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    qaytarish matn(kenglik - s.size(), toldiruvchi) + s;
+}
+
+funksiya ongdan_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    qaytarish s + matn(kenglik - s.size(), toldiruvchi);
+}
+
+funksiya markazga_toldirish(o'zgarmas matn& s, hajm_turi kenglik, belgi toldiruvchi = ' ') -> matn {
+    agar (s.size() >= kenglik) {
+        qaytarish s;
+    }
+    hajm_turi chap = (kenglik - s.size()) / 2;
+    hajm_turi ong = kenglik - s.size() - chap;
+    qaytarish matn(chap, toldiruvchi) + s + matn(ong, toldiruvchi);
+}
+
+// ===== KONVERSIYA =====
+
+funksiya butun_songa(o'zgarmas matn& s) -> butun {
+    urinish {
+        qaytarish std::stoi(s);
+    } ushlash (...) {
+        irgitish std::invalid_argument("Matn butun songa aylantirib bo'lmadi: " + s);
+    }
+}
+
+funksiya kasr_songa(o'zgarmas matn& s) -> ixtiyoriy<haqiqiy> {
+    urinish {
+        qaytarish std::stod(s);
+    } ushlash (...) {
+        qaytarish std::nullopt;
+    }
+}
+
+funksiya songa_aylantirish(butun n) -> matn {
+    qaytarish std::to_string(n);
+}
+
+funksiya songa_aylantirish(haqiqiy d) -> matn {
+    qaytarish std::to_string(d);
+}
+
+funksiya songa_aylantirish(uzun_uzun n) -> matn {
+    qaytarish std::to_string(n);
+}
+
+// ===== QO'SHIMCHA YORDAMCHILAR =====
+
+// Matnni `maks_uzunlik` belgigacha qisqartiradi va kerak bo'lsa `ko'pnuqta`ni
+// (masalan "...") qo'shadi. Agar matn allaqachon qisqa bo'lsa, o'zgarishsiz qaytadi.
+funksiya qadar_qirqish(o'zgarmas matn& s, hajm_turi maks_uzunlik, o'zgarmas matn& ko'pnuqta = "...") -> matn {
+    agar (s.size() <= maks_uzunlik) {
+        qaytarish s;
+    }
+    agar (ko'pnuqta.size() >= maks_uzunlik) {
+        qaytarish ko'pnuqta.substr(0, maks_uzunlik);
+    }
+    qaytarish s.substr(0, maks_uzunlik - ko'pnuqta.size()) + ko'pnuqta;
+}
+
+// '\n' bo'yicha qatorlar sonini sanaydi (oxirgi qator '\n' bilan tugamasa ham
+// hisobga olinadi).
+funksiya qator_son(o'zgarmas matn& s) -> butun {
+    agar (s.empty()) {
+        qaytarish 0;
+    }
+    butun adad = 1;
+    uchun (belgi c : s) {
+        agar (c == '\n') {
+            adad = adad + 1;
+        }
+    }
+    agar (s.back() == '\n') {
+        adad = adad - 1;
+    }
+    qaytarish adad;
+}
+
+// Har bir `eski_belgi`ni `yangi_belgi`ga almashtiradi. Bu `almashtirish` ning
+// belgi-darajasidagi tezkor variantidir (substring-search siz).
+funksiya belgi_almashtirish(matn s, belgi eski_belgi, belgi yangi_belgi) -> matn {
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        agar (s[i] == eski_belgi) {
+            s[i] = yangi_belgi;
+        }
+    }
+    qaytarish s;
+}
+
+// Birinchi belgini qaytaradi. Matn bo'sh bo'lsa, std::out_of_range otiladi.
+funksiya bosh_belgi(o'zgarmas matn& s) -> belgi {
+    agar (s.empty()) {
+        irgitish std::out_of_range("bosh_belgi: matn bo'sh");
+    }
+    qaytarish s.front();
+}
+
+// Oxirgi belgini qaytaradi. Matn bo'sh bo'lsa, std::out_of_range otiladi.
+funksiya oxir_belgi(o'zgarmas matn& s) -> belgi {
+    agar (s.empty()) {
+        irgitish std::out_of_range("oxir_belgi: matn bo'sh");
+    }
+    qaytarish s.back();
+}
+
+// Matnda kamida bitta harf bor va barcha harflar katta (uppercase) bo'lsa rost.
+// Raqamlar va belgilar tekshirilmaydi.
+funksiya katta_yokib(o'zgarmas matn& s) -> mantiqiy {
+    mantiqiy harf_bor = yolg'on;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan c = statik_otkazish<musbat_belgi>(s[i]);
+        agar (std::isalpha(c)) {
+            harf_bor = rost;
+            agar (!std::isupper(c)) {
+                qaytarish yolg'on;
+            }
+        }
+    }
+    qaytarish harf_bor;
+}
+
+// Matnda kamida bitta harf bor va barcha harflar kichik (lowercase) bo'lsa rost.
+funksiya kichik_yokib(o'zgarmas matn& s) -> mantiqiy {
+    mantiqiy harf_bor = yolg'on;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan c = statik_otkazish<musbat_belgi>(s[i]);
+        agar (std::isalpha(c)) {
+            harf_bor = rost;
+            agar (!std::islower(c)) {
+                qaytarish yolg'on;
+            }
+        }
+    }
+    qaytarish harf_bor;
+}
+
+// Pozitsion `{0}`, `{1}` ... `{N}` joy egalaridan iborat naqshni argumentlar
+// bilan to'ldiradi. `{{` va `}}` bitta qavs sifatida chiqariladi.
+//   formatlash_indeksli("Salom, {0}! Sizga {1} yoshda.", {"Olim", "42"})
+//   → "Salom, Olim! Sizga 42 yoshda."
+funksiya formatlash_indeksli(o'zgarmas matn& naqsh, o'zgarmas vektor<matn>& argumentlar) -> matn {
+    matn natija;
+    natija.reserve(naqsh.size());
+    hajm_turi i = 0;
+    toki (i < naqsh.size()) {
+        belgi c = naqsh[i];
+        agar (c == '{') {
+            agar (i + 1 < naqsh.size() && naqsh[i + 1] == '{') {
+                natija = natija + matn(1, '{');
+                i = i + 2;
+                davom_etish;
+            }
+            // Indeksni o'qish
+            hajm_turi j = i + 1;
+            butun indeks = 0;
+            mantiqiy indeks_bor = yolg'on;
+            toki (j < naqsh.size() && std::isdigit(statik_otkazish<musbat_belgi>(naqsh[j]))) {
+                indeks = indeks * 10 + (naqsh[j] - '0');
+                j = j + 1;
+                indeks_bor = rost;
+            }
+            agar (!indeks_bor || j >= naqsh.size() || naqsh[j] != '}') {
+                irgitish std::invalid_argument(
+                    "formatlash_indeksli: noto'g'ri joy egasi pozitsiya " +
+                    std::to_string(i));
+            }
+            agar (statik_otkazish<hajm_turi>(indeks) >= argumentlar.size()) {
+                irgitish std::out_of_range(
+                    "formatlash_indeksli: argument indeksi {" +
+                    std::to_string(indeks) + "} chegaradan tashqari");
+            }
+            natija = natija + argumentlar[statik_otkazish<hajm_turi>(indeks)];
+            i = j + 1;
+            davom_etish;
+        }
+        agar (c == '}') {
+            agar (i + 1 < naqsh.size() && naqsh[i + 1] == '}') {
+                natija = natija + matn(1, '}');
+                i = i + 2;
+                davom_etish;
+            }
+            irgitish std::invalid_argument(
+                "formatlash_indeksli: yopish qavs '}' bo'sh joy egasi pozitsiya " +
+                std::to_string(i));
+        }
+        natija = natija + matn(1, c);
+        i = i + 1;
+    }
+    qaytarish natija;
+}
+
+// Naqshni oxiridan boshlab izlash (right-find). Topilmasa nullopt.
+funksiya oxir_topish(o'zgarmas matn& s, o'zgarmas matn& qidiriluvchi) -> ixtiyoriy<hajm_turi> {
+    o'zgaruvchan p = s.rfind(qidiriluvchi);
+    agar (p == matn::npos) {
+        qaytarish std::nullopt;
+    }
+    qaytarish p;
+}
+
+// Matnni `bo'luvchi` bo'yicha birinchi marta uchragan joyida ikkiga bo'ladi.
+// Bo'luvchi topilmasa, juftlikning birinchi qismi = s, ikkinchisi = "".
+funksiya bir_marta_ajratish(o'zgarmas matn& s, o'zgarmas matn& bo'luvchi) -> juftlik<matn, matn> {
+    agar (bo'luvchi.empty()) {
+        qaytarish std::make_pair(s, matn(""));
+    }
+    o'zgaruvchan p = s.find(bo'luvchi);
+    agar (p == matn::npos) {
+        qaytarish std::make_pair(s, matn(""));
+    }
+    qaytarish std::make_pair(s.substr(0, p), s.substr(p + bo'luvchi.size()));
+}
+
+// ===== UNICODE (UTF-8) =====
+// Bu funksiyalar matnni UTF-8 belgilar (kodli nuqtalar) bo'yicha hisoblaydi.
+// "salom" — 5 bayt, 5 belgi. "Салом" — 10 bayt, 5 belgi.
+// `uzunlik`/`qism_matn` baytlar bo'yicha; bu funksiyalar — belgilarda.
+
+// UTF-8 ning birinchi (boshlovchi) baytlarini sanaydi.
+// Continuation baytlar (`10xx_xxxx`) hisoblanmaydi.
+funksiya belgilar_soni(o'zgarmas matn& s) -> hajm_turi {
+    hajm_turi adad = 0;
+    uchun (belgi c : s) {
+        o'zgaruvchan b = statik_otkazish<musbat_belgi>(c);
+        agar ((b & 0xC0) != 0x80) {
+            adad = adad + 1;
+        }
+    }
+    qaytarish adad;
+}
+
+// Belgi indeksini UTF-8 baytlar bo'yicha pozitsiyaga aylantiradi.
+// Indeks belgilar sonidan kattaroq bo'lsa, matn uzunligi qaytariladi.
+funksiya belgi_pozitsiyasi(o'zgarmas matn& s, hajm_turi belgi_indeks) -> hajm_turi {
+    hajm_turi joriy_belgi = 0;
+    uchun (hajm_turi i = 0; i < s.size(); i = i + 1) {
+        o'zgaruvchan b = statik_otkazish<musbat_belgi>(s[i]);
+        agar ((b & 0xC0) != 0x80) {
+            agar (joriy_belgi == belgi_indeks) {
+                qaytarish i;
+            }
+            joriy_belgi = joriy_belgi + 1;
+        }
+    }
+    qaytarish s.size();
+}
+
+// Matnning birinchi `n` belgisini (UTF-8 codepoints) qaytaradi.
+funksiya chapdan_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi n) -> matn {
+    hajm_turi oxir = belgi_pozitsiyasi(s, n);
+    qaytarish s.substr(0, oxir);
+}
+
+// Matnning oxirgi `n` belgisini (UTF-8 codepoints) qaytaradi.
+funksiya ongdan_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi n) -> matn {
+    hajm_turi jami = belgilar_soni(s);
+    agar (n >= jami) {
+        qaytarish s;
+    }
+    hajm_turi boshi = belgi_pozitsiyasi(s, jami - n);
+    qaytarish s.substr(boshi);
+}
+
+// Belgilar (codepoints) bo'yicha qism-matn.
+//   qism_matn_belgi_bo'yicha("Салом, дунё", 2, 3) → "лом"
+funksiya qism_matn_belgi_bo'yicha(o'zgarmas matn& s, hajm_turi boshlanish, hajm_turi uzunlik = matn::npos) -> matn {
+    hajm_turi bayt_boshi = belgi_pozitsiyasi(s, boshlanish);
+    agar (bayt_boshi >= s.size()) {
+        qaytarish "";
+    }
+    agar (uzunlik == matn::npos) {
+        qaytarish s.substr(bayt_boshi);
+    }
+    hajm_turi bayt_oxiri = belgi_pozitsiyasi(s, boshlanish + uzunlik);
+    qaytarish s.substr(bayt_boshi, bayt_oxiri - bayt_boshi);
+}
+
+// Berilgan UTF-8 belgini ko'pligini (byte length) qaytaradi. Buzilgan UTF-8 da 1.
+funksiya belgi_uzunligi(belgi boshlovchi_bayt) -> hajm_turi {
+    o'zgaruvchan b = statik_otkazish<musbat_belgi>(boshlovchi_bayt);
+    agar ((b & 0x80) == 0x00) qaytarish 1;
+    agar ((b & 0xE0) == 0xC0) qaytarish 2;
+    agar ((b & 0xF0) == 0xE0) qaytarish 3;
+    agar ((b & 0xF8) == 0xF0) qaytarish 4;
+    qaytarish 1; // buzilgan kodlash — bir bayt sifatida muomala qilamiz
+}
+
+// Indeks bo'yicha bitta UTF-8 belgini matn sifatida qaytaradi
+// (1-4 baytdan iborat bo'lishi mumkin).
+funksiya belgi_olish(o'zgarmas matn& s, hajm_turi belgi_indeks) -> matn {
+    hajm_turi p = belgi_pozitsiyasi(s, belgi_indeks);
+    agar (p >= s.size()) {
+        qaytarish "";
+    }
+    hajm_turi bayt_uzunligi = belgi_uzunligi(s[p]);
+    agar (p + bayt_uzunligi > s.size()) {
+        bayt_uzunligi = s.size() - p;
+    }
+    qaytarish s.substr(p, bayt_uzunligi);
+}
+
+// ===== REGEX =====
+
+sinf RegEx {
+ochiq:
+    RegEx(o'zgarmas matn& naqsh, mantiqiy katta_kichik_farqsiz = yolg'on)
+        : regex_(naqsh, katta_kichik_farqsiz ? std::regex::icase : std::regex::ECMAScript) {}
+
+    mantiqiy mos(o'zgarmas matn& s) o'zgarmas {
+        qaytarish std::regex_match(s, regex_);
+    }
+
+    mantiqiy qidirish(o'zgarmas matn& s) o'zgarmas {
+        qaytarish std::regex_search(s, regex_);
+    }
+
+    matn almashtirish(o'zgarmas matn& s, o'zgarmas matn& yangisi) o'zgarmas {
+        qaytarish std::regex_replace(s, regex_, yangisi);
+    }
+
+    vektor<matn> topish_hammasi(o'zgarmas matn& s) o'zgarmas {
+        vektor<matn> natija;
+        o'zgaruvchan it = std::sregex_iterator(s.begin(), s.end(), regex_);
+        o'zgaruvchan oxir = std::sregex_iterator();
+        toki (it != oxir) {
+            natija.push_back((*it)[0].str());
+            ++it;
+        }
+        qaytarish natija;
+    }
+
+yopiq:
+    std::regex regex_;
+};
+
+} // nomlar_fazosi uzpp::Matn
+
