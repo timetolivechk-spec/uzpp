@@ -68,17 +68,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (GCC-15 via toolchain PPA)
         run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update -qq
-          sudo apt-get install -y gcc-14 g++-14 cmake ninja-build
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+          # libstdc++-15-dev brings the <generator> header (C++23 coroutines)
+          # that gcc-14 / its libstdc++ doesn't ship. Required for tests like
+          # test_coyield.uzpp.
+          sudo apt-get install -y gcc-15 g++-15 libstdc++-15-dev cmake ninja-build
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
 
       - name: Build
         env:
-          CC: gcc-14
-          CXX: g++-14
+          CC: gcc-15
+          CXX: g++-15
         run: |
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
           cmake --build build --config Release

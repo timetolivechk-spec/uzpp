@@ -128,7 +128,10 @@ jobs:
         run: |
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update -qq
-          sudo apt-get install -y gcc-15 g++-15 cmake ninja-build libx11-dev libgl1-mesa-dev
+          # libstdc++-15-dev is required for <generator> (C++23 coroutines)
+          # — gcc-15 ships the compiler but the matching libstdc++ headers
+          # come as a separate package on Ubuntu.
+          sudo apt-get install -y gcc-15 g++-15 libstdc++-15-dev cmake ninja-build libx11-dev libgl1-mesa-dev
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
           g++-15 --version
