@@ -45,6 +45,7 @@ private:
     void formatExpressionStatement(const ExpressionStatement* stmt);
     void formatVariableDeclaration(const VariableDeclaration* decl);
     void formatMatchStatement(const MatchStatement* stmt);
+    void formatTryStatement(const TryStatement* stmt);
 
     // Expressions
     void formatExpression(const Expression* expr);

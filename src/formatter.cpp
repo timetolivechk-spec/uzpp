@@ -307,32 +307,70 @@ void Formatter::formatStatement(const Statement* stmt) {
             formatBlock(static_cast<const Block*>(stmt));
             break;
         case ASTNodeType::IfStatement:
+            emitLeadingComments(static_cast<const IfStatement*>(stmt)->getIfToken());
             formatIfStatement(static_cast<const IfStatement*>(stmt));
             break;
         case ASTNodeType::WhileStatement:
+            emitLeadingComments(static_cast<const WhileStatement*>(stmt)->getWhileToken());
             formatWhileStatement(static_cast<const WhileStatement*>(stmt));
             break;
         case ASTNodeType::ForStatement:
+            emitLeadingComments(static_cast<const ForStatement*>(stmt)->getForToken());
             formatForStatement(static_cast<const ForStatement*>(stmt));
             break;
         case ASTNodeType::ReturnStatement:
+            emitLeadingComments(static_cast<const ReturnStatement*>(stmt)->getReturnToken());
             formatReturnStatement(static_cast<const ReturnStatement*>(stmt));
             break;
         case ASTNodeType::BreakStatement:
+            emitLeadingComments(static_cast<const BreakStatement*>(stmt)->getBreakToken());
             writeIndent(); emitRaw("to'xtatish;"); emitNewline();
             break;
         case ASTNodeType::ContinueStatement:
+            emitLeadingComments(static_cast<const ContinueStatement*>(stmt)->getContinueToken());
             writeIndent(); emitRaw("davom_etish;"); emitNewline();
             break;
-        case ASTNodeType::ExpressionStatement:
-            formatExpressionStatement(static_cast<const ExpressionStatement*>(stmt));
+        case ASTNodeType::ExpressionStatement: {
+            auto* es = static_cast<const ExpressionStatement*>(stmt);
+            if (es->getExpression()) {
+                Token exprToken;
+                switch (es->getExpression()->getType()) {
+                    case ASTNodeType::LiteralExpression:
+                        exprToken = static_cast<const LiteralExpression*>(es->getExpression())->getSourceToken();
+                        break;
+                    case ASTNodeType::IdentifierExpression:
+                        exprToken = static_cast<const IdentifierExpression*>(es->getExpression())->getSourceToken();
+                        break;
+                    case ASTNodeType::BinaryExpression:
+                        exprToken = static_cast<const BinaryExpression*>(es->getExpression())->getOperatorToken();
+                        break;
+                    default: break;
+                }
+                emitLeadingComments(exprToken);
+            }
+            formatExpressionStatement(es);
             break;
+        }
         case ASTNodeType::VariableDeclaration:
+            emitLeadingComments(static_cast<const VariableDeclaration*>(stmt)->getDeclToken());
             formatVariableDeclaration(static_cast<const VariableDeclaration*>(stmt));
             break;
         case ASTNodeType::MatchStatement:
+            emitLeadingComments(static_cast<const MatchStatement*>(stmt)->getMatchToken());
             formatMatchStatement(static_cast<const MatchStatement*>(stmt));
             break;
+        case ASTNodeType::TryStatement: {
+            auto* ts = static_cast<const TryStatement*>(stmt);
+            emitLeadingComments(ts->getTryToken());
+            formatTryStatement(ts);
+            break;
+        }
+        case ASTNodeType::StatementList: {
+            auto* sl = static_cast<const StatementList*>(stmt);
+            for (const auto& s : sl->getStatements())
+                formatStatement(s.get());
+            break;
+        }
         default:
             break;
     }
@@ -483,6 +521,22 @@ void Formatter::formatMatchStatement(const MatchStatement* stmt) {
     writeIndent();
     emitRaw("}");
     emitNewline();
+}
+
+void Formatter::formatTryStatement(const TryStatement* stmt) {
+    if (!stmt) return;
+    writeIndent();
+    emitRaw("urinish");
+    emitNewline();
+    formatBlock(stmt->getTryBlock());
+    for (const auto& cc : stmt->getCatchClauses()) {
+        writeIndent();
+        emitRaw("ushlash (");
+        emitRaw(cc->exceptionDecl);
+        emitRaw(")");
+        emitNewline();
+        formatBlock(cc->block.get());
+    }
 }
 
 // ===== EXPRESSIONS =====
