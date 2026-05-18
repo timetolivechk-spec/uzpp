@@ -61,6 +61,105 @@ jobs:
           name: uzpp-windows-x64
           path: uzpp-windows-x64.zip
 
+      # Stash the freshly-built uzpp.exe so the installer job can use it
+      # without re-compiling.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-windows-exe-raw
+          path: build/uzpp.exe
+
+  # ──────────────────────────────────────────────────────────
+  # Build uzpp-setup.exe — single Inno-Setup-packaged installer that
+  # bundles uzpp.exe + stdlib + misollar + MinGW so end users get a
+  # "download → double-click → done" experience.
+  # ──────────────────────────────────────────────────────────
+  build-windows-installer:
+    name: Windows — uzpp-setup.exe (Inno Setup)
+    needs: [build-windows, package-mingw]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version"
+
+      - name: Download uzpp.exe artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: uzpp-windows-exe-raw
+          path: artifacts/uzpp
+
+      - name: Download MinGW artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mingw-w64-windows
+          path: artifacts/mingw
+
+      - name: Stage dist/ for Inno Setup
+        shell: pwsh
+        run: |
+          $dist = "dist"
+          New-Item -ItemType Directory -Path $dist -Force | Out-Null
+
+          # uzpp.exe + stdlib + misollar + LICENSE
+          Copy-Item artifacts/uzpp/uzpp.exe $dist/
+          Copy-Item -Recurse stdlib   $dist/stdlib
+          Copy-Item -Recurse misollar $dist/misollar
+          Copy-Item LICENSE $dist/LICENSE.txt
+
+          # README.txt shown by installer after install
+          @"
+          uz++ - O'zbek Dasturlash Tili
+          =============================
+
+          Tezda ishga tushirish | Quick start:
+            uzpp ishga-tushirish misollar\01_salom_dunyo.uzpp
+
+          Bundled C++ compiler: compiler\bin\g++.exe (MinGW-w64 GCC 15.2 UCRT)
+          VS Code kengaytmasi: Marketplace -> uzpp.uzpp
+          GitHub: https://github.com/timetolivechk-spec/uzpp
+          "@ | Set-Content -Path $dist/README.txt -Encoding utf8
+
+          # Extract bundled MinGW into dist\compiler\
+          Expand-Archive -Force -Path artifacts/mingw/mingw-w64-windows-x64.zip `
+                         -DestinationPath dist/winlibs-extracted
+          # WinLibs zip extracts into a top-level `mingw64\` folder; rename it.
+          Move-Item dist/winlibs-extracted/mingw64 dist/compiler
+          Remove-Item -Recurse -Force dist/winlibs-extracted
+
+          # Sanity: list staging tree top level
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Compile installer with Inno Setup
+        shell: pwsh
+        run: |
+          # Inno Setup 6 is pre-installed on windows-latest GitHub runners.
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\iscc.exe"
+          if (-not (Test-Path $iscc)) {
+            # Fallback: install via Chocolatey if the pre-installed path moved.
+            choco install -y innosetup
+            $iscc = "C:\Program Files (x86)\Inno Setup 6\iscc.exe"
+          }
+          & $iscc /DAppVersion="${{ steps.version.outputs.version }}" `
+                  installer/windows/installer.iss
+          Get-ChildItem installer/windows/Output
+
+      - name: Rename to canonical artifact name
+        shell: pwsh
+        run: |
+          # The .iss writes Output\uzpp-setup.exe — keep that name on disk.
+          Copy-Item installer/windows/Output/uzpp-setup.exe uzpp-setup.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-setup-windows
+          path: uzpp-setup.exe
+
   # ──────────────────────────────────────────────────────────
   build-linux:
     name: Linux — uzpp + stdlib tar.gz
@@ -181,7 +280,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   release:
     name: GitHub Release
-    needs: [build-windows, build-linux, build-macos-arm64, package-mingw]
+    needs: [build-windows, build-windows-installer, build-linux, build-macos-arm64, package-mingw]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -210,9 +309,26 @@ jobs:
 
             ---
 
+            ### Windows — bir-bosishlik installer (eng oson)
+
+            ```
+            uzpp-setup.exe ni yuklab oling → ikki marta bosing → tayyor.
+            ```
+
+            Installer ichida bor:
+            - `uzpp.exe` (kompilyator)
+            - `stdlib/` (standart kutubxona)
+            - `misollar/` (10 ta misol)
+            - `compiler/` (WinLibs GCC 15.2 UCRT — uzpp avtomatik ishlatadi)
+
+            PATH avtomatik sozlanadi, `.uzpp` fayllari uzpp bilan ochiladi.
+            Admin huquqlari kerak emas (`%LOCALAPPDATA%` ga o'rnatiladi).
+
+            ---
+
             ### Qo'lda o'rnatish
 
-            **Windows:**
+            **Windows (faqat zip):**
             ```powershell
             curl -L -o uzpp.zip https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-windows-x64.zip
             Expand-Archive uzpp.zip -DestinationPath uzpp-install
@@ -239,11 +355,13 @@ jobs:
 
             | Fayl | Tarkib |
             |------|--------|
-            | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` |
+            | `uzpp-setup.exe` | **Windows installer**: uzpp + stdlib + misollar + MinGW (~150 MB) |
+            | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` (portable, MinGW yo'q) |
             | `uzpp-linux-x64.tar.gz` | `uzpp` + `stdlib/` |
             | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (Apple Silicon) |
             | `mingw-w64-windows-x64.zip` | Portable C++ kompilyatori (g++) Windows uchun |
           files: |
+            dist/uzpp-setup-windows/uzpp-setup.exe
             dist/uzpp-windows-x64/uzpp-windows-x64.zip
             dist/uzpp-linux-x64/uzpp-linux-x64.tar.gz
             dist/uzpp-macos-arm64/uzpp-macos-arm64.tar.gz
