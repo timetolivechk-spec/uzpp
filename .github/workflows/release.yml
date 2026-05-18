@@ -145,13 +145,27 @@ jobs:
     name: Package MinGW-w64 for Windows
     runs-on: ubuntu-latest
     env:
-      MINGW_VERSION: "14.2.0posix-18.1.8-12.0.0-ucrt-r2"
-      MINGW_FILENAME: "winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2.zip"
+      # WinLibs GCC 15.2.0 UCRT64 posix/seh — matches Linux CI's gcc-15.
+      # Old tag (14.2.0posix-18.1.8-12.0.0-ucrt-r2) was 404 — WinLibs changed
+      # naming conventions; today's scheme is <gcc>posix-<mingw-w64>-ucrt-r<N>.
+      MINGW_VERSION: "15.2.0posix-14.0.0-ucrt-r7"
+      MINGW_FILENAME: "winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7.zip"
     steps:
       - name: Download WinLibs MinGW
         run: |
-          curl -L --retry 3 -o mingw-source.zip \
+          # -f makes curl exit non-zero on HTTP errors (else it would write
+          # a 9-byte HTML error page and pretend everything was fine — exactly
+          # what landed in v2.1.7 / first v2.1.8 release attempts).
+          curl -fL --retry 3 -o mingw-source.zip \
             "https://github.com/brechtsanders/winlibs_mingw/releases/download/${MINGW_VERSION}/${MINGW_FILENAME}"
+          # Sanity check: the archive is ~255 MB; if we got <100 MB something
+          # is wrong (silent partial download, redirect HTML, etc).
+          size=$(stat -c %s mingw-source.zip)
+          echo "Downloaded $size bytes"
+          if [ "$size" -lt 100000000 ]; then
+            echo "ERROR: mingw zip is suspiciously small ($size bytes)"
+            exit 1
+          fi
 
       # Rename to our canonical artifact name so componentManager.js can download it
       - name: Rename to canonical name
