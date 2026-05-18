@@ -1,0 +1,36 @@
+// uz++ — vaqt kutubxonasi testi (self-test via ulash)
+
+ulash "vaqt.uzpp"
+
+butun asosiy() {
+    // hozir() — joriy vaqtni olish
+    ozgaruvchan hoz = uzpp::Vaqt::hozir();
+    yozish << "Yil: " << hoz.yil << qator_oxiri;
+    yozish << "Oy: " << hoz.oy << qator_oxiri;
+    yozish << "Kun: " << hoz.kun << qator_oxiri;
+    yozish << "Soat: " << hoz.soat << qator_oxiri;
+    yozish << "Mintaqa: " << hoz.mintaqa << qator_oxiri;
+
+    // formatlash — vaqtni matn ko'rinishida chiqarish
+    matn formatlangan = hoz.formatlash("%Y-%m-%d %H:%M:%S");
+    yozish << "Formatlangan: " << formatlangan << qator_oxiri;
+
+    // SanaVaVaqt qo'lda yasash
+    uzpp::Vaqt::SanaVaVaqt sana;
+    sana.yil = 2026;
+    sana.oy = 5;
+    sana.kun = 18;
+    sana.soat = 12;
+    sana.daqiqa = 0;
+    sana.soniya = 0;
+    sana.mintaqa = "UTC";
+
+    yozish << "Qo'lda: " << sana.formatlash() << qator_oxiri;
+
+    // kutish — 10ms (tezkor test uchun)
+    uzpp::Vaqt::kutish_ms(10);
+    yozish << "kutish_ms(10) ishladi" << qator_oxiri;
+
+    yozish << "=== VAQT TESTI MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
