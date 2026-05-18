@@ -290,6 +290,14 @@ jobs:
         with:
           path: dist/
 
+      - name: Stage install.sh (Unix one-line installer)
+        run: |
+          # The release attaches installer/unix/install.sh as `install.sh`,
+          # so users can run:
+          #   curl -fsSL https://github.com/<repo>/releases/latest/download/install.sh | bash
+          mkdir -p dist/install-sh
+          cp installer/unix/install.sh dist/install-sh/install.sh
+
       - name: List artifacts
         run: find dist/ -type f | sort
 
@@ -335,27 +343,40 @@ jobs:
             # uzpp.exe + stdlib/ hazir
             ```
 
-            **Linux:**
+            **Linux / macOS — bitta buyruq bilan o'rnatish:**
+            ```bash
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/install.sh | bash
+            ```
+
+            Skript tizimni aniqlaydi, mos arxivni yuklaydi, `uzpp` ni
+            `/usr/local/bin/` ga, `stdlib/` ni `/usr/local/lib/uzpp/` ga
+            qo'yadi va C++ kompilyatori (g++/clang++) borligini tekshiradi.
+            Agar yo'q bo'lsa, qaysi paketni o'rnatishni ko'rsatadi.
+
+            **Linux (qo'lda):**
             ```bash
             curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-linux-x64.tar.gz
             mkdir uzpp-install && tar -xzf uzpp.tar.gz -C uzpp-install
             sudo cp uzpp-install/uzpp /usr/local/bin/
             sudo cp -r uzpp-install/stdlib /usr/local/lib/uzpp/
+            sudo apt-get install -y g++ libstdc++-15-dev  # if you don't have g++ yet
             ```
 
-            **macOS (Apple Silicon):**
+            **macOS (Apple Silicon, qo'lda):**
             ```bash
             curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-arm64.tar.gz
             mkdir uzpp-install && tar -xzf uzpp.tar.gz -C uzpp-install
             sudo cp uzpp-install/uzpp /usr/local/bin/
             sudo cp -r uzpp-install/stdlib /usr/local/lib/uzpp/
+            xcode-select --install  # if Command Line Tools missing
             ```
 
             ### Arxiv tarkibi
 
             | Fayl | Tarkib |
             |------|--------|
-            | `uzpp-setup.exe` | **Windows installer**: uzpp + stdlib + misollar + MinGW (~150 MB) |
+            | `uzpp-setup.exe` | **Windows installer** — uzpp + stdlib + misollar + MinGW (~150 MB) |
+            | `install.sh` | **Linux/macOS bir-buyruqli installer** — tizimni aniqlaydi va o'rnatadi |
             | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` (portable, MinGW yo'q) |
             | `uzpp-linux-x64.tar.gz` | `uzpp` + `stdlib/` |
             | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (Apple Silicon) |
@@ -366,6 +387,7 @@ jobs:
             dist/uzpp-linux-x64/uzpp-linux-x64.tar.gz
             dist/uzpp-macos-arm64/uzpp-macos-arm64.tar.gz
             dist/mingw-w64-windows/mingw-w64-windows-x64.zip
+            dist/install-sh/install.sh
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
