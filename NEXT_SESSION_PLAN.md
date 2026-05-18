@@ -6,14 +6,20 @@
 
 ## Current state at a glance
 
-- **70/70 tests pass locally** (Windows MSYS2 g++ 15.2). Linux CI = 68/70
-  (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — both gated on
-  Ubuntu toolchain, not uz++ bugs).
+- **71/71 tests pass locally** + **29/29 negative tests** (Windows MSYS2 g++ 15.2).
+  Linux CI = 69/71 (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` —
+  both gated on Ubuntu toolchain, not uz++ bugs).
 - **Latest tag pushed: `v2.1.9`** (VSCode extension texts refresh).
-- **Local commits ahead of origin** (not yet pushed — 5):
-  - `848cc20` fix(lang+lsp): namespace alias actually emits + drop bogus class trailing-requires + typesEquivalent + matn formatlash alias
+- **Local commits ahead of origin** (not yet pushed — 10):
+  - `51beb10` fix(cli): catch missing asosiy() with a helpful message
+  - `7d903f3` ci(release): slim MinGW zip from 255 MB to ~150 MB
+  - `55bc932` feat(formatter): preserve inline comments inside statements
+  - `2eeb3aa` feat(lang+lsp): module partitions + type-mismatch code actions
+  - `f1e0e25` feat(stdlib): port vaqt to uz++
+  - `ecfbe02` docs(plan): record (G)/(H) done
+  - `848cc20` fix(lang+lsp): namespace alias actually emits + drop bogus class trailing-requires
   - `0a0c6e2` docs(plan): mark (A)/(B)/(C) done
-  - `f4ca448` feat(lang): namespace aliases (claim of trailing requires on classes — rolled back in 848cc20)
+  - `f4ca448` feat(lang): namespace aliases (the original — fixed in 848cc20)
   - `9915302` feat(lsp): AST-aware definition / references / rename
   - `0f34978` feat(stdlib): port xatoliklar to uz++
 - **stdlib partially self-hosted:** `stdlib/matn.hpp` (~626 LOC source)
@@ -329,6 +335,40 @@ removing parts of WinLibs that uzpp never invokes.
 - **DAP `-var-create` / `-var-list-children`** — needs a GDB-MI-aware
   reader on top of the current line-buffer parser. ~100 LOC, but
   requires a Windows test setup to validate.
+
+## Known fragile points uncovered by stress testing (NOT yet fixed)
+
+Captured here so the next agent doesn't have to rediscover them. None
+are top priority — most have workarounds — but each is a real "if user
+hits this, error is unhelpful" trap.
+
+1. **Char-literal escape sequences** (`belgi c = '\\n';`, `'\\t'`, `'\\\\'`).
+   Lexer reports `XATO: Yopilmagan belgi literal` because it doesn't
+   recognise `\\<char>` as an escaped single byte. Workaround: write the
+   numeric value (`belgi c = 10;` for `\n`). Real fix: ~20 LOC in
+   `src/lexer.cpp` char-literal handler.
+
+2. **Non-ASCII identifiers** (Cyrillic, Japanese, etc — except the
+   `'` → U+02BC apostrophe path which is already wired). Lexer rejects
+   them as "Noto'g'ri ifoda". Workaround: ASCII Latin / digits / `_` /
+   `'` only. Real fix: extend lexer's "is identifier char" check to
+   accept all Unicode XID_Continue codepoints. Bigger lexer work,
+   ~80 LOC.
+
+3. **Uz++ type aliases inside template argument lists.** Codegen
+   doesn't translate `butun` → `int` etc. inside `<...>` of a qualified
+   identifier like `std::function<butun(butun)>`. The whole
+   `<butun(butun)>` is treated as opaque text. Result: g++ rejects with
+   `'butun' is not a type`. Workaround: write `std::function<int(int)>`
+   directly. Real fix: harder than it looks — would need codegen to
+   reparse the template-arg blob and run identifierTranslations inside it.
+
+4. **Disk-space / linker error confusion.** Already documented in
+   memory as gotcha #6, but worth restating in test-runner output:
+   when `df -h /c` < 5 % free, `ld returned 1 exit status` appears
+   silently. The new `parse_missing_asosiy` fix shows the pattern —
+   prefer "diagnose then refuse" over "let collect2 emit something
+   cryptic".
 
 ## Found in the last session (consider for future polish)
 
