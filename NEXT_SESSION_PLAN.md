@@ -6,14 +6,16 @@
 
 ## Current state at a glance
 
-- **69/69 tests pass locally** (Windows MSYS2 g++ 15.2). Linux CI = 67/69
+- **70/70 tests pass locally** (Windows MSYS2 g++ 15.2). Linux CI = 68/70
   (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — both gated on
   Ubuntu toolchain, not uz++ bugs).
 - **Latest tag pushed: `v2.1.9`** (VSCode extension texts refresh).
-- **Local commits ahead of origin** (not yet pushed):
-  - `0f34978` feat(stdlib): port xatoliklar to uz++
+- **Local commits ahead of origin** (not yet pushed — 5):
+  - `848cc20` fix(lang+lsp): namespace alias actually emits + drop bogus class trailing-requires + typesEquivalent + matn formatlash alias
+  - `0a0c6e2` docs(plan): mark (A)/(B)/(C) done
+  - `f4ca448` feat(lang): namespace aliases (claim of trailing requires on classes — rolled back in 848cc20)
   - `9915302` feat(lsp): AST-aware definition / references / rename
-  - `f4ca448` feat(lang): namespace aliases + trailing requires on classes
+  - `0f34978` feat(stdlib): port xatoliklar to uz++
 - **stdlib partially self-hosted:** `stdlib/matn.hpp` (~626 LOC source)
   AND `stdlib/xatoliklar.hpp` (~97 LOC source) are now generated from
   `.uzpp` via header-mode transpilation. Source of truth is `.uzpp`.
@@ -122,12 +124,17 @@ Process (proven on `matn`):
 
 ### 🟡 Language gaps (small wins individually)
 
-- ~~**Namespace aliases**~~ — done in f4ca448.
-- ~~**Trailing `requires` on classes**~~ — done in f4ca448.
+- ~~**Namespace aliases**~~ — working (fixed in 848cc20 — the original
+  f4ca448 patch was a stub; emit path is now correct, test_namespace_alias
+  covers it).
+- ~~**Trailing `requires` on classes**~~ — **don't reintroduce.** Was rolled
+  back in 848cc20: C++20 `class X requires C { };` is invalid. Use the
+  template-wrapper form already supported: `shablon<tur T> shart(C) sinf Foo`.
 - **Module partitions** (`export module foo:bar;`) — parser gap, ~25 LOC.
 - **`static operator()`** C++23 (deducing-this on call site) — ~20 LOC.
-- **Variadic templates with `std::format_string<Args...>`** — would unblock
-  `Matn::formatlash` (currently only `formatlash_indeksli`). Bigger work,
+- **Variadic templates with `std::format_string<Args...>`** — would let
+  `Matn::formatlash` accept `Args...` directly (currently it forwards to
+  `formatlash_indeksli` via a `vektor<matn>` wrapper). Bigger work,
   parser + codegen — ~80 LOC. Risk: may collide with existing variadic.
 
 ### 🟡 CI/release polish
@@ -161,20 +168,167 @@ assumptions throughout. Discuss approach with user before starting.
 
 ## Suggested next batch
 
-Last session knocked out (A), (B), (C). Pick ONE of these next:
+Quick wins (G, H) landed in 848cc20. Remaining to choose from:
 
 - **(D) Port `vaqt` to uz++** — third stdlib module. `<chrono>` interop
   the trickiest part; otherwise straightforward. ~120 LOC + tests.
+  After `matn` + `xatoliklar` template, this is mechanical.
 - **(E) Better LSP code actions** — type-mismatch quick-fix (`static_cast`
   suggestion), redeclaration → rename. Reuses the warnings TypeChecker
-  already emits. ~80 LOC.
+  already emits. ~80 LOC per fix.
 - **(F) Push the merged work to origin + cut v2.2.0 tag** — requires
-  user authorisation. Three local commits worth shipping: xatoliklar
-  port, AST-aware LSP, namespace aliases / trailing requires. Bump
+  user authorisation. Five local commits worth shipping. Bump
   vscode-uzpp to v2.2.0; CHANGELOG entry; tag; let release.yml fire.
-- **(G) Fix the `mantiq` / `mantiqiy` warning noise** — one line in
-  type_checker.hpp to treat them as equivalent (both alias `bool`).
-  ~5 LOC. Tiny, but kills dozens of spurious warnings.
+- **(I) MinGW zip slim-down** — current artefact is 255 MB. Strip
+  `share/locale`, `share/doc`, `share/man`, `lib/python`, `share/cmake`,
+  `lib/gcc/.../include-fixed/X11`. Target ~150 MB. ~25 LOC change to
+  the `package-mingw` job in release.yml.
+- **(J) Module partitions** (`export module foo:bar;`) — parser gap,
+  ~25 LOC. Small standalone win.
+- **(K) Inline comments in formatter** — Lexer captures them as
+  `Token.leadingComments` already; formatter only emits at top-level.
+  ~200 LOC in `src/formatter.cpp::formatBlock` etc.
+
+## Detailed plan for an AI agent (any of D / E / I / J)
+
+### (D) Port `vaqt` to uz++
+
+**Goal.** Make `stdlib/vaqt.uzpp` the source of truth; regenerate
+`stdlib/vaqt.hpp` via header-mode transpilation. Same pattern as `matn`
+and `xatoliklar`.
+
+**Steps.**
+1. Read `stdlib/vaqt.hpp` (117 LOC). Note the public API: classes
+   (`Vaqt`, `Soat`...), helpers (`hozir()`, `sana_olish()` ...). Catalog
+   every `inline` function, every `class` field, every `[[nodiscard]]`.
+2. Write `stdlib/vaqt.uzpp`:
+   - `nomlar_fazosi uzpp::Vaqt { ... }` to match what other stdlib
+     references.
+   - `ulash <chrono>` + `<ctime>` + `<thread>` near the top — header mode
+     needs explicit includes because preamble is suppressed.
+   - One uz++ function per C++ function. Avoid `formatlash`-style
+     variadics; use `formatlash_indeksli` if needed.
+3. Self-test in `butun asosiy()` at file end (`tasdiqlash` helpers).
+   When it compiles green, split asosiy out into
+   `tests/test_vaqt_module.uzpp` — keeps the library file clean.
+4. Add `tests/test_vaqt_include.uzpp` (consumer): pure `ulash
+   "uzpp_runtime.hpp"`, call `uzpp::Vaqt::*`. Drives the
+   `ulash "*.uzpp"` import path.
+5. **Regenerate `stdlib/vaqt.hpp`** using the documented procedure
+   (don't edit by hand). Both `stdlib/matn.hpp` precedent and the
+   "Regenerating matn.hpp" section apply identically.
+6. Sanity-check `stdlib/uzpp_runtime.hpp` still `#include "vaqt.hpp"`.
+   Don't change other modules.
+7. Full regression must stay `≥ 71/71` (was 70/70; +test_vaqt_module
+   + test_vaqt_include).
+
+**Acceptance.**
+- Both `tests/test_vaqt_module.uzpp` and `tests/test_vaqt_include.uzpp`
+  compile and print `=== MUVAFFAQIYATLI ===`.
+- `tests/test_yangi_imkoniyatlar.uzpp` (uses `uzpp::Vaqt::*`) still passes.
+- `stdlib/vaqt.hpp` starts with `#pragma once / #ifndef UZPP_GEN_VAQT_HPP_`
+  and contains `namespace uzpp::Vaqt { ... }`.
+
+**Pitfalls to watch.**
+- `<chrono>` types in templates are tricky — if you hit "Tur
+  nomutanosibligi" warnings on `chrono::seconds`, treat them as opaque
+  raw C++ types in uz++ (use `auto`-style declarations).
+- Don't translate `std::chrono::...` into uz++ aliases unless you also
+  wire them into `identifierTranslations` / `typeMap` in codegen.cpp.
+- `vaqt.hpp` may have ABI exposed via `#if defined(ARDUINO)` blocks —
+  keep those as raw C++ inside the .uzpp via inline string emit, or
+  document explicitly that vaqt drops embedded-Arduino support.
+
+### (E) Better LSP code actions
+
+**Goal.** Surface two more quick-fixes alongside the existing
+"unused variable" pair (prefix `_` / remove line) and the new
+"unreachable code" remover added in 848cc20.
+
+**Steps.**
+1. In `src/lsp_server.cpp::computeCodeActions` — find the existing
+   warning-text matching block (`kUnusedPrefix` / `kUnusedSuffix`).
+   Add two new pattern matches:
+   - `Tur nomutanosibligi: '<from>' kutilgan, lekin '<to>' berildi` →
+     offer "Wrap with `statik_otkazish<<from>>`" quick-fix. Parse
+     `<from>`, `<to>` out of the message.
+   - `Metod '<name>' qayta e'lon qilindi` (or whichever redeclaration
+     wording TypeChecker uses; verify by grep) → offer "Rename to `<name>_2`"
+     and "Remove redeclaration" quick-fixes.
+2. Each quick-fix needs a `WorkspaceEdit` JSON payload. Existing
+   patterns in `computeCodeActions` show the shape.
+3. Add corresponding unit assertions in
+   `tests/frontend_smoke.cpp` — feed a snippet with the relevant
+   warning, call `LspServer::computeCodeActions`, assert the action
+   titles appear.
+4. No regression budget: 70/70 must still pass.
+
+**Pitfalls.**
+- TypeChecker warning text is in Uzbek; match exact substrings, not
+  English equivalents.
+- `statik_otkazish` wrapping must respect operator precedence — wrap
+  the bare expression in parens before the cast.
+
+### (I) MinGW zip slim-down
+
+**Goal.** Shrink `mingw-w64-windows-x64.zip` from 255 MB to ~150 MB by
+removing parts of WinLibs that uzpp never invokes.
+
+**Steps.**
+1. In `.github/workflows/release.yml::package-mingw`, after the
+   download + extract step, before the `mv` to canonical name:
+   ```bash
+   cd mingw64
+   rm -rf share/locale share/doc share/man share/info share/cmake \
+          share/gettext share/aclocal share/gtk-doc lib/python* \
+          include/X11 include/GL include/freetype2 include/gtk* \
+          include/cairo*
+   # Optional, larger savings: drop debug libs, but uzpp users may want them
+   # rm -rf lib/debug
+   cd ..
+   ```
+2. Re-zip. Verify the archive is `< 175 MB` and still contains
+   `bin/g++.exe` + `bin/gcc.exe` + `lib/gcc/x86_64-w64-mingw32/*/`.
+3. Run `uzpp-setup.exe` (locally if possible, or in a VM) to confirm
+   the bundled compiler still builds `misollar/01_salom_dunyo.uzpp`.
+
+**Acceptance.**
+- Release artifact size drops to ~150 MB.
+- VSCode `componentManager.js` install still works (download +
+  unpack + `g++ --version`).
+- Smoke test: build any non-trivial example end-to-end.
+
+### (J) Module partitions
+
+**Goal.** Parse `eksport modul foo:bar;` and emit `export module foo:bar;`.
+
+**Steps.**
+1. In `src/parser.cpp`, find the existing `eksport modul` (or
+   `export module`) handler — search for `parseExportModule` /
+   `ExportModuleStatement`.
+2. After consuming `modul X`, peek for `:`. If present, consume
+   `: <Identifier>` and append `:Identifier` to the module name string.
+3. AST node `ExportModuleStatement` stores name as a string; partition
+   suffix lives inside that string. Codegen emits as-is.
+4. Add `tests/test_module_partition.uzpp` — `eksport modul foo:bar;`
+   followed by a trivial function. Should compile (no `qurish` runtime
+   needed — module bootstrapping in GCC is finicky; just verify the
+   transpile output matches).
+
+**Acceptance.**
+- `eksport modul foo:bar;` parses (no "Noto'g'ri ifoda" error).
+- Generated C++ contains literally `export module foo:bar;`.
+
+## Things still off the list (don't pick without runway)
+
+- **🔴 Type-checker honesty** — multi-session, architectural. See main
+  memory file.
+- **Variadic-template `std::format_string<Args...>`** — parser change
+  is small but interacts with how existing variadic templates emit
+  template parameters; tested poorly. Defer.
+- **DAP `-var-create` / `-var-list-children`** — needs a GDB-MI-aware
+  reader on top of the current line-buffer parser. ~100 LOC, but
+  requires a Windows test setup to validate.
 
 ## Found in the last session (consider for future polish)
 
