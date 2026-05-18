@@ -266,9 +266,18 @@ jobs:
             exit 1
           fi
 
-      # Rename to our canonical artifact name so componentManager.js can download it
-      - name: Rename to canonical name
-        run: mv mingw-source.zip mingw-w64-windows-x64.zip
+      - name: Extract, strip unused data, re-zip
+        run: |
+          unzip -q mingw-source.zip -d mingw-extract
+          cd mingw-extract/mingw64
+          # Strip unused bloat — saves ~100 MB (255→~150 MB)
+          rm -rf share/locale share/doc share/man share/info share/cmake \
+                 share/gettext share/aclocal share/gtk-doc lib/python* \
+                 include/X11 include/GL include/freetype2 include/gtk* \
+                 include/cairo*
+          cd ../..
+          zip -r -q mingw-w64-windows-x64.zip mingw-extract/mingw64
+          rm -rf mingw-extract mingw-source.zip
 
       - uses: actions/upload-artifact@v4
         with:
