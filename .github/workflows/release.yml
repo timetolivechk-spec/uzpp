@@ -127,30 +127,13 @@ jobs:
           name: uzpp-macos-arm64
           path: uzpp-macos-arm64.tar.gz
 
-  # ──────────────────────────────────────────────────────────
-  build-macos-x64:
-    name: macOS x64 — uzpp + stdlib tar.gz
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v4
-      - run: brew install cmake ninja
-
-      - name: Build
-        run: |
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
-          cmake --build build --config Release
-
-      - name: Package uzpp-macos-x64.tar.gz
-        run: |
-          mkdir pkg-macos-x64
-          cp build/uzpp pkg-macos-x64/
-          cp -r stdlib pkg-macos-x64/stdlib
-          tar -czf uzpp-macos-x64.tar.gz -C pkg-macos-x64 .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: uzpp-macos-x64
-          path: uzpp-macos-x64.tar.gz
+  # macOS x64 (Intel) job removed in v2.1.8 — the `macos-13` runner is
+  # deprecated by GitHub Actions (deprecation announced Sept 2025) and was
+  # leaving the release job stuck in `queued` indefinitely. Apple Silicon
+  # is the only macOS target Apple itself still ships hardware for, and
+  # `build-macos-arm64` above covers it. If Intel macOS support is needed
+  # later, switch this job to `macos-14-large` (Intel xlarge) or cross
+  # build from arm64.
 
   # ──────────────────────────────────────────────────────────
   # Download a portable MinGW-w64 and re-upload as our release artifact.
@@ -184,7 +167,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   release:
     name: GitHub Release
-    needs: [build-windows, build-linux, build-macos-arm64, build-macos-x64, package-mingw]
+    needs: [build-windows, build-linux, build-macos-arm64, package-mingw]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -245,13 +228,11 @@ jobs:
             | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` |
             | `uzpp-linux-x64.tar.gz` | `uzpp` + `stdlib/` |
             | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (Apple Silicon) |
-            | `uzpp-macos-x64.tar.gz` | `uzpp` + `stdlib/` (Intel) |
             | `mingw-w64-windows-x64.zip` | Portable C++ kompilyatori (g++) Windows uchun |
           files: |
             dist/uzpp-windows-x64/uzpp-windows-x64.zip
             dist/uzpp-linux-x64/uzpp-linux-x64.tar.gz
             dist/uzpp-macos-arm64/uzpp-macos-arm64.tar.gz
-            dist/uzpp-macos-x64/uzpp-macos-x64.tar.gz
             dist/mingw-w64-windows/mingw-w64-windows-x64.zip
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
