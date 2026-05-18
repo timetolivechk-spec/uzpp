@@ -1143,6 +1143,92 @@ std::string LspServer::computeCodeActions(const std::string& text,
             << ",\"character\":0},\"end\":{\"line\":" << (lineIdx + 1)
             << ",\"character\":0}},\"newText\":\"\"}]}}}";
     }
+
+    // Code action: type mismatch → wrap initializer with static_cast
+    // Warning format: "Tur nomutanosibligi: '<from>' kutilgan, lekin '<to>' berildi."
+    static const std::string kTypeMismatchPrefix = "Tur nomutanosibligi: '";
+    static const std::string kTypeMismatchMid = "' kutilgan, lekin '";
+    for (const auto& w : checker.getWarnings()) {
+        if (w.message.compare(0, kTypeMismatchPrefix.size(), kTypeMismatchPrefix) != 0) continue;
+        const auto midPos = w.message.find(kTypeMismatchMid, kTypeMismatchPrefix.size());
+        if (midPos == std::string::npos) continue;
+        const std::string fromType = w.message.substr(kTypeMismatchPrefix.size(),
+            midPos - kTypeMismatchPrefix.size());
+        if (w.line <= 0) continue;
+        const int lineIdx = w.line - 1;
+        if (lineIdx < rangeStartLine || lineIdx > rangeEndLine) continue;
+        if (lineIdx >= static_cast<int>(lines.size())) continue;
+
+        // Find the '=' on this line to wrap the initializer
+        const std::string& srcLine = lines[lineIdx];
+        const auto eqPos = srcLine.find('=');
+        if (eqPos == std::string::npos) continue;
+        // The initializer starts after '=' plus optional whitespace
+        size_t initStart = eqPos + 1;
+        while (initStart < srcLine.size() && (srcLine[initStart] == ' ' || srcLine[initStart] == '\t'))
+            initStart++;
+        if (initStart >= srcLine.size()) continue;
+        // End of initializer: before ';' or end of line
+        size_t initEnd = srcLine.find(';', initStart);
+        if (initEnd == std::string::npos) initEnd = srcLine.size();
+        while (initEnd > initStart && (srcLine[initEnd-1] == ' ' || srcLine[initEnd-1] == '\t'))
+            initEnd--;
+
+        if (!first) out << ",";
+        first = false;
+        out << "{\"title\":\"statik_otkazish<" << fromType
+            << ">(...) bilan o'rash\",\"kind\":\"quickfix\","
+            << "\"edit\":{\"changes\":{\"" << uri << "\":["
+            << "{\"range\":{\"start\":{\"line\":" << lineIdx
+            << ",\"character\":" << initStart
+            << "},\"end\":{\"line\":" << lineIdx
+            << ",\"character\":" << initEnd << "}},"
+            << "\"newText\":\"statik_otkazish<" << fromType << ">("
+            << srcLine.substr(initStart, initEnd - initStart) << ")\"}]}}}";
+    }
+
+    // Code action: return type mismatch → wrap with static_cast
+    // Warning format: "Funksiya '<type>' qaytarishi kerak, lekin '<type>' qaytarilmoqda."
+    static const std::string kReturnMismatchPrefix = "Funksiya '";
+    static const std::string kReturnMismatchMid = "' qaytarishi kerak, lekin '";
+    for (const auto& w : checker.getWarnings()) {
+        if (w.message.compare(0, kReturnMismatchPrefix.size(), kReturnMismatchPrefix) != 0) continue;
+        const auto midPos = w.message.find(kReturnMismatchMid, kReturnMismatchPrefix.size());
+        if (midPos == std::string::npos) continue;
+        const std::string retType = w.message.substr(kReturnMismatchPrefix.size(),
+            midPos - kReturnMismatchPrefix.size());
+        if (w.line <= 0) continue;
+        const int lineIdx = w.line - 1;
+        if (lineIdx < rangeStartLine || lineIdx > rangeEndLine) continue;
+        if (lineIdx >= static_cast<int>(lines.size())) continue;
+
+        // Find 'qaytarish' or 'qaytish' on this line
+        const std::string& srcLine = lines[lineIdx];
+        size_t retPos = srcLine.find("qaytarish");
+        if (retPos == std::string::npos) retPos = srcLine.find("qaytish");
+        if (retPos == std::string::npos) continue;
+        // Start after the keyword
+        size_t exprStart = retPos + (srcLine[retPos] == 'q' ? std::string("qaytarish").size() : std::string("qaytish").size());
+        while (exprStart < srcLine.size() && (srcLine[exprStart] == ' ' || srcLine[exprStart] == '\t'))
+            exprStart++;
+        if (exprStart >= srcLine.size()) continue;
+        size_t exprEnd = srcLine.find(';', exprStart);
+        if (exprEnd == std::string::npos) exprEnd = srcLine.size();
+        while (exprEnd > exprStart && (srcLine[exprEnd-1] == ' ' || srcLine[exprEnd-1] == '\t'))
+            exprEnd--;
+
+        if (!first) out << ",";
+        first = false;
+        out << "{\"title\":\"statik_otkazish<" << retType
+            << ">(...) bilan o'rash\",\"kind\":\"quickfix\","
+            << "\"edit\":{\"changes\":{\"" << uri << "\":["
+            << "{\"range\":{\"start\":{\"line\":" << lineIdx
+            << ",\"character\":" << exprStart
+            << "},\"end\":{\"line\":" << lineIdx
+            << ",\"character\":" << exprEnd << "}},"
+            << "\"newText\":\"statik_otkazish<" << retType << ">("
+            << srcLine.substr(exprStart, exprEnd - exprStart) << ")\"}]}}}";
+    }
     out << "]";
     return out.str();
 }

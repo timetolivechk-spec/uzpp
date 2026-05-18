@@ -1819,6 +1819,11 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         if (checkKeyword("modul")) {
             advance(); // 'modul'
             std::string modName = advance().value;
+            // Module partition: eksport modul foo:bar;
+            if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ":") {
+                advance(); // ':'
+                modName += ":" + advance().value;
+            }
             if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
             return std::make_unique<ExportModuleStatement>(modName, expToken);
         }
