@@ -58,6 +58,19 @@ private:
         warnings_.push_back({msg, token.line, token.column});
     }
 
+    // Treat aliased type names as one type so we don't emit noisy
+    // "Tur nomutanosibligi" warnings for surface-equivalent pairs.
+    // Keep this list tight — only true aliases that compile to identical
+    // C++ types belong here.
+    static bool typesEquivalent(const std::string& a, const std::string& b) {
+        if (a == b) return true;
+        // bool: mantiq == mantiqiy
+        if ((a == "mantiq" && b == "mantiqiy") || (a == "mantiqiy" && b == "mantiq")) return true;
+        // double: haqiqiy == ikkilangan
+        if ((a == "haqiqiy" && b == "ikkilangan") || (a == "ikkilangan" && b == "haqiqiy")) return true;
+        return false;
+    }
+
     Token getTokenForNode(const ASTNode* node) {
         if (!node) return Token{TokenType::Identifier, "", 0, 0};
         if (auto var = dynamic_cast<const VariableDeclaration*>(node)) return var->getDeclToken();
@@ -374,10 +387,11 @@ private:
                             inferredAutoTypes_[var] = inferredType;
                         }
                         declaredType = inferredType; // Type inference
-                    } else if (inferredType != "noma'lum" && declaredType != "noma'lum" && inferredType != declaredType) {
-                        if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiqiy" || declaredType == "haqiqiy") &&
-                            (inferredType == "butun" || inferredType == "matn" || inferredType == "mantiqiy" || inferredType == "haqiqiy")) {
-                            if (!(declaredType == "haqiqiy" && inferredType == "butun")) {
+                    } else if (inferredType != "noma'lum" && declaredType != "noma'lum" &&
+                               !typesEquivalent(inferredType, declaredType)) {
+                        if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiq" || declaredType == "mantiqiy" || declaredType == "haqiqiy" || declaredType == "ikkilangan") &&
+                            (inferredType == "butun" || inferredType == "matn" || inferredType == "mantiq" || inferredType == "mantiqiy" || inferredType == "haqiqiy" || inferredType == "ikkilangan")) {
+                            if (!((declaredType == "haqiqiy" || declaredType == "ikkilangan") && inferredType == "butun")) {
                                 reportWarning("Tur nomutanosibligi: '" + declaredType + "' kutilgan, lekin '" + inferredType + "' berildi.", var->getDeclToken());
                             }
                         }
@@ -765,10 +779,11 @@ private:
                 std::string targetType = inferType(asgn->getTarget());
                 std::string valueType = inferType(asgn->getValue());
                 
-                if (targetType != "noma'lum" && valueType != "noma'lum" && targetType != valueType) {
-                    if ((targetType == "butun" || targetType == "matn" || targetType == "mantiqiy" || targetType == "haqiqiy") &&
-                        (valueType == "butun" || valueType == "matn" || valueType == "mantiqiy" || valueType == "haqiqiy")) {
-                        if (!(targetType == "haqiqiy" && valueType == "butun")) {
+                if (targetType != "noma'lum" && valueType != "noma'lum" &&
+                    !typesEquivalent(targetType, valueType)) {
+                    if ((targetType == "butun" || targetType == "matn" || targetType == "mantiq" || targetType == "mantiqiy" || targetType == "haqiqiy" || targetType == "ikkilangan") &&
+                        (valueType == "butun" || valueType == "matn" || valueType == "mantiq" || valueType == "mantiqiy" || valueType == "haqiqiy" || valueType == "ikkilangan")) {
+                        if (!((targetType == "haqiqiy" || targetType == "ikkilangan") && valueType == "butun")) {
                             reportWarning("Tur nomutanosibligi: '" + targetType + "' o'zgaruvchiga '" + valueType + "' qiymat ta'minlanmoqda.", getTokenForNode(expr));
                         }
                     }
@@ -857,7 +872,8 @@ private:
                             for (size_t i = 0; i < gotArgs; ++i) {
                                 std::string argType = inferType(call->getArguments()[i].get());
                                 std::string expBase = stripRef(expectedParams[i]);
-                                if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" && argType != expectedParams[i] && argType != expBase) {
+                                if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" &&
+                                    !typesEquivalent(argType, expectedParams[i]) && !typesEquivalent(argType, expBase)) {
                                     if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && argType == "butun")) {
                                         // Suppress if argType is a subclass of expBase
                                         if (!classIsSubtype(argType, expBase)) {
@@ -880,7 +896,8 @@ private:
                             } else {
                                 for (size_t i = 0; i < expectedParams.size(); ++i) {
                                     std::string argType = inferType(call->getArguments()[i].get());
-                                    if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" && argType != expectedParams[i]) {
+                                    if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" &&
+                                        !typesEquivalent(argType, expectedParams[i])) {
                                         if (!((expectedParams[i] == "haqiqiy" || expectedParams[i] == "ikkilangan") && argType == "butun")) {
                                             reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + argType + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
                                         }

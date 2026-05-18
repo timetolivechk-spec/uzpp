@@ -2301,9 +2301,9 @@ std::unique_ptr<NamespaceDeclaration> Parser::parseNamespaceDeclaration() {
             }
         }
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") advance();
-        Token aliasTok = token;
-        aliasTok.value = "namespace " + name + " = " + target + ";";
-        return std::make_unique<NamespaceDeclaration>(name, std::vector<std::unique_ptr<ASTNode>>{}, token);
+        auto decl = std::make_unique<NamespaceDeclaration>(name, std::vector<std::unique_ptr<ASTNode>>{}, token);
+        decl->setAliasTarget(target);
+        return decl;
     }
 
     // Traditional bracketed namespace
@@ -2655,22 +2655,12 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
         } while (!isAtEnd());
     }
 
-    // C++20 trailing requires-clause: sinf Foo shart (cond) { ... }
-    std::string classRequires;
-    if (checkKeyword("shart")) {
-        advance(); // 'shart'
-        if (isAtEnd() || peek().value != "(") throw ParseError("Kutilgan '(' shart dan keyin " + formatLocation(peek()));
-        advance();
-        int depth = 1;
-        while (!isAtEnd() && depth > 0) {
-            const std::string& v = peek().value;
-            if (v == "(") depth++;
-            else if (v == ")") { depth--; if (depth == 0) break; }
-            classRequires += peek().value + " ";
-            advance();
-        }
-        if (!isAtEnd()) advance(); // ')'
-    }
+    // NB: a "trailing" `shart (cond)` after the class header is NOT valid
+    // C++20 — `class X requires C { };` is rejected by the compiler.
+    // Class-template constraints belong in the template wrapper:
+    //   shablon<tur T> shart (cond) sinf Foo { ... }
+    // which the template parser at parser.cpp:~1994 already handles by
+    // emitting `template <typename T> requires (cond)\n class Foo`.
 
     if (isAtEnd() || peek().value != "{") {
         throw ParseError("Kutilgan sinf tanasi '{' " + formatLocation(peek()));
@@ -3006,9 +2996,8 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
     
     advance(); // consume '}'
     
-    auto cls = std::make_unique<ClassDeclaration>(className, baseClass, std::move(interfaces), std::move(members), 
+    auto cls = std::make_unique<ClassDeclaration>(className, baseClass, std::move(interfaces), std::move(members),
                                               std::move(methods), classToken);
-    if (!classRequires.empty()) cls->setRequiresClause(classRequires);
     return cls;
 }
 

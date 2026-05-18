@@ -427,6 +427,11 @@ funksiya kichik_yokib(o'zgarmas matn& s) -> mantiqiy {
 // bilan to'ldiradi. `{{` va `}}` bitta qavs sifatida chiqariladi.
 //   formatlash_indeksli("Salom, {0}! Sizga {1} yoshda.", {"Olim", "42"})
 //   → "Salom, Olim! Sizga 42 yoshda."
+//
+// `formatlash` — shu funksiyaning qisqaroq taxallus (alias). Variadic
+// `std::format_string<Args...>` bilan ishlovchi haqiqiy C++20 format
+// hozircha qo'llab-quvvatlanmaydi (transpiler variadic template lar
+// uchun chegaralangan); pozitsion variantga o'tyapsiz.
 funksiya formatlash_indeksli(o'zgarmas matn& naqsh, o'zgarmas vektor<matn>& argumentlar) -> matn {
     matn natija;
     natija.reserve(naqsh.size());
@@ -476,6 +481,13 @@ funksiya formatlash_indeksli(o'zgarmas matn& naqsh, o'zgarmas vektor<matn>& argu
         i = i + 1;
     }
     qaytarish natija;
+}
+
+// `formatlash` — `formatlash_indeksli` ning qisqa taxallusi.
+// Variadic `std::format_string<Args...>` qo'llab-quvvatlanmaganligi
+// uchun `vektor<matn>` argument ro'yxati orqali ishlatiladi.
+funksiya formatlash(o'zgarmas matn& naqsh, o'zgarmas vektor<matn>& argumentlar) -> matn {
+    qaytarish formatlash_indeksli(naqsh, argumentlar);
 }
 
 // Naqshni oxiridan boshlab izlash (right-find). Topilmasa nullopt.

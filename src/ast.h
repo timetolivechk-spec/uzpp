@@ -819,10 +819,16 @@ public:
     const std::vector<std::unique_ptr<ASTNode>>& getChildren() const { return children_; }
     const Token& getTargetToken() const { return targetToken_; }
 
+    // Namespace alias: `nomlar_fazosi A = B::C;` — when set, codegen emits
+    // `namespace A = B::C;` instead of `namespace A { }`.
+    const std::string& getAliasTarget() const { return aliasTarget_; }
+    void setAliasTarget(const std::string& target) { aliasTarget_ = target; }
+
 private:
     std::string name_;
     std::vector<std::unique_ptr<ASTNode>> children_;
     Token targetToken_;
+    std::string aliasTarget_;
 };
 
 class InterfaceDeclaration final : public Declaration {

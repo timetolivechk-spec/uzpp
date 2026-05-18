@@ -1,7 +1,7 @@
 #pragma once
 #ifndef UZPP_GEN_MATN_HPP_
 #define UZPP_GEN_MATN_HPP_
-#line 1 "C:\\Users\\MSN\\uz++\\.claude\\worktrees\\musing-satoshi-e40317\\stdlib\\matn.uzpp"
+#line 1 "C:\\Users\\MSN\\uz++\\stdlib\\matn.uzpp"
 #include <regex>
 #include <cctype>
 #include <algorithm>
@@ -503,6 +503,10 @@ namespace uzpp::Matn {
                 (i =(i + 1));
             }
         return natija;
+    }
+    inline auto formatlash(const std::string& naqsh, const std::vector<std::string>& argumentlar)->std::string
+    {
+        return formatlash_indeksli(naqsh, argumentlar);
     }
     inline auto oxir_topish(const std::string& s, const std::string& qidiriluvchi)->std::optional<std::size_t>
     {

@@ -1808,11 +1808,9 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
         }
     }
     
-    // C++20 trailing requires-clause on class template
-    if (!decl->getRequiresClause().empty()) {
-        emitRawToken("requires");
-        emitRawToken("(" + decl->getRequiresClause() + ")");
-    }
+    // No class-trailing-requires here — C++ rejects `class X requires C`.
+    // For constrained class templates, use the form parsed at the template
+    // wrapper level: `shablon<T> shart(C) sinf X { ... }`.
 
     emitRawToken("{");
     emitNewline();
@@ -1960,6 +1958,17 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
 
 void CodeGen::visitNamespaceDeclaration(const NamespaceDeclaration* decl) {
     if (decl == nullptr) return;
+    // Namespace alias: `nomlar_fazosi A = B::C;` -> `namespace A = B::C;`
+    if (!decl->getAliasTarget().empty()) {
+        writeIndentIfNeeded();
+        emitRawToken("namespace");
+        emitRawToken(decl->getName());
+        emitRawToken("=");
+        emitRawToken(decl->getAliasTarget());
+        emitRawToken(";");
+        emitNewline();
+        return;
+    }
     // "nomlar_fazosi X;" (no children) -> "using namespace X;"
     if (decl->getChildren().empty()) {
         writeIndentIfNeeded();

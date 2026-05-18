@@ -1,0 +1,33 @@
+// uz++ — namespace alias sintaksisini sinaydi:
+//   nomlar_fazosi Qisqa = Uzun::Ichki::Nom;
+
+ulash "uzpp_runtime.hpp"
+
+nomlar_fazosi Uzun {
+    nomlar_fazosi Ichki {
+        funksiya salomlash() -> matn {
+            qaytarish "salom!";
+        }
+
+        sobit_ifoda butun PI_YAQIN = 3;
+    }
+}
+
+// Alias deklaratsiya — C++ ga: namespace Qisqa = Uzun::Ichki;
+nomlar_fazosi Qisqa = Uzun::Ichki;
+
+butun asosiy() {
+    matn x = Qisqa::salomlash();
+    agar (x != "salom!") {
+        irgitish std::runtime_error("salomlash() qiymatda xato");
+    }
+    agar (Qisqa::PI_YAQIN != 3) {
+        irgitish std::runtime_error("PI_YAQIN qiymati noto'g'ri");
+    }
+    // Asl ham qulay bo'lishi kerak
+    agar (Uzun::Ichki::PI_YAQIN != 3) {
+        irgitish std::runtime_error("Asl yo'l ham buzilgan");
+    }
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
