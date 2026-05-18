@@ -1808,6 +1808,12 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
         }
     }
     
+    // C++20 trailing requires-clause on class template
+    if (!decl->getRequiresClause().empty()) {
+        emitRawToken("requires");
+        emitRawToken("(" + decl->getRequiresClause() + ")");
+    }
+
     emitRawToken("{");
     emitNewline();
     

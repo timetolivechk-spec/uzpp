@@ -788,6 +788,10 @@ public:
     
     const std::string& getAlignment() const { return alignment_; }
     void setAlignment(const std::string& alignment) { alignment_ = alignment; }
+    
+    // C++20 trailing requires-clause: sinf Foo shart (cond) { ... }
+    const std::string& getRequiresClause() const { return requiresClause_; }
+    void setRequiresClause(const std::string& clause) { requiresClause_ = clause; }
 
 private:
     std::string name_;
@@ -799,6 +803,7 @@ private:
     std::string kind_;  // "class" (default), "struct", or "union"
     std::vector<std::string> friendDecls_;  // raw "friend ..." declarations
     std::string alignment_;  // alignas(N) value
+    std::string requiresClause_;  // C++20 trailing requires on class
 };
 
 class NamespaceDeclaration final : public Declaration {
