@@ -274,6 +274,35 @@ public:
             Parser parser(tokens);
             const auto program = parser.parse();
 
+            // Empty / asosiy()-less programs used to fall through and link
+            // with no entry point — producing a cryptic "ld returned 5 exit
+            // status" from collect2.exe instead of a helpful message. Catch
+            // the missing-main case here, in test/bench modes we accept it
+            // because the runner wraps tests in its own main().
+            if (!isTestMode && !isBenchMode) {
+                bool hasAsosiy = false;
+                for (const auto& node : program->getChildren()) {
+                    if (node->getType() == ASTNodeType::FunctionDeclaration) {
+                        const auto* fn = static_cast<const FunctionDeclaration*>(node.get());
+                        if (fn->getName() == "asosiy" || fn->getName() == "main") {
+                            hasAsosiy = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasAsosiy) {
+                    std::cerr << "\033[1m" << inputFile.filename().string() << ":\033[0m "
+                              << "\033[1;31mxato\033[0m: `butun asosiy()` funksiyasi topilmadi. "
+                              << "Har bir uz++ dasturi `asosiy` funksiyasidan boshlanadi.\n"
+                              << "  Misol:\n"
+                              << "    butun asosiy() {\n"
+                              << "        yozish << \"Salom, dunyo!\" << qator_oxiri;\n"
+                              << "        qaytarish 0;\n"
+                              << "    }\n";
+                    return false;
+                }
+            }
+
             TypeChecker checker;
             std::cout << "[0/2] Semantik analiz tekshirilmoqda...\n";
             

@@ -1,0 +1,10 @@
+// XATOLIK_KUTILMOQDA: parse: asosiy() funksiyasi yo'q
+// `butun asosiy()` topilmaganda uzpp tezda tushunarli xato
+// chiqarishi kerak ("collect2.exe: ld returned 5" o'rniga).
+
+ulash "uzpp_runtime.hpp"
+
+funksiya yordamchi() -> butun {
+    qaytarish 42;
+}
+// Bu yerda `butun asosiy() { ... }` qasddan yo'q.
