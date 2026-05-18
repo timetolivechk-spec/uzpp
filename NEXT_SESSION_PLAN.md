@@ -6,15 +6,17 @@
 
 ## Current state at a glance
 
-- **68/68 tests pass locally** (Windows MSYS2 g++ 15.2). Linux CI = 66/68
+- **69/69 tests pass locally** (Windows MSYS2 g++ 15.2). Linux CI = 67/69
   (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — both gated on
   Ubuntu toolchain, not uz++ bugs).
-- **Latest tag pushed: `v2.1.9`** (VSCode extension texts refresh on top of
-  v2.1.8 — apostrophe identifiers, ulash *.uzpp, matn rewritten in uz++,
-  scope shadowing, uzpp-setup.exe + install.sh in release).
-- **stdlib partially self-hosted:** `stdlib/matn.hpp` is generated from
-  `stdlib/matn.uzpp` via header-mode transpilation. Other stdlib modules
-  are still hand-written C++.
+- **Latest tag pushed: `v2.1.9`** (VSCode extension texts refresh).
+- **Local commits ahead of origin** (not yet pushed):
+  - `0f34978` feat(stdlib): port xatoliklar to uz++
+  - `9915302` feat(lsp): AST-aware definition / references / rename
+  - `f4ca448` feat(lang): namespace aliases + trailing requires on classes
+- **stdlib partially self-hosted:** `stdlib/matn.hpp` (~626 LOC source)
+  AND `stdlib/xatoliklar.hpp` (~97 LOC source) are now generated from
+  `.uzpp` via header-mode transpilation. Source of truth is `.uzpp`.
 - **Marketplace: uzpp.uzpp v2.1.9** is live.
 - **GitHub Release v2.1.9** has Windows installer (151 MB), portable zips,
   Linux/macOS tarballs, install.sh, MinGW WinLibs zip (255 MB).
@@ -81,11 +83,11 @@ sed -i 's|^// #include "matn.hpp"|#include "matn.hpp"|' stdlib/uzpp_runtime.hpp
 
 ### 🟢 Stdlib dogfooding — port the next library to uz++
 
-Now that `matn` works (and the `ulash "*.uzpp"` plumbing is solid),
-repeat the pattern on the next module. Order of difficulty:
+Two modules self-hosted so far (`matn`, `xatoliklar`). Remaining order:
 
-1. **`xatoliklar`** (133 LOC) — easiest. Error helpers, pure logic.
+1. ~~**`xatoliklar`** (133 LOC)~~ — done in 0f34978.
 2. **`vaqt`** (117 LOC) — date/time. Some `<chrono>` interop, manageable.
+   Next easiest pick.
 3. **`matematika`** (312 LOC) — lots of thin `<cmath>` wrappers (`sin`,
    `cos`, `log`, ...) plus statistics. Mostly mechanical translation.
 4. **`json`** (324 LOC) — ambitious. Variant + shared_ptr recursion;
@@ -104,9 +106,8 @@ Process (proven on `matn`):
 
 ### 🟡 LSP & tooling polish
 
-- **Definition / references / rename are text-based.** Make them AST-aware
-  — TypeChecker already has scope info, just plumb it through.
-  Files: `src/lsp_server.cpp::findDefinition`, ~150 LOC.
+- ~~**Definition / references / rename are text-based.**~~ Done in
+  9915302 — now AST-aware (walks IdentifierExpression nodes).
 - **Inline comments in formatter** still drop inside expressions / blank
   lines. `Lexer::Token::leadingComments` captures them; formatter only
   emits at top-level. ~200 LOC in `src/formatter.cpp::formatBlock` etc.
@@ -114,15 +115,16 @@ Process (proven on `matn`):
   `std::optional`, smart pointers) uses gdb-MI's flat output. Switch to
   `-var-create` / `-var-list-children` for tree expansion. ~100 LOC in
   `src/dap_server.cpp`.
-- **Code actions for more warnings.** Today only "unused variable" gets
-  quick-fixes. Add: "type mismatch" (suggest `static_cast`), "redeclaration"
-  (rename), unreachable code (remove). ~80 LOC per fix.
+- **Code actions for more warnings.** "unused variable" + "unreachable
+  code" land in 9915302 / f4ca448. Still to do: "type mismatch" (suggest
+  `static_cast`), "redeclaration" (rename), warning-driven import
+  suggestions. ~80 LOC per fix.
 
 ### 🟡 Language gaps (small wins individually)
 
-- **Namespace aliases** (`nomlar_fazosi A = B::C;`) — parser gap, ~20 LOC.
+- ~~**Namespace aliases**~~ — done in f4ca448.
+- ~~**Trailing `requires` on classes**~~ — done in f4ca448.
 - **Module partitions** (`export module foo:bar;`) — parser gap, ~25 LOC.
-- **Trailing `requires` on classes** (currently only on functions) — ~15 LOC.
 - **`static operator()`** C++23 (deducing-this on call site) — ~20 LOC.
 - **Variadic templates with `std::format_string<Args...>`** — would unblock
   `Matn::formatlash` (currently only `formatlash_indeksli`). Bigger work,
@@ -159,16 +161,20 @@ assumptions throughout. Discuss approach with user before starting.
 
 ## Suggested next batch
 
-Pick ONE of these as a single-session goal (verify with user first):
+Last session knocked out (A), (B), (C). Pick ONE of these next:
 
-- **(A) Port `xatoliklar` to uz++** — small, mechanical, gets a second
-  stdlib module self-hosted. ~150 LOC + tests. 1 session.
-- **(B) AST-aware LSP definition/references** — fix the long-standing
-  text-based hack. Biggest UX win for non-trivial codebases. ~200 LOC.
-  1 session.
-- **(C) Two parser gaps + code action expansion** — namespace aliases,
-  trailing `requires` on classes, one more code-action variant.
-  ~80 LOC + tests. Half-session.
+- **(D) Port `vaqt` to uz++** — third stdlib module. `<chrono>` interop
+  the trickiest part; otherwise straightforward. ~120 LOC + tests.
+- **(E) Better LSP code actions** — type-mismatch quick-fix (`static_cast`
+  suggestion), redeclaration → rename. Reuses the warnings TypeChecker
+  already emits. ~80 LOC.
+- **(F) Push the merged work to origin + cut v2.2.0 tag** — requires
+  user authorisation. Three local commits worth shipping: xatoliklar
+  port, AST-aware LSP, namespace aliases / trailing requires. Bump
+  vscode-uzpp to v2.2.0; CHANGELOG entry; tag; let release.yml fire.
+- **(G) Fix the `mantiq` / `mantiqiy` warning noise** — one line in
+  type_checker.hpp to treat them as equivalent (both alias `bool`).
+  ~5 LOC. Tiny, but kills dozens of spurious warnings.
 
 ## Found in the last session (consider for future polish)
 
