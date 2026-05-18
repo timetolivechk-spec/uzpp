@@ -1,12 +1,14 @@
 #pragma once
 
+#include "ast.h"
+
+#include <sstream>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace uzpp {
 
-class Program;
 class LspServer {
 public:
     void run();
@@ -35,6 +37,22 @@ private:
     std::string getWordAtPosition(const std::string& text, int line, int character);
     std::string buildDocumentSymbols(const Program* program);
     std::string findDefinition(const std::string& uri, const std::string& word);
+    // AST-based definition lookup — walks the full AST (not just top-level)
+    std::string findDefinitionAst(const std::string& uri, const std::string& word);
+    // AST-based reference collection — only matches IdentifierExpressions
+    std::string findReferencesAst(const std::string& uri, const std::string& word, int cursorLine, int cursorChar);
+    // AST-based rename — returns workspace edits for all IdentifierExpression matches
+    std::string buildRenameEditsAst(const std::string& uri, const std::string& word, const std::string& newName, int cursorLine, int cursorChar);
+    // Recursive helpers — collect definition locations from an AST node tree
+    void collectDefinitions(const ASTNode* node, const std::string& word,
+                            const std::string& uri, std::ostringstream& out, bool& first);
+    // Recursive helpers — collect reference locations from an AST node tree
+    void collectReferences(const ASTNode* node, const std::string& word,
+                           const std::string& uri, std::ostringstream& out, bool& first);
+    // Collect rename edits from AST
+    void collectRenameEdits(const ASTNode* node, const std::string& word,
+                            const std::string& newName, const std::string& uri,
+                            std::ostringstream& out, bool& first);
     std::string buildSignatureHelp(const std::string& uri, int line, int character);
     std::string buildSemanticTokens(const std::string& text);
     std::string buildInlayHints(const std::string& uri);

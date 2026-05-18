@@ -221,7 +221,7 @@ void LspServer::handleMessage(const std::string& content) {
         if (charPos != std::string::npos) hoverChar = std::stoi(content.substr(charPos + 12, content.find_first_of(",}", charPos) - charPos - 12));
         
         std::string word = getWordAtPosition(documentCache_[uri], hoverLine, hoverChar);
-        std::string loc = findDefinition(uri, word);
+        std::string loc = findDefinitionAst(uri, word);
         sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + loc + "}");
     }
     else if (method == "textDocument/signatureHelp") {
@@ -248,26 +248,8 @@ void LspServer::handleMessage(const std::string& content) {
         if (charPos != std::string::npos) hoverChar = std::stoi(content.substr(charPos + 12, content.find_first_of(",}", charPos) - charPos - 12));
         
         std::string word = getWordAtPosition(documentCache_[uri], hoverLine, hoverChar);
-        std::ostringstream res;
-        res << "[";
-        if (!word.empty() && documentCache_.contains(uri)) {
-            try {
-                Lexer lexer(documentCache_[uri]);
-                auto tokens = lexer.tokenize();
-                bool first = true;
-                for (const auto& t : tokens) {
-                    if (t.value == word) {
-                        if (!first) res << ",";
-                        first = false;
-                        int l = t.line > 0 ? t.line - 1 : 0;
-                        int c = t.column > 0 ? t.column - 1 : 0;
-                        res << "{\"uri\":\"" << uri << "\",\"range\":{\"start\":{\"line\":" << l << ",\"character\":" << c << "},\"end\":{\"line\":" << l << ",\"character\":" << (c + word.length()) << "}}}";
-                    }
-                }
-            } catch(...) {}
-        }
-        res << "]";
-        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + res.str() + "}");
+        std::string refs = findReferencesAst(uri, word, hoverLine, hoverChar);
+        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + refs + "}");
     }
     else if (method == "textDocument/rename") {
         std::string idStr = extractId(content);
@@ -281,27 +263,8 @@ void LspServer::handleMessage(const std::string& content) {
         if (charPos != std::string::npos) hoverChar = std::stoi(content.substr(charPos + 12, content.find_first_of(",}", charPos) - charPos - 12));
         
         std::string word = getWordAtPosition(documentCache_[uri], hoverLine, hoverChar);
-        
-        std::ostringstream res;
-        res << "{\"changes\":{\"" << uri << "\":[";
-        if (!word.empty() && !newName.empty() && documentCache_.contains(uri)) {
-            try {
-                Lexer lexer(documentCache_[uri]);
-                auto tokens = lexer.tokenize();
-                bool first = true;
-                for (const auto& t : tokens) {
-                    if (t.value == word) {
-                        if (!first) res << ",";
-                        first = false;
-                        int l = t.line > 0 ? t.line - 1 : 0;
-                        int c = t.column > 0 ? t.column - 1 : 0;
-                        res << "{\"range\":{\"start\":{\"line\":" << l << ",\"character\":" << c << "},\"end\":{\"line\":" << l << ",\"character\":" << (c + word.length()) << "}},\"newText\":\"" << newName << "\"}";
-                    }
-                }
-            } catch(...) {}
-        }
-        res << "]}}";
-        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + res.str() + "}");
+        std::string edits = buildRenameEditsAst(uri, word, newName, hoverLine, hoverChar);
+        sendMessage("{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":" + edits + "}");
     }
     else if (method == "textDocument/documentSymbol") {
         std::string idStr = extractId(content);
@@ -1163,6 +1126,23 @@ std::string LspServer::computeCodeActions(const std::string& text,
             << ",\"character\":0},\"end\":{\"line\":" << (lineIdx + 1)
             << ",\"character\":0}},\"newText\":\"\"}]}}}";
     }
+
+    // Code action: unreachable code → remove the line
+    static const std::string kUnreachable = "Ushbu kodga hech qachon etib kelinmaydi";
+    for (const auto& w : checker.getWarnings()) {
+        if (w.message.compare(0, kUnreachable.size(), kUnreachable) != 0) continue;
+        if (w.line <= 0) continue;
+        const int lineIdx = w.line - 1;
+        if (lineIdx < rangeStartLine || lineIdx > rangeEndLine) continue;
+        if (!first) out << ",";
+        first = false;
+        out << "{\"title\":\"Yetib bo'lmaydigan kodni o'chirish (qator " << w.line
+            << ")\",\"kind\":\"quickfix\","
+            << "\"edit\":{\"changes\":{\"" << uri << "\":["
+            << "{\"range\":{\"start\":{\"line\":" << lineIdx
+            << ",\"character\":0},\"end\":{\"line\":" << (lineIdx + 1)
+            << ",\"character\":0}},\"newText\":\"\"}]}}}";
+    }
     out << "]";
     return out.str();
 }
@@ -1184,6 +1164,539 @@ void LspServer::applyContentChanges(std::string& document, const std::string& co
             document = newText;
         }
     }
+}
+
+// ===== AST-AWARE DEFINITION / REFERENCES / RENAME =====
+
+// Helper: format a single LSP Location as a JSON fragment.
+static std::string formatLocation(const std::string& uri, int line, int col, int endCol) {
+    int l = line > 0 ? line - 1 : 0;
+    int c = col > 0 ? col - 1 : 0;
+    return "{\"uri\":\"" + uri + "\",\"range\":{\"start\":{\"line\":" +
+           std::to_string(l) + ",\"character\":" + std::to_string(c) +
+           "},\"end\":{\"line\":" + std::to_string(l) +
+           ",\"character\":" + std::to_string(c + endCol) + "}}}";
+}
+
+void LspServer::collectDefinitions(const ASTNode* node, const std::string& word,
+                                    const std::string& uri, std::ostringstream& out, bool& first) {
+    if (!node) return;
+    switch (node->getType()) {
+        case ASTNodeType::FunctionDeclaration: {
+            auto* f = static_cast<const FunctionDeclaration*>(node);
+            if (f->getName() == word) {
+                if (!first) out << ","; first = false;
+                out << formatLocation(uri, f->getFunctionToken().line,
+                                      f->getFunctionToken().column, static_cast<int>(word.size()));
+            }
+            // Recurse into body
+            if (f->getBody()) collectDefinitions(f->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ClassDeclaration: {
+            auto* c = static_cast<const ClassDeclaration*>(node);
+            if (c->getName() == word) {
+                if (!first) out << ","; first = false;
+                out << formatLocation(uri, c->getClassToken().line,
+                                      c->getClassToken().column, static_cast<int>(word.size()));
+            }
+            for (const auto& m : c->getMethods()) {
+                if (m->name == word) {
+                    if (!first) out << ","; first = false;
+                    out << formatLocation(uri, m->token.line, m->token.column, static_cast<int>(word.size()));
+                }
+                if (m->body) collectDefinitions(m->body.get(), word, uri, out, first);
+            }
+            for (const auto& m : c->getMembers()) {
+                if (m.name == word) {
+                    if (!first) out << ","; first = false;
+                    out << formatLocation(uri, m.token.line, m.token.column, static_cast<int>(word.size()));
+                }
+            }
+            break;
+        }
+        case ASTNodeType::VariableDeclaration: {
+            auto* v = static_cast<const VariableDeclaration*>(node);
+            if (v->getName() == word) {
+                if (!first) out << ","; first = false;
+                out << formatLocation(uri, v->getDeclToken().line,
+                                      v->getDeclToken().column, static_cast<int>(word.size()));
+            }
+            break;
+        }
+        case ASTNodeType::NamespaceDeclaration: {
+            auto* ns = static_cast<const NamespaceDeclaration*>(node);
+            for (const auto& child : ns->getChildren())
+                collectDefinitions(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Block: {
+            auto* b = static_cast<const Block*>(node);
+            for (const auto& s : b->getStatements())
+                collectDefinitions(s.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ForStatement: {
+            auto* fs = static_cast<const ForStatement*>(node);
+            if (fs->getInit()) collectDefinitions(fs->getInit(), word, uri, out, first);
+            if (fs->getBody()) collectDefinitions(fs->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::IfStatement: {
+            auto* ifs = static_cast<const IfStatement*>(node);
+            if (ifs->getThenBranch()) collectDefinitions(ifs->getThenBranch(), word, uri, out, first);
+            if (ifs->getElseBranch()) collectDefinitions(ifs->getElseBranch(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::WhileStatement: {
+            auto* ws = static_cast<const WhileStatement*>(node);
+            if (ws->getBody()) collectDefinitions(ws->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::MatchStatement: {
+            auto* ms = static_cast<const MatchStatement*>(node);
+            for (const auto& c : ms->getCases())
+                if (c->body) collectDefinitions(c->body.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::TryStatement: {
+            auto* ts = static_cast<const TryStatement*>(node);
+            if (ts->getTryBlock()) collectDefinitions(ts->getTryBlock(), word, uri, out, first);
+            for (const auto& cc : ts->getCatchClauses())
+                if (cc->block) collectDefinitions(cc->block.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Program: {
+            auto* p = static_cast<const Program*>(node);
+            for (const auto& child : p->getChildren())
+                collectDefinitions(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::EnumDeclaration: {
+            auto* e = static_cast<const EnumDeclaration*>(node);
+            if (e->getName() == word) {
+                if (!first) out << ","; first = false;
+                out << formatLocation(uri, e->getToken().line,
+                                      e->getToken().column, static_cast<int>(word.size()));
+            }
+            break;
+        }
+        case ASTNodeType::Group: {
+            auto* g = static_cast<const GroupNode*>(node);
+            for (const auto& child : g->getChildren())
+                collectDefinitions(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ExpressionStatement: {
+            auto* es = static_cast<const ExpressionStatement*>(node);
+            if (es->getExpression() && es->getExpression()->getType() == ASTNodeType::LambdaExpression) {
+                auto* lam = static_cast<const LambdaExpression*>(es->getExpression());
+                if (lam->getBody()) collectDefinitions(lam->getBody(), word, uri, out, first);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void LspServer::collectReferences(const ASTNode* node, const std::string& word,
+                                   const std::string& uri, std::ostringstream& out, bool& first) {
+    if (!node) return;
+    switch (node->getType()) {
+        case ASTNodeType::IdentifierExpression: {
+            auto* id = static_cast<const IdentifierExpression*>(node);
+            if (id->getName() == word) {
+                if (!first) out << ","; first = false;
+                out << formatLocation(uri, id->getSourceToken().line,
+                                      id->getSourceToken().column, static_cast<int>(word.size()));
+            }
+            break;
+        }
+        case ASTNodeType::BinaryExpression: {
+            auto* b = static_cast<const BinaryExpression*>(node);
+            collectReferences(b->getLeft(), word, uri, out, first);
+            collectReferences(b->getRight(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::UnaryExpression: {
+            auto* u = static_cast<const UnaryExpression*>(node);
+            collectReferences(u->getExpression(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::FunctionCall: {
+            auto* fc = static_cast<const FunctionCall*>(node);
+            collectReferences(fc->getCallee(), word, uri, out, first);
+            for (const auto& a : fc->getArguments())
+                collectReferences(a.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::MemberAccess: {
+            auto* ma = static_cast<const MemberAccess*>(node);
+            collectReferences(ma->getObject(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::SubscriptAccess: {
+            auto* sa = static_cast<const SubscriptAccess*>(node);
+            collectReferences(sa->getArray(), word, uri, out, first);
+            collectReferences(sa->getIndex(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::AssignmentExpression: {
+            auto* ae = static_cast<const AssignmentExpression*>(node);
+            collectReferences(ae->getTarget(), word, uri, out, first);
+            collectReferences(ae->getValue(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::VariableDeclaration: {
+            auto* v = static_cast<const VariableDeclaration*>(node);
+            if (v->getInitializer())
+                collectReferences(v->getInitializer(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ReturnStatement: {
+            auto* r = static_cast<const ReturnStatement*>(node);
+            if (r->getValue()) collectReferences(r->getValue(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ExpressionStatement: {
+            auto* es = static_cast<const ExpressionStatement*>(node);
+            collectReferences(es->getExpression(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::IfStatement: {
+            auto* ifs = static_cast<const IfStatement*>(node);
+            collectReferences(ifs->getCondition(), word, uri, out, first);
+            if (ifs->getThenBranch()) collectReferences(ifs->getThenBranch(), word, uri, out, first);
+            if (ifs->getElseBranch()) collectReferences(ifs->getElseBranch(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::WhileStatement: {
+            auto* ws = static_cast<const WhileStatement*>(node);
+            collectReferences(ws->getCondition(), word, uri, out, first);
+            if (ws->getBody()) collectReferences(ws->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ForStatement: {
+            auto* fs = static_cast<const ForStatement*>(node);
+            if (fs->getInit()) collectReferences(fs->getInit(), word, uri, out, first);
+            if (fs->getCondition()) collectReferences(fs->getCondition(), word, uri, out, first);
+            if (fs->getIncrement()) collectReferences(fs->getIncrement(), word, uri, out, first);
+            if (fs->getBody()) collectReferences(fs->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Block: {
+            auto* b = static_cast<const Block*>(node);
+            for (const auto& s : b->getStatements())
+                collectReferences(s.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::StatementList: {
+            auto* sl = static_cast<const StatementList*>(node);
+            for (const auto& s : sl->getStatements())
+                collectReferences(s.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::MatchStatement: {
+            auto* ms = static_cast<const MatchStatement*>(node);
+            collectReferences(ms->getCondition(), word, uri, out, first);
+            for (const auto& c : ms->getCases()) {
+                if (c->pattern) collectReferences(c->pattern.get(), word, uri, out, first);
+                if (c->body) collectReferences(c->body.get(), word, uri, out, first);
+            }
+            break;
+        }
+        case ASTNodeType::TryStatement: {
+            auto* ts = static_cast<const TryStatement*>(node);
+            if (ts->getTryBlock()) collectReferences(ts->getTryBlock(), word, uri, out, first);
+            for (const auto& cc : ts->getCatchClauses())
+                if (cc->block) collectReferences(cc->block.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::FunctionDeclaration: {
+            auto* f = static_cast<const FunctionDeclaration*>(node);
+            if (f->getBody()) collectReferences(f->getBody(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ClassDeclaration: {
+            auto* c = static_cast<const ClassDeclaration*>(node);
+            for (const auto& m : c->getMethods())
+                if (m->body) collectReferences(m->body.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::NamespaceDeclaration: {
+            auto* ns = static_cast<const NamespaceDeclaration*>(node);
+            for (const auto& child : ns->getChildren())
+                collectReferences(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Program: {
+            auto* p = static_cast<const Program*>(node);
+            for (const auto& child : p->getChildren())
+                collectReferences(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Group: {
+            auto* g = static_cast<const GroupNode*>(node);
+            for (const auto& child : g->getChildren())
+                collectReferences(child.get(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ThrowExpression: {
+            auto* te = static_cast<const ThrowExpression*>(node);
+            collectReferences(te->getExpression(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::AwaitExpression: {
+            auto* ae = static_cast<const AwaitExpression*>(node);
+            collectReferences(ae->getExpression(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::PipelineExpression: {
+            auto* pe = static_cast<const PipelineExpression*>(node);
+            collectReferences(pe->getLeft(), word, uri, out, first);
+            collectReferences(pe->getRight(), word, uri, out, first);
+            break;
+        }
+        case ASTNodeType::TernaryExpression: {
+            auto* te = static_cast<const TernaryExpression*>(node);
+            collectReferences(te->getCondition(), word, uri, out, first);
+            collectReferences(te->getThenExpr(), word, uri, out, first);
+            collectReferences(te->getElseExpr(), word, uri, out, first);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void LspServer::collectRenameEdits(const ASTNode* node, const std::string& word,
+                                    const std::string& newName, const std::string& uri,
+                                    std::ostringstream& out, bool& first) {
+    if (!node) return;
+    if (node->getType() == ASTNodeType::IdentifierExpression) {
+        auto* id = static_cast<const IdentifierExpression*>(node);
+        if (id->getName() == word) {
+            if (!first) out << ","; first = false;
+            int l = id->getSourceToken().line > 0 ? id->getSourceToken().line - 1 : 0;
+            int c = id->getSourceToken().column > 0 ? id->getSourceToken().column - 1 : 0;
+            out << "{\"range\":{\"start\":{\"line\":" << l
+                << ",\"character\":" << c << "},\"end\":{\"line\":" << l
+                << ",\"character\":" << (c + static_cast<int>(word.size()))
+                << "}},\"newText\":\"" << newName << "\"}";
+        }
+        return;
+    }
+    // Recurse into child nodes (same dispatch as collectReferences)
+    switch (node->getType()) {
+        case ASTNodeType::BinaryExpression: {
+            auto* b = static_cast<const BinaryExpression*>(node);
+            collectRenameEdits(b->getLeft(), word, newName, uri, out, first);
+            collectRenameEdits(b->getRight(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::UnaryExpression: {
+            auto* u = static_cast<const UnaryExpression*>(node);
+            collectRenameEdits(u->getExpression(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::FunctionCall: {
+            auto* fc = static_cast<const FunctionCall*>(node);
+            collectRenameEdits(fc->getCallee(), word, newName, uri, out, first);
+            for (const auto& a : fc->getArguments())
+                collectRenameEdits(a.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::MemberAccess: {
+            auto* ma = static_cast<const MemberAccess*>(node);
+            collectRenameEdits(ma->getObject(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::SubscriptAccess: {
+            auto* sa = static_cast<const SubscriptAccess*>(node);
+            collectRenameEdits(sa->getArray(), word, newName, uri, out, first);
+            collectRenameEdits(sa->getIndex(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::AssignmentExpression: {
+            auto* ae = static_cast<const AssignmentExpression*>(node);
+            collectRenameEdits(ae->getTarget(), word, newName, uri, out, first);
+            collectRenameEdits(ae->getValue(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::VariableDeclaration: {
+            auto* v = static_cast<const VariableDeclaration*>(node);
+            if (v->getInitializer())
+                collectRenameEdits(v->getInitializer(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ReturnStatement: {
+            auto* r = static_cast<const ReturnStatement*>(node);
+            if (r->getValue()) collectRenameEdits(r->getValue(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ExpressionStatement: {
+            auto* es = static_cast<const ExpressionStatement*>(node);
+            collectRenameEdits(es->getExpression(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::IfStatement: {
+            auto* ifs = static_cast<const IfStatement*>(node);
+            collectRenameEdits(ifs->getCondition(), word, newName, uri, out, first);
+            if (ifs->getThenBranch()) collectRenameEdits(ifs->getThenBranch(), word, newName, uri, out, first);
+            if (ifs->getElseBranch()) collectRenameEdits(ifs->getElseBranch(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::WhileStatement: {
+            auto* ws = static_cast<const WhileStatement*>(node);
+            collectRenameEdits(ws->getCondition(), word, newName, uri, out, first);
+            if (ws->getBody()) collectRenameEdits(ws->getBody(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ForStatement: {
+            auto* fs = static_cast<const ForStatement*>(node);
+            if (fs->getInit()) collectRenameEdits(fs->getInit(), word, newName, uri, out, first);
+            if (fs->getCondition()) collectRenameEdits(fs->getCondition(), word, newName, uri, out, first);
+            if (fs->getIncrement()) collectRenameEdits(fs->getIncrement(), word, newName, uri, out, first);
+            if (fs->getBody()) collectRenameEdits(fs->getBody(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Block: {
+            auto* b = static_cast<const Block*>(node);
+            for (const auto& s : b->getStatements())
+                collectRenameEdits(s.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::StatementList: {
+            auto* sl = static_cast<const StatementList*>(node);
+            for (const auto& s : sl->getStatements())
+                collectRenameEdits(s.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::MatchStatement: {
+            auto* ms = static_cast<const MatchStatement*>(node);
+            collectRenameEdits(ms->getCondition(), word, newName, uri, out, first);
+            for (const auto& c : ms->getCases()) {
+                if (c->pattern) collectRenameEdits(c->pattern.get(), word, newName, uri, out, first);
+                if (c->body) collectRenameEdits(c->body.get(), word, newName, uri, out, first);
+            }
+            break;
+        }
+        case ASTNodeType::TryStatement: {
+            auto* ts = static_cast<const TryStatement*>(node);
+            if (ts->getTryBlock()) collectRenameEdits(ts->getTryBlock(), word, newName, uri, out, first);
+            for (const auto& cc : ts->getCatchClauses())
+                if (cc->block) collectRenameEdits(cc->block.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::FunctionDeclaration: {
+            auto* f = static_cast<const FunctionDeclaration*>(node);
+            if (f->getBody()) collectRenameEdits(f->getBody(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ClassDeclaration: {
+            auto* c = static_cast<const ClassDeclaration*>(node);
+            for (const auto& m : c->getMethods())
+                if (m->body) collectRenameEdits(m->body.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::NamespaceDeclaration: {
+            auto* ns = static_cast<const NamespaceDeclaration*>(node);
+            for (const auto& child : ns->getChildren())
+                collectRenameEdits(child.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Program: {
+            auto* p = static_cast<const Program*>(node);
+            for (const auto& child : p->getChildren())
+                collectRenameEdits(child.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::Group: {
+            auto* g = static_cast<const GroupNode*>(node);
+            for (const auto& child : g->getChildren())
+                collectRenameEdits(child.get(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::ThrowExpression: {
+            auto* te = static_cast<const ThrowExpression*>(node);
+            collectRenameEdits(te->getExpression(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::AwaitExpression: {
+            auto* ae = static_cast<const AwaitExpression*>(node);
+            collectRenameEdits(ae->getExpression(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::PipelineExpression: {
+            auto* pe = static_cast<const PipelineExpression*>(node);
+            collectRenameEdits(pe->getLeft(), word, newName, uri, out, first);
+            collectRenameEdits(pe->getRight(), word, newName, uri, out, first);
+            break;
+        }
+        case ASTNodeType::TernaryExpression: {
+            auto* te = static_cast<const TernaryExpression*>(node);
+            collectRenameEdits(te->getCondition(), word, newName, uri, out, first);
+            collectRenameEdits(te->getThenExpr(), word, newName, uri, out, first);
+            collectRenameEdits(te->getElseExpr(), word, newName, uri, out, first);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+std::string LspServer::findDefinitionAst(const std::string& uri, const std::string& word) {
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end() || word.empty()) return "[]";
+    try {
+        Lexer lexer(it->second);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        collectDefinitions(program.get(), word, uri, out, first);
+        out << "]";
+        return out.str();
+    } catch (...) { return "[]"; }
+}
+
+std::string LspServer::findReferencesAst(const std::string& uri, const std::string& word,
+                                          int cursorLine, int cursorChar) {
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end() || word.empty()) return "[]";
+    try {
+        Lexer lexer(it->second);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+        std::ostringstream out;
+        out << "[";
+        bool first = true;
+        collectReferences(program.get(), word, uri, out, first);
+        out << "]";
+        return out.str();
+    } catch (...) { return "[]"; }
+}
+
+std::string LspServer::buildRenameEditsAst(const std::string& uri, const std::string& word,
+                                            const std::string& newName, int cursorLine, int cursorChar) {
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end() || word.empty() || newName.empty()) return "null";
+    try {
+        Lexer lexer(it->second);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+        std::ostringstream out;
+        out << "{\"changes\":{\"" << uri << "\":[";
+        bool first = true;
+        collectRenameEdits(program.get(), word, newName, uri, out, first);
+        out << "]}}";
+        return out.str();
+    } catch (...) { return "null"; }
 }
 
 } // namespace uzpp
