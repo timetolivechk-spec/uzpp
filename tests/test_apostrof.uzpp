@@ -1,6 +1,7 @@
-// uz++ — apostroflar (' / o' / g') o'zgaruvchi, funksiya, sinf, metod va
-// maydon nomlarida ishlashini tekshiradi. Hammasi C++23 da U+02BC
-// MODIFIER LETTER APOSTROPHE ga aylantirilishi kerak.
+// uz++ — haqiqiy o'zbek so'zlaridagi apostrof (o' / g') o'zgaruvchi,
+// funksiya, sinf, metod va maydon nomlarida ishlashini tekshiradi.
+// Hammasi C++23 da U+02BC MODIFIER LETTER APOSTROPHE ga aylantirilishi
+// kerak — `_` mangling yo'q.
 
 ulash "uzpp_runtime.hpp"
 
@@ -12,46 +13,55 @@ funksiya tekshir(o'zgarmas matn& nom, mantiqiy shart) -> bosh {
     }
 }
 
-// Apostrof bilan funksiya nomi
+// Apostrof bilan funksiya nomi — "o'lcham" haqiqiy o'zbekcha (size)
 funksiya o'lcham(o'zgarmas matn& s) -> hajm_turi {
     qaytarish s.size();
 }
 
-// Apostrof bilan sinf nomi va a'zolari
+// "to'lov" (to'lash dan, payment) — apostrof bilan
+funksiya to'lov(butun summa) -> butun {
+    qaytarish summa * 2;
+}
+
+// Apostrof bilan sinf nomi — "G'oya" (idea)
 sinf G'oya {
 ochiq:
-    matn nom'i;
-    butun bah'osi;
+    matn nomi;
+    butun bahosi;
 
-    G'oya(o'zgarmas matn& n, butun b) : nom'i(n), bah'osi(b) {}
+    G'oya(o'zgarmas matn& n, butun b) : nomi(n), bahosi(b) {}
 
-    funksiya yangi'lash(o'zgarmas matn& n) -> bosh {
-        nom'i = n;
+    funksiya yangilash(o'zgarmas matn& n) -> bosh {
+        nomi = n;
     }
 
     funksiya tasviri() o'zgarmas -> matn {
-        qaytarish nom'i;
+        qaytarish nomi;
     }
 };
 
 butun asosiy() {
-    // Apostrof bilan lokal o'zgaruvchilar
-    matn o'l = "salom";
-    butun yo'q = 0;
-    matn ko'k = "rang";
+    // Haqiqiy o'zbek so'zlari lokal o'zgaruvchi nomlari sifatida:
+    matn so'z = "salom";       // so'z — word
+    butun yo'q = 0;             // yo'q — no/none
+    matn ko'k = "rang";         // ko'k — blue
+    matn o'rtoq = "do'st";      // o'rtoq — friend; do'st — friend (string)
+    butun o'lchov = 42;         // o'lchov — measurement
 
-    tekshir("o'lcham", o'lcham(o'l) == 5);
-
-    G'oya g'oya("birinchi", 100);
-    tekshir("g'oya.nom'i", g'oya.nom'i == "birinchi");
-    tekshir("g'oya.bah'osi", g'oya.bah'osi == 100);
-    tekshir("g'oya.tasviri()", g'oya.tasviri() == "birinchi");
-
-    g'oya.yangi'lash("ikkinchi");
-    tekshir("g'oya.nom'i (yangilangan)", g'oya.nom'i == "ikkinchi");
-
+    tekshir("o'lcham", o'lcham(so'z) == 5);
+    tekshir("to'lov", to'lov(50) == 100);
     tekshir("yo'q nol", yo'q == 0);
     tekshir("ko'k rang", ko'k == "rang");
+    tekshir("o'rtoq do'st", o'rtoq == "do'st");
+    tekshir("o'lchov", o'lchov == 42);
+
+    G'oya g'oya("birinchi", 100);
+    tekshir("g'oya.nomi", g'oya.nomi == "birinchi");
+    tekshir("g'oya.bahosi", g'oya.bahosi == 100);
+    tekshir("g'oya.tasviri()", g'oya.tasviri() == "birinchi");
+
+    g'oya.yangilash("ikkinchi");
+    tekshir("g'oya.nomi (yangilangan)", g'oya.nomi == "ikkinchi");
 
     yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
     qaytarish 0;
