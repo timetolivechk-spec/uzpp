@@ -563,21 +563,30 @@ function showWelcome(context) {
 }
 
 /**
- * Downloads the official uzpp-setup.exe from the latest GitHub release and
- * launches it via the system shell. After the user finishes the installer
- * and reloads VS Code, findCompilerOnPath() will discover uz++ automatically.
+ * Runs the official installer for the user's platform:
+ *  - Windows: downloads uzpp-setup.exe from the latest GitHub release and
+ *    launches it via the system shell. Bundles MinGW + uzpp + stdlib.
+ *  - Linux/macOS: opens a VS Code integrated terminal and runs the
+ *    install.sh one-liner (`curl -fsSL .../install.sh | bash`). The script
+ *    detects the platform, checks for g++/clang++, and installs uzpp into
+ *    /usr/local/. After it finishes, reload VS Code.
  *
- * Linux/macOS users get the releases page in their browser instead — Inno
- * Setup is Windows-only and bundling AppImage / pkg installers is on the
- * roadmap (see README Quick Install table).
+ * After the installer finishes and VS Code reloads, findCompilerOnPath()
+ * will discover uz++ automatically.
  */
 async function runOfficialInstaller(panel) {
     if (process.platform !== 'win32') {
-        await vscode.env.openExternal(vscode.Uri.parse(RELEASES_LATEST_URL));
+        // Linux/macOS: run install.sh in an integrated terminal so the user
+        // can see progress + answer the C++-compiler prompt if needed.
+        const term = vscode.window.createTerminal({ name: 'uz++ installer' });
+        term.show(true);
+        term.sendText(
+            'curl -fsSL https://github.com/timetolivechk-spec/uzpp/releases/latest/download/install.sh | bash'
+        );
         panel?.webview.postMessage({
             type: 'info',
-            text: 'Linux/macOS uchun rasmiy o\'rnatuvchi hali tayyor emas. ' +
-                  'Manba koddan qurish bo\'yicha ko\'rsatma brauzerda ochildi.'
+            text: "Terminalda install.sh ishga tushdi. Skript yakunlangach, " +
+                  "VS Code'ni qayta yuklang (Reload Window) — uz++ avtomatik topiladi."
         });
         return;
     }
@@ -654,20 +663,24 @@ function buildWelcomeHtml(compilerInfo) {
     // Install button is ALWAYS visible. Label adapts to current state so users
     // who already have uz++ can still re-install / upgrade from this screen.
     const installLabel = isWin
-        ? (ready ? "uz++ ni qayta o'rnatish / yangilash (~115 MB)"
-                 : "Hammasini o'rnatish — uzpp-setup.exe (~115 MB)")
-        : (ready ? "Releases sahifasini ochish (yangilash uchun)"
-                 : "Releases sahifasini ochish");
+        ? (ready ? "uz++ ni qayta o'rnatish / yangilash (~152 MB)"
+                 : "Hammasini o'rnatish — uzpp-setup.exe (~152 MB)")
+        : (ready ? "install.sh orqali qayta o'rnatish / yangilash"
+                 : "Hammasini o'rnatish — install.sh (terminalda)");
 
     const installDescription = isWin
         ? `<p>Bu rasmiy <code>uzpp-setup.exe</code> ni yuklab oladi va ishga tushiradi.
-            Ichida MinGW GCC 14.2 ham bor — boshqa hech narsa o'rnatish kerak emas.
+            Ichida MinGW-w64 GCC 15.2 UCRT ham bor — boshqa hech narsa o'rnatish kerak emas.
             O'rnatuvchi <code>%LOCALAPPDATA%\\Programs\\uzpp\\</code> ga o'rnatadi
-            (admin huquqsiz).</p>`
-        : `<p>Linux/macOS uchun rasmiy paket hali yo'q. Brauzerda releases
-            sahifasi ochiladi — manba koddan qurish bo'yicha
-            <a href="#" onclick="vscode.postMessage({command:'openDocs'})">qo'llanma</a>
-            bilan davom eting.</p>`;
+            (admin huquqsiz). PATH avtomatik sozlanadi, <code>.uzpp</code> fayllar
+            uzpp bilan ochiladi.</p>`
+        : `<p>Bu rasmiy <code>install.sh</code> ni terminalda ishga tushiradi:</p>
+           <pre><code>curl -fsSL https://github.com/timetolivechk-spec/uzpp/releases/latest/download/install.sh | bash</code></pre>
+           <p>Skript tizimni aniqlaydi (Linux x64 / macOS Apple Silicon),
+            <code>g++</code> / <code>clang++</code> borligini tekshiradi va yo'q bo'lsa
+            qaysi paketni o'rnatishni ko'rsatadi (apt / dnf / brew / xcode-select).
+            Keyin <code>uzpp</code> ni <code>/usr/local/bin/</code> ga,
+            stdlib ni <code>/usr/local/lib/uzpp/</code> ga qo'yadi.</p>`;
 
     const installSection = `<div class="install-box">
         ${statusBanner}

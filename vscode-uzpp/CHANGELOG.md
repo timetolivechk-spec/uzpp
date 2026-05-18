@@ -1,5 +1,64 @@
 # Changelog
 
+## [2.1.9] — 2026-05-18
+
+### Welcome ekrani / o'rnatish
+- **Linux/macOS uchun `install.sh` integratsiyasi** — Welcome ekranidagi
+  "Hammasini o'rnatish" tugmasi endi Linux/macOS da terminalda
+  `curl -fsSL .../install.sh | bash` ni ishga tushiradi (avval "rasmiy
+  o'rnatuvchi hali tayyor emas" deyilardi).
+- README to'liq qayta yozildi: `uzpp-setup.exe` (~152 MB, MinGW-w64
+  GCC 15.2 UCRT) va Linux/macOS one-liner ko'rsatildi.
+- Welcome ekranidagi installer hajmi yangilandi (~115 MB → ~152 MB,
+  GCC 14.2 → 15.2).
+
+## [2.1.8] — 2026-05-18
+
+### Til imkoniyatlari (uz++ kompilyatori)
+- **Apostrof identifikatorlarda haqiqatan ishlaydi.** `o'lcham`, `G'oya`,
+  `to'lov` kabi haqiqiy o'zbek so'zlari endi `_` ga aylantirilmaydi —
+  C++23 da U+02BC MODIFIER LETTER APOSTROPHE sifatida saqlanadi (`oʼlcham`).
+- **Keyword shadowing.** `yangi`, `bor`, `kasr`, `uzun`, `bosh` kabi
+  alias-keywordlarni endi lokal o'zgaruvchi nomi sifatida ishlatish mumkin.
+- **`} yoki { ... }`** — `yoki` endi `if`-`then`dan keyin `else` sifatida
+  qabul qilinadi.
+- **`funksiya X() o'zgarmas -> T { ... }`** — sinf metodlarida `funksiya`
+  uslubida `o'zgarmas` modifier va trailing return type birga ishlaydi.
+- **Bitwise operatorlar `& | ^`** — parser ularni binary sifatida tan
+  oladi (unary `&` o'zgarmagan).
+- **`yangi`/`o'chirish` lookahead** — endi `new`/`delete` sifatida faqat
+  type/expression davom etganda olinadi.
+
+### Stdlib
+- **`stdlib/matn.uzpp`** — `matn` kutubxonasi to'liq uz++ tilida qayta
+  yozildi (626 LOC). Eski C++ `matn.hpp` artefakt sifatida shu fayldan
+  generatsiya qilinadi.
+- **41 funksiya** `matn` da: barcha 27 ta eski + 14 ta yangi
+  (`qadar_qirqish`, `qator_son`, `formatlash_indeksli`, `bir_marta_ajratish`...)
+  + 7 ta UTF-8 yordamchi (`belgilar_soni`, `chapdan_belgi_bo'yicha`,
+  `qism_matn_belgi_bo'yicha` ...) — kirill/o'zbek matnlari uchun kritik.
+
+### Til — `ulash "*.uzpp"`
+- Uz++ fayllarni boshqa uz++ fayldan to'g'ridan-to'g'ri `ulash` qilish
+  mumkin. Transpilator rekursiv ravishda `.uzpp` ni `.hpp` ga aylantiradi
+  (header-mode).
+- `manba_joyi` — `std::source_location` ning o'zbekcha aliasi.
+
+### LSP
+- **Inlay hints**: `o'zgaruvchan x = ...` dan keyin xulosa qilingan tur
+  ko'rsatiladi.
+- **Code actions**: `unused variable` warning uchun quick-fix.
+
+### Release infrastruktura
+- **`uzpp-setup.exe` avtomatik quriladi** (avval qo'lda upload qilinardi).
+  Inno Setup + WinLibs GCC 15.2 UCRT bundle.
+- **`install.sh`** — Linux/macOS bir-buyruqli installer.
+- macOS x64 (Intel) qo'llab-quvvatlash to'xtatildi (macos-13 runner
+  GitHub Actions tomonidan deprecated).
+
+### Sinov natijasi
+- Local regression: **68/68** (avval 64/64).
+
 ## [2.1.7] — 2026-05-13
 
 ### Til imkoniyatlari (transpilatsiya)

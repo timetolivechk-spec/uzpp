@@ -7,56 +7,68 @@
 
 ---
 
-## ⚡ O'rnatish — Windows uchun bitta qadam
+## ⚡ Tezda boshlash — sizning platformangiz
 
-### 👉 [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe) ni yuklab oling va ishga tushiring (~115 MB).
+### 🪟 Windows — bitta fayl
+
+👉 **[uzpp-setup.exe](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe)** ni yuklab oling va ishga tushiring (~152 MB).
 
 Bitta o'rnatuvchi ichida bor:
 
-| Komponent | Hajm | Tavsif |
-|---|---|---|
-| **uz++ kompilyatori** | ~4 MB | Transpayler: `.uzpp` → C++ → binary |
-| **Standart kutubxona** | ~2 MB | `stdlib/uzpp_runtime.hpp` va boshqa modullar |
-| **MinGW GCC 14.2** | ~700 MB (113 MB zip) | C++ kompilyatori — boshqa hech narsa o'rnatish kerak emas |
+| Komponent | Tavsif |
+|---|---|
+| **uz++ kompilyatori** | Transpayler: `.uzpp` → C++ → binary |
+| **Standart kutubxona** | `stdlib/` — 30+ modul (matn, vaqt, json, tarmoq, ...) |
+| **Misollar** | `misollar/` — 10 ta tayyor `.uzpp` dastur |
+| **MinGW-w64 GCC 15.2 UCRT** | Bundle C++ kompilyatori — alohida yuklash kerak emas |
 
-Default joy: `%LOCALAPPDATA%\Programs\uzpp\` — admin huquqlari shart emas.
-PATH ga avtomatik qo'shiladi.
-
-O'rnatish tugagach VS Code'ni qayta ishga tushiring → har qanday `.uzpp` faylda **F5** bossangiz, dastur ishlaydi.
-
----
-
-### Ko'p marta bosib turgan bo'lsangiz...
-
-VS Code Extensions panelida shu kengaytma sahifasida **Install** bosgandan keyin:
-
-- **Status bar pastida `⬇ uz++ install` tugmasi har doim turadi** — bosing, "Xush kelibsiz" ekrani ochiladi.
-- "Xush kelibsiz" ekranida **"Hammasini o'rnatish — uzpp-setup.exe (~115 MB)"** primary tugma har doim ko'rinib turadi (siz uz++ ni allaqachon o'rnatgan bo'lsangiz ham, qayta o'rnatish uchun).
-- Tugma `uzpp-setup.exe` ni avtomatik yuklab oladi va ishga tushiradi.
-
-Yoki to'g'ridan-to'g'ri brauzerdan yuklab oling: [GitHub Release v2.1.1](https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.1).
+- Default joy: `%LOCALAPPDATA%\Programs\uzpp\` (admin huquqlari shart emas).
+- PATH ga avtomatik qo'shiladi; `.uzpp` fayllar uzpp bilan ochiladi.
+- Tugagach: VS Code'ni qayta ishga tushiring → har qanday `.uzpp` faylda **F5**.
 
 ---
 
-### Linux / macOS
+### 🐧 Linux / 🍎 macOS — bitta buyruq
 
-Hozircha rasmiy paket yo'q — manba koddan quring:
-[Boshlash qo'llanmasi](https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md).
+```bash
+curl -fsSL https://github.com/timetolivechk-spec/uzpp/releases/latest/download/install.sh | bash
+```
 
----
+Skript:
+- Tizimni aniqlaydi (Linux x64 yoki macOS Apple Silicon).
+- `g++` / `clang++` borligini tekshiradi; yo'q bo'lsa kerakli `apt`/`dnf`/`brew` buyrug'ini ko'rsatadi.
+- `uzpp` ni `/usr/local/bin/` ga, stdlib ni `/usr/local/lib/uzpp/` ga o'rnatadi.
+- Smoke-test: `uzpp --version`.
 
-## Imkoniyatlar
-
-- **Sintaksis yorqinligi** — barcha uz++ kalit so'zlari rangli
-- **Real-vaqt diagnostika** — xatolar yozayotganda ko'rsatiladi (LSP)
-- **Avtoto'ldirish** — kalit so'zlar va funksiyalar
-- **F5 → ishga tushirish** — bir tugma bilan
-- **C++ kodini ko'rish** — transpile qilingan C++ ni yonida ochish
-- **Status bar** — kompilyator holati va versiyasi
+Pin qilingan versiya kerak bo'lsa: `UZPP_VERSION=v2.1.8 ./install.sh` (yoki `$HOME` ga: `UZPP_PREFIX=$HOME ./install.sh`).
 
 ---
 
-## Buyruqlar
+### 💻 VS Code Welcome ekrani (har uchchala platforma uchun)
+
+Extension o'rnatilgandan keyin status bar pastida **`⬇ uz++ install`** tugmasi paydo bo'ladi — bosing va "Xush kelibsiz" ekrani ochiladi:
+
+- **Windows**: tugma `uzpp-setup.exe` ni avtomatik yuklab oladi va ishga tushiradi.
+- **Linux/macOS**: tugma terminal ochib `install.sh` ni `curl|bash` orqali ishga tushiradi.
+
+---
+
+## ✨ Imkoniyatlar
+
+- **Sintaksis yorqinligi** — barcha uz++ kalit so'zlari rangli (semantic tokens orqali AST-aware).
+- **Real-vaqt diagnostika** — xatolar yozayotganda ko'rsatiladi (LSP, TypeChecker).
+- **Inlay hints** — `o'zgaruvchan x = ...` keyin xulosa qilingan tur ko'rsatiladi.
+- **Code actions** — "ishlatilmagan o'zgaruvchi" uchun quick-fix: `_` prefiks yoki o'chirish.
+- **Avtoto'ldirish** — 100+ kalit so'zlar va stdlib funksiyalari.
+- **Hover** — kursor ostidagi belgilar haqida ma'lumot (uz++ → C++ tarjima, signature).
+- **Definition / References / Rename** — barcha asosiy LSP navigatsiya buyruqlari.
+- **F5 → ishga tushirish** — bir tugma bilan.
+- **C++ kodini ko'rish** — transpile qilingan C++ ni yonida ochish.
+- **Status bar** — kompilyator holati va versiyasi.
+
+---
+
+## ⌨️ Buyruqlar
 
 | Tugma / Buyruq | Amal |
 |----------------|------|
@@ -66,28 +78,29 @@ Hozircha rasmiy paket yo'q — manba koddan quring:
 | `Ctrl+Shift+P` → `uz++ C++ kodi` | Generatsiya qilingan C++ ni ko'rish |
 | `Ctrl+Shift+P` → `uz++ komponentlar holati` | O'rnatilgan komponentlarni ko'rish |
 | `Ctrl+Shift+P` → `uz++ kompilyatorni yangilash` | Yangi versiyani GitHub'dan yuklash |
-| `Ctrl+Shift+P` → `uz++ fayldan o'rnatish` | Offline o'rnatish |
+| `Ctrl+Shift+P` → `uz++ fayldan o'rnatish` | Offline `.vsix` / `.exe` orqali o'rnatish |
 | `Ctrl+Shift+P` → `uz++ reset` | Barcha komponentlarni o'chirish |
 
 ---
 
-## Birinchi dastur
+## 🚀 Birinchi dastur
 
 ```uz++
 // salom.uzpp
 ulash "uzpp_runtime.hpp"
 
 butun asosiy() {
-    yozish << "Salom, Dunyo!" << qator_oxiri;
+    matn o'lcham = "kichik";        // apostrof haqiqiy o'zbek so'zida
+    yozish << "Salom, " << o'lcham << " dunyo!" << qator_oxiri;
     qaytarish 0;
 }
 ```
 
-Saqlang → `F5` → Natija terminala chiqadi.
+Saqlang → `F5` → Natija terminalda chiqadi.
 
 ---
 
-## Kalit so'zlar (qisqacha)
+## 🔑 Kalit so'zlar (qisqacha)
 
 | uz++ | C++ | uz++ | C++ |
 |------|-----|------|-----|
@@ -95,39 +108,42 @@ Saqlang → `F5` → Natija terminala chiqadi.
 | `haqiqiy` | `double` | `o'qish` | `std::cin` |
 | `matn` | `std::string` | `qaytarish` | `return` |
 | `mantiqiy` | `bool` | `agar` | `if` |
-| `ozgaruvchan` | `auto` | `aks holda` | `else` |
-| `ozgarmas` | `const` | `uchun` | `for` |
-| `sinf` | `class` | `holda` | `while` |
+| `o'zgaruvchan` | `auto` | `aks` / `yoki` | `else` |
+| `o'zgarmas` | `const` | `uchun` | `for` |
+| `sinf` | `class` | `toki` | `while` |
 | `vektor` | `std::vector` | `urinish` | `try` |
 | `qator_oxiri` | `std::endl` | `ushlash` | `catch` |
+| `manba_joyi` | `std::source_location` | `funksiya` | `auto fn(...) -> T` |
+
+Apostrof identifikatorlar (`o'lcham`, `G'oya`, `to'lov`) C++23 ga U+02BC MODIFIER LETTER APOSTROPHE sifatida ko'chiriladi — `_` ga mangle qilinmaydi.
 
 ---
 
-## Sozlamalar
+## ⚙️ Sozlamalar
 
-**`uzpp.compilerPath`** — Kompilyatorga maxsus yo'l (ixtiyoriy). Odatda bo'sh qoldiriladi — kengaytma o'zi topadi.
-
----
-
-## Xato tuzatish
-
-**Komponent yuklanmadi:** Internetni tekshiring, keyin `Ctrl+Shift+P` → `uz++ komponentlarni o'rnatish`.
-
-**"command not found":** `Ctrl+Shift+P` → `uz++ komponentlar holati` — nima yetishmayotganini ko'rsatadi.
-
-**VPN/proxy bilan muammo:** [GitHub Releases](https://github.com/timetolivechk-spec/uzpp/releases/latest) dan qo'lda yuklab, `uz++ fayldan o'rnatish` orqali o'rnating.
+- **`uzpp.compilerPath`** — Kompilyatorga maxsus yo'l (ixtiyoriy). Odatda bo'sh qoldiriladi — kengaytma o'zi topadi.
 
 ---
 
-## Maxfiylik
+## 🐛 Xato tuzatish
 
-Kengaytma faqat `github.com/timetolivechk-spec/uzpp` manzilidan komponentlar yuklab oladi. Foydalanuvchi ma'lumotlari hech qayerga yuborilmaydi.
+- **Komponent yuklanmadi:** Internetni tekshiring, keyin `Ctrl+Shift+P` → `uz++ komponentlarni o'rnatish`.
+- **"command not found":** `Ctrl+Shift+P` → `uz++ komponentlar holati` — nima yetishmayotganini ko'rsatadi.
+- **VPN/proxy bilan muammo:** [GitHub Releases](https://github.com/timetolivechk-spec/uzpp/releases/latest) dan qo'lda yuklab, `uz++ fayldan o'rnatish` orqali o'rnating.
+- **Linux: `<generator>` topilmadi:** `sudo apt install libstdc++-15-dev` (Ubuntu 24.04 + ubuntu-toolchain-r/test PPA).
 
 ---
 
-## Resurslar
+## 🔒 Maxfiylik
 
-- [GitHub](https://github.com/timetolivechk-spec/uzpp)
+Kengaytma faqat `github.com/timetolivechk-spec/uzpp` manzilidan komponentlar yuklab oladi. Foydalanuvchi ma'lumotlari hech qayerga yuborilmaydi. Telemetriya yo'q.
+
+---
+
+## 📚 Resurslar
+
+- [GitHub](https://github.com/timetolivechk-spec/uzpp) — manba kodi, issues, releases
 - [Boshlash qo'llanmasi](https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md)
 - [Misollar](https://github.com/timetolivechk-spec/uzpp/tree/main/examples)
 - [Muammo bildirish](https://github.com/timetolivechk-spec/uzpp/issues)
+- [So'nggi release (v2.1.8)](https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.8)
