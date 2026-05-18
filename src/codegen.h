@@ -106,11 +106,25 @@ private:
     bool needsSpaceBefore(const std::string& previous, const std::string& current) const;
     void writeIndentIfNeeded();
     void emitRawToken(const std::string& token);
-    // O'zbek identifikatorlaridagi apostrof (o', g') ni C++ uchun xavfsiz qilish
+    // O'zbek identifikatorlaridagi apostrof (o', g') ni C++ uchun xavfsiz qilish.
+    // ASCII apostrof (U+0027) C++ identifikatorida ruxsat etilmagan, lekin
+    // U+02BC MODIFIER LETTER APOSTROPHE — bu XID_Continue belgisi va C++23
+    // standartida identifikator ichida qabul qilinadi. Bu o'zbek so'zlari
+    // (`o'lcham`, `g'oya`, `o'zgaruvchan` ...) ni C++ ga deyarli o'zgarmagan
+    // ko'rinishda olib o'tishga imkon beradi.
     static std::string safeIdent(const std::string& name) {
         if (name.find('\'') == std::string::npos) return name;
-        std::string safe = name;
-        for (char& c : safe) if (c == '\'') c = '_';
+        std::string safe;
+        safe.reserve(name.size() + 4);
+        for (char c : name) {
+            if (c == '\'') {
+                // U+02BC encoded as UTF-8: 0xCA 0xBC
+                safe += '\xCA';
+                safe += '\xBC';
+            } else {
+                safe += c;
+            }
+        }
         return safe;
     }
     void emitNewline();

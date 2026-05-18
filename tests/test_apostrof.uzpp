@@ -1,0 +1,58 @@
+// uz++ — apostroflar (' / o' / g') o'zgaruvchi, funksiya, sinf, metod va
+// maydon nomlarida ishlashini tekshiradi. Hammasi C++23 da U+02BC
+// MODIFIER LETTER APOSTROPHE ga aylantirilishi kerak.
+
+ulash "uzpp_runtime.hpp"
+
+// O'z-o'zini sinash uchun yordamchi
+funksiya tekshir(o'zgarmas matn& nom, mantiqiy shart) -> bosh {
+    agar (!shart) {
+        yozish << "[XATO] " << nom << qator_oxiri;
+        irgitish std::runtime_error("Sinov muvaffaqiyatsiz: " + nom);
+    }
+}
+
+// Apostrof bilan funksiya nomi
+funksiya o'lcham(o'zgarmas matn& s) -> hajm_turi {
+    qaytarish s.size();
+}
+
+// Apostrof bilan sinf nomi va a'zolari
+sinf G'oya {
+ochiq:
+    matn nom'i;
+    butun bah'osi;
+
+    G'oya(o'zgarmas matn& n, butun b) : nom'i(n), bah'osi(b) {}
+
+    funksiya yangi'lash(o'zgarmas matn& n) -> bosh {
+        nom'i = n;
+    }
+
+    funksiya tasviri() o'zgarmas -> matn {
+        qaytarish nom'i;
+    }
+};
+
+butun asosiy() {
+    // Apostrof bilan lokal o'zgaruvchilar
+    matn o'l = "salom";
+    butun yo'q = 0;
+    matn ko'k = "rang";
+
+    tekshir("o'lcham", o'lcham(o'l) == 5);
+
+    G'oya g'oya("birinchi", 100);
+    tekshir("g'oya.nom'i", g'oya.nom'i == "birinchi");
+    tekshir("g'oya.bah'osi", g'oya.bah'osi == 100);
+    tekshir("g'oya.tasviri()", g'oya.tasviri() == "birinchi");
+
+    g'oya.yangi'lash("ikkinchi");
+    tekshir("g'oya.nom'i (yangilangan)", g'oya.nom'i == "ikkinchi");
+
+    tekshir("yo'q nol", yo'q == 0);
+    tekshir("ko'k rang", ko'k == "rang");
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

@@ -526,6 +526,21 @@ int main() {
         assert(cpp.find("else") != std::string::npos);
     }
 
+    {
+        // Apostrophe-bearing Uzbek identifiers (`o'lcham`, `g'oya`) must
+        // survive transpilation as a *meaningful* C++ identifier. They get
+        // mapped to U+02BC MODIFIER LETTER APOSTROPHE (UTF-8: CA BC) — a
+        // C++23 XID_Continue character — not flattened to `_` which would
+        // mangle `o'lcham` and `o_lcham` into the same name.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun o'lcham = 5; qaytarish o'lcham; }");
+        // Look for the UTF-8 bytes of U+02BC immediately following 'o'.
+        const std::string apos_utf8 = "\xCA\xBC";
+        assert(cpp.find("o" + apos_utf8 + "lcham") != std::string::npos);
+        // Must NOT use the legacy `_` mangling.
+        assert(cpp.find("o_lcham") == std::string::npos);
+    }
+
     std::cout << "uzpp frontend smoke tests passed\n";
     return 0;
 }

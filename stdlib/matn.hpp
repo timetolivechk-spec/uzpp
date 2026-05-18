@@ -359,17 +359,17 @@ namespace uzpp::Matn {
     {
         return std::to_string(n);
     }
-    inline auto qadar_qirqish(const std::string& s, std::size_t maks_uzunlik, const std::string& ko_pnuqta = "...")->std::string
+    inline auto qadar_qirqish(const std::string& s, std::size_t maks_uzunlik, const std::string& koʼpnuqta = "...")->std::string
     {
         if((s.size() <= maks_uzunlik))
             {
                 return s;
             }
-        if((ko_pnuqta.size() >= maks_uzunlik))
+        if((koʼpnuqta.size() >= maks_uzunlik))
             {
-                return ko_pnuqta.substr(0, maks_uzunlik);
+                return koʼpnuqta.substr(0, maks_uzunlik);
             }
-        return(s.substr(0,(maks_uzunlik - ko_pnuqta.size())) + ko_pnuqta);
+        return(s.substr(0,(maks_uzunlik - koʼpnuqta.size())) + koʼpnuqta);
     }
     inline auto qator_son(const std::string& s)->int
     {
@@ -513,18 +513,18 @@ namespace uzpp::Matn {
             }
         return p;
     }
-    inline auto bir_marta_ajratish(const std::string& s, const std::string& bo_luvchi)->std::pair<std::string, std::string>
+    inline auto bir_marta_ajratish(const std::string& s, const std::string& boʼluvchi)->std::pair<std::string, std::string>
     {
-        if(bo_luvchi.empty())
+        if(boʼluvchi.empty())
             {
                 return std::make_pair(s, std::string(""));
             }
-        auto p = s.find(bo_luvchi);
+        auto p = s.find(boʼluvchi);
         if((p == std::string::npos))
             {
                 return std::make_pair(s, std::string(""));
             }
-        return std::make_pair(s.substr(0, p), s.substr((p + bo_luvchi.size())));
+        return std::make_pair(s.substr(0, p), s.substr((p + boʼluvchi.size())));
     }
     inline auto belgilar_soni(const std::string& s)->std::size_t
     {
@@ -556,12 +556,12 @@ namespace uzpp::Matn {
             }
         return s.size();
     }
-    inline auto chapdan_belgi_bo_yicha(const std::string& s, std::size_t n)->std::string
+    inline auto chapdan_belgi_boʼyicha(const std::string& s, std::size_t n)->std::string
     {
         std::size_t oxir = belgi_pozitsiyasi(s, n);
         return s.substr(0, oxir);
     }
-    inline auto ongdan_belgi_bo_yicha(const std::string& s, std::size_t n)->std::string
+    inline auto ongdan_belgi_boʼyicha(const std::string& s, std::size_t n)->std::string
     {
         std::size_t jami = belgilar_soni(s);
         if((n >= jami))
@@ -571,7 +571,7 @@ namespace uzpp::Matn {
         std::size_t boshi = belgi_pozitsiyasi(s,(jami - n));
         return s.substr(boshi);
     }
-    inline auto qism_matn_belgi_bo_yicha(const std::string& s, std::size_t boshlanish, std::size_t uzunlik = std::string::npos)->std::string
+    inline auto qism_matn_belgi_boʼyicha(const std::string& s, std::size_t boshlanish, std::size_t uzunlik = std::string::npos)->std::string
     {
         std::size_t bayt_boshi = belgi_pozitsiyasi(s, boshlanish);
         if((bayt_boshi >= s.size()))

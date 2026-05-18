@@ -519,12 +519,13 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
                 return pit->second + token.value.substr(scopePos);
             }
         }
-        // O'zbek maxsus harflari: o' va g' (apostrof) C++ identifikatorida ruxsat etilmagan.
-        // Ularni xavfsiz '_' belgisiga almashtirish.
+        // O'zbek apostrof — `safeIdent` orqali U+02BC MODIFIER LETTER APOSTROPHE
+        // ga o'tkazadi (ASCII '\'' C++ identifier ichida noqonuniy, lekin
+        // U+02BC C++23 da XID_Continue sifatida qabul qilinadi). Bu `o'lcham`
+        // kabi nomlarni `oʼlcham` qilib qoldiradi — `o_lcham` qilib mangle
+        // qilish o'rniga.
         if (token.value.find('\'') != std::string::npos) {
-            std::string safe = token.value;
-            for (char& c : safe) if (c == '\'') c = '_';
-            return safe;
+            return safeIdent(token.value);
         }
     } else if (token.type == TokenType::Symbol) {
         if (token.value == "??") {
