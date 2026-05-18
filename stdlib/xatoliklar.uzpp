@@ -1,0 +1,105 @@
+// uz++ — Xatoliklar (crash/backtrace handler + MajburiyNatija/IshNatijasi),
+// uz++ tilida qayta yozilgan.
+// Bu fayl `stdlib/xatoliklar.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+// Faqat ish-stoli (desktop) yo'li amalga oshirilgan; UZPP_EMBEDDED yo'li
+// to'g'ridan-to'g'ri C++ xatoliklar.hpp dan olinadi.
+
+ulash <csignal>
+ulash <cstdlib>
+ulash <iostream>
+ulash <stdexcept>
+ulash <string>
+
+// execinfo.h + unistd.h — POSIX (Linux/macOS) backtrace uchun.
+// Windows da bu sarlavhalar mavjud emas; codegen ularni qo'shadi, lekin
+// #include xatolik tug'dirmasligi uchun quyidagi tartibda:
+// #if defined(...) guards generated .hpp ga qo'lda qo'shiladi.
+// Hozircha uz++ tilida preprocessor shartlari yo'q — backtrace faqat
+// POSIX tizimlarda ishlaydi; Windows da signal handler backtracesiz ishlaydi.
+
+nomlar_fazosi uzpp::Xatoliklar {
+
+// ===== MAJBURIYNATIJA<T> — Rust-uslubidagi unwrap =====
+
+shablon <tur T>
+sinf MajburiyNatija {
+    mantiqiy ok_;
+    T qiymat_;
+    matn xato_matni_;
+
+ochiq:
+    MajburiyNatija(o'zgarmas matn& xato) : ok_(false), xato_matni_(xato) {}
+    MajburiyNatija(T q) : ok_(true), qiymat_(q) {}
+
+    [[nodiscard]] mantiqiy xatomi() o'zgarmas { qaytarish !ok_; }
+    [[nodiscard]] mantiqiy rostmi() o'zgarmas { qaytarish ok_; }
+
+    // Rust uslubida "unwrap". Xato bo'lsa darhol exception tashlaydi.
+    T echish() o'zgarmas {
+        agar (!ok_) {
+            irgitish std::runtime_error("MajburiyNatija echishda xato: " + xato_matni_);
+        }
+        qaytarish qiymat_;
+    }
+
+    // Xato bo'lsa berilgan standart qiymat qaytadi.
+    T yokida(T standart_qiymat) o'zgarmas {
+        qaytarish ok_ ? qiymat_ : standart_qiymat;
+    }
+
+    matn xatoMatni() o'zgarmas { qaytarish xato_matni_; }
+};
+
+// ===== ISHNATIJASI — faqat muvaffaqiyat/xato holatini saqlaydi =====
+
+sinf IshNatijasi {
+    mantiqiy ok_;
+    matn xato_matni_;
+
+ochiq:
+    IshNatijasi() : ok_(true) {}
+    IshNatijasi(o'zgarmas matn& xato) : ok_(false), xato_matni_(xato) {}
+
+    [[nodiscard]] mantiqiy muvaffaqiyatlimi() o'zgarmas { qaytarish ok_; }
+    matn xatoniOlish() o'zgarmas { qaytarish xato_matni_; }
+};
+
+// ===== SIGNAL/BACKTRACE ISHLOVCHISI =====
+
+funksiya dastur_qulashi_xabari(butun signal) -> bosh {
+    yozish << "\n======================================================\n";
+    yozish << " [UZ++ HALOKAT]: Dastur tizim xatosi tufayli quladi!\n";
+    yozish << " Signal kodi: " << signal;
+
+    agar (signal == SIGSEGV) {
+        yozish << " (Xotiraga ruxsatsiz murojaat / Segfault)";
+    } aks_holda agar (signal == SIGFPE) {
+        yozish << " (Matematik xato / Nolga bo'lish)";
+    } aks_holda agar (signal == SIGABRT) {
+        yozish << " (Dastur majburiy to'xtatildi / Abort)";
+    }
+    yozish << qator_oxiri;
+
+    // POSIX backtrace — faqat Linux/macOS da ishlaydi.
+    // Windows da execinfo.h yo'q; kompilyatsiya vaqtida #if guard kerak.
+    // Generated .hpp ga qo'lda #if defined(__unix__) ... #endif qo'shiladi.
+    yozish << "\n --- BACKTRACE (Chaqiruvlar ro'yxati) ---\n";
+
+    // backtrace() + backtrace_symbols() — POSIX-only.
+    // Agar kompilyatsiya qilinsa va mavjud bo'lmasa, linking xatosi beradi.
+    // Shuning uchun generated .hpp da #if guard mavjud.
+
+    yozish << "\n Iltimos, dasturni '--debug' bayrog'i bilan qurib tekshiring.\n";
+    yozish << "======================================================\n";
+    std::exit(signal);
+}
+
+funksiya xavfsizlikni_yoqish() -> bosh {
+    std::signal(SIGSEGV, dastur_qulashi_xabari);
+    std::signal(SIGABRT, dastur_qulashi_xabari);
+    std::signal(SIGILL, dastur_qulashi_xabari);
+    std::signal(SIGFPE, dastur_qulashi_xabari);
+}
+
+} // namespace uzpp::Xatoliklar

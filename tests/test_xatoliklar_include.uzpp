@@ -1,0 +1,28 @@
+// uz++ — xatoliklar kutubxonasi testi (self-test via ulash)
+
+ulash "xatoliklar.uzpp"
+
+butun asosiy() {
+    // IshNatijasi test
+    uzpp::Xatoliklar::IshNatijasi okNatija;
+    yozish << "IshNatijasi muvaffaqiyat: " << (okNatija.muvaffaqiyatlimi() ? "rost" : "yolg'on") << qator_oxiri;
+
+    uzpp::Xatoliklar::IshNatijasi xatoNatija("test xatosi");
+    yozish << "IshNatijasi xato matni: " << xatoNatija.xatoniOlish() << qator_oxiri;
+
+    // MajburiyNatija test
+    uzpp::Xatoliklar::MajburiyNatija<butun> muvaffaq(42);
+    yozish << "MajburiyNatija rostmi: " << (muvaffaq.rostmi() ? "rost" : "yolg'on") << qator_oxiri;
+    yozish << "MajburiyNatija echish: " << muvaffaq.echish() << qator_oxiri;
+
+    uzpp::Xatoliklar::MajburiyNatija<butun> xato("son topilmadi");
+    yozish << "MajburiyNatija xatomi: " << (xato.xatomi() ? "rost" : "yolg'on") << qator_oxiri;
+    yozish << "MajburiyNatija yokida: " << xato.yokida(99) << qator_oxiri;
+
+    // xavfsizlikni_yoqish — signal handler o'rnatilganligini tekshirib bo'lmaydi,
+    // lekin chaqirib ko'ramiz (segfaultsiz ishlashi kerak)
+    uzpp::Xatoliklar::xavfsizlikni_yoqish();
+
+    yozish << "=== XATOLIKLAR TESTI MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}
