@@ -1,0 +1,45 @@
+// uz++ — multi-byte UTF-8 identifikatorlarini sinaydi.
+// Kirill, arab, fors va xitoy harflari C++23 da XID_Continue
+// belgilari sifatida qabul qilinadi, shuning uchun uzpp ularni
+// to'g'ridan-to'g'ri o'tkazib yuboradi (mangling shart emas).
+
+ulash "uzpp_runtime.hpp"
+
+// Cyrillic — типичный кейс для русско-/узбекскоязычных программистов.
+funksiya приветствие(o'zgarmas matn& имя) -> matn {
+    qaytarish "Привет, " + имя + "!";
+}
+
+// Smesi: Latin + Cyrillic + apostrof.
+sinf O'quvchi {
+ochiq:
+    matn имя;
+    butun возраст;
+
+    O'quvchi(o'zgarmas matn& и, butun в) : имя(и), возраст(в) {}
+
+    funksiya tavsifi() o'zgarmas -> matn {
+        qaytarish имя;
+    }
+};
+
+butun asosiy() {
+    matn рез = приветствие("Olim");
+    agar (рез != "Привет, Olim!") {
+        irgitish std::runtime_error("приветствие() noto'g'ri qaytardi");
+    }
+
+    O'quvchi студент("Anvar", 25);
+    agar (студент.имя != "Anvar") {
+        irgitish std::runtime_error("Cyrillic field name buzuq");
+    }
+    agar (студент.возраст != 25) {
+        irgitish std::runtime_error("Cyrillic field name buzuq (возраст)");
+    }
+    agar (студент.tavsifi() != "Anvar") {
+        irgitish std::runtime_error("tavsifi() noto'g'ri");
+    }
+
+    yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+    qaytarish 0;
+}

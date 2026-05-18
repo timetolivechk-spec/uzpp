@@ -10,7 +10,15 @@ namespace uzpp {
 namespace {
 
 bool isIdentifierSuffix(char value) {
-    return std::isalnum(static_cast<unsigned char>(value)) != 0 || value == '_' || value == '\'' || value == '`';
+    // UTF-8 high bytes (>= 0x80) are part of multi-byte non-ASCII letters
+    // (Cyrillic, Arabic, CJK, etc.). C++23 accepts the resolved code-point
+    // as XID_Continue, so passing the raw UTF-8 bytes through verbatim is
+    // both safe and "just works" for the common cases (Uzbek Latin and
+    // Cyrillic, Russian comments-as-identifiers, etc.). We deliberately
+    // don't decode + validate XID_Continue here — too much work for the
+    // payoff, and g++ will reject anything actually illegal at compile time.
+    const auto byte = static_cast<unsigned char>(value);
+    return std::isalnum(byte) != 0 || value == '_' || value == '\'' || value == '`' || byte >= 0x80;
 }
 
 } // namespace
@@ -193,7 +201,11 @@ std::vector<std::string> Lexer::takeQueuedComments() {
 }
 
 bool Lexer::isIdentifierStart(char value) const {
-    return std::isalpha(static_cast<unsigned char>(value)) != 0 || value == '_';
+    // Accept UTF-8 high bytes (>= 0x80) as identifier starts — same
+    // rationale as isIdentifierSuffix above. Lets non-Latin alphabets
+    // (Cyrillic, Arabic, CJK) be used as identifier names.
+    const auto byte = static_cast<unsigned char>(value);
+    return std::isalpha(byte) != 0 || value == '_' || byte >= 0x80;
 }
 
 bool Lexer::isIdentifierPart(char value) const {
