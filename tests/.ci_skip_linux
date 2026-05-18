@@ -8,3 +8,11 @@
 # packaging/regression issue, not an uz++ bug. Revisit when Ubuntu's
 # default gcc supports the full feature.
 test_deducing_this.uzpp
+
+# test_coyield.uzpp — `#include <generator>` (C++23 std::generator
+# coroutines library). On Ubuntu noble + ubuntu-toolchain-r/test PPA,
+# `libstdc++-15-dev` installs but the `<generator>` header isn't
+# actually shipped in /usr/include/c++/15. Windows MSYS2 g++-15.2 has
+# it and the test runs locally. Revisit when the Ubuntu toolchain
+# packages the C++23 coroutines header.
+test_coyield.uzpp
