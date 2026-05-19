@@ -15,6 +15,32 @@ struct SemanticError {
     int column;
 };
 
+// Tri-state type representation for honest inference.
+// - Known(name)        — we determined a concrete type ("butun", "vektor<matn>", "Foo")
+// - Unknown            — we couldn't infer (our limitation, not the user's fault)
+// - Polymorphic(param) — template type parameter, will be concrete at instantiation
+//
+// Diagnostics MUST only fire when comparing Known × Known. Unknown × _ and
+// Polymorphic × _ are silently accepted. This eliminates false-positive
+// warnings that previously fired on expressions like *p, &x, ternary, etc.
+struct Type {
+    enum class Kind { Known, Unknown, Polymorphic };
+    Kind kind = Kind::Unknown;
+    std::string name; // Known: type name; Polymorphic: template-param name; Unknown: empty
+
+    static Type known(std::string n) { return Type{Kind::Known, std::move(n)}; }
+    static Type unknown() { return Type{Kind::Unknown, {}}; }
+    static Type polymorphic(std::string p) { return Type{Kind::Polymorphic, std::move(p)}; }
+
+    bool isKnown() const { return kind == Kind::Known; }
+    bool isUnknown() const { return kind == Kind::Unknown; }
+    bool isPolymorphic() const { return kind == Kind::Polymorphic; }
+
+    // For backward compatibility with code paths that still use plain strings:
+    // Known → name, Unknown/Polymorphic → "noma'lum" (the legacy sentinel).
+    std::string toLegacyString() const { return isKnown() ? name : "noma'lum"; }
+};
+
 class TypeChecker {
 private:
     struct ClassInfo {
@@ -89,18 +115,26 @@ private:
         return Token{TokenType::Identifier, "", 0, 0};
     }
 
-    std::string inferType(const Expression* expr) {
-        if (!expr) return "noma'lum";
+    // Primary type-inference routine. Returns a tri-state Type:
+    //   Known(name)  — concrete type determined
+    //   Unknown      — we couldn't infer (silent in diagnostics)
+    //   Polymorphic  — not yet emitted here; reserved for template-body inference
+    //
+    // All call sites that gate diagnostics on type info should check .isKnown()
+    // before comparing names. The legacy wrapper inferType() returns a plain
+    // string for code paths that still expect the old contract.
+    Type inferTypeT(const Expression* expr) {
+        if (!expr) return Type::unknown();
         switch (expr->getType()) {
             case ASTNodeType::LiteralExpression: {
                 auto lit = static_cast<const LiteralExpression*>(expr);
                 switch(lit->getLiteralType()) {
-                    case LiteralExpression::LiteralType::Integer: return "butun";
-                    case LiteralExpression::LiteralType::Float: return "haqiqiy";
-                    case LiteralExpression::LiteralType::String: 
-                    case LiteralExpression::LiteralType::FormatString: return "matn";
-                    case LiteralExpression::LiteralType::Character: return "belgi";
-                    case LiteralExpression::LiteralType::Boolean: return "mantiqiy";
+                    case LiteralExpression::LiteralType::Integer: return Type::known("butun");
+                    case LiteralExpression::LiteralType::Float: return Type::known("haqiqiy");
+                    case LiteralExpression::LiteralType::String:
+                    case LiteralExpression::LiteralType::FormatString: return Type::known("matn");
+                    case LiteralExpression::LiteralType::Character: return Type::known("belgi");
+                    case LiteralExpression::LiteralType::Boolean: return Type::known("mantiqiy");
                 }
                 break;
             }
@@ -110,38 +144,45 @@ private:
                 for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
                     if (it->contains(name)) {
                         (*it)[name].used = true;
-                        return (*it)[name].type;
+                        const std::string& t = (*it)[name].type;
+                        if (t.empty() || t == "noma'lum") return Type::unknown();
+                        return Type::known(t);
                     }
                 }
                 break;
             }
             case ASTNodeType::BinaryExpression: {
-                // Oddiy tur xulosasi (soddalashtirilgan)
                 auto bin = static_cast<const BinaryExpression*>(expr);
                 std::string op = bin->getOperator();
                 if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||" || op == "va" || op == "yoki") {
-                    return "mantiqiy";
+                    return Type::known("mantiqiy");
                 }
-                std::string leftType = inferType(bin->getLeft());
-                std::string rightType = inferType(bin->getRight());
-                if (leftType == "haqiqiy" || rightType == "haqiqiy") return "haqiqiy";
-                if (leftType == "matn" || rightType == "matn") return "matn";
-                return leftType;
+                Type leftType = inferTypeT(bin->getLeft());
+                Type rightType = inferTypeT(bin->getRight());
+                // Promotion rules apply only when both sides have a known type
+                if (leftType.isKnown() && rightType.isKnown()) {
+                    if (leftType.name == "haqiqiy" || rightType.name == "haqiqiy") return Type::known("haqiqiy");
+                    if (leftType.name == "matn" || rightType.name == "matn") return Type::known("matn");
+                    return leftType;
+                }
+                if (leftType.isKnown()) return leftType;
+                if (rightType.isKnown()) return rightType;
+                return Type::unknown();
             }
             case ASTNodeType::MemberAccess: {
                 auto mac = static_cast<const MemberAccess*>(expr);
-                std::string objType = inferType(mac->getObject());
-                if (classes_.contains(objType)) {
-                    std::string ret = classMethodReturn(objType, mac->getMemberName());
-                    if (ret != "noma'lum") return ret;
+                Type objType = inferTypeT(mac->getObject());
+                if (objType.isKnown() && classes_.contains(objType.name)) {
+                    std::string ret = classMethodReturn(objType.name, mac->getMemberName());
+                    if (ret != "noma'lum") return Type::known(ret);
                 }
                 break;
             }
             case ASTNodeType::SubscriptAccess: {
                 auto sub = static_cast<const SubscriptAccess*>(expr);
-                std::string arrType = inferType(sub->getArray());
-                if (arrType.starts_with("vektor<") && arrType.back() == '>') {
-                    return arrType.substr(7, arrType.length() - 8);
+                Type arrType = inferTypeT(sub->getArray());
+                if (arrType.isKnown() && arrType.name.starts_with("vektor<") && arrType.name.back() == '>') {
+                    return Type::known(arrType.name.substr(7, arrType.name.length() - 8));
                 }
                 break;
             }
@@ -151,28 +192,39 @@ private:
                     std::string name = static_cast<const IdentifierExpression*>(call->getCallee())->getName();
                     if (name == "__uzpp_array") {
                         if (!call->getArguments().empty()) {
-                            return "vektor<" + inferType(call->getArguments()[0].get()) + ">";
+                            Type elem = inferTypeT(call->getArguments()[0].get());
+                            return Type::known("vektor<" + (elem.isKnown() ? elem.name : "noma'lum") + ">");
                         }
-                        return "vektor<noma'lum>";
+                        return Type::known("vektor<noma'lum>");
                     }
                     if (name == "__uzpp_dict") {
-                        return "lug'at<matn, noma'lum>";
+                        return Type::known("lug'at<matn, noma'lum>");
                     }
-                    if (functionReturns_.contains(name)) return functionReturns_[name];
-                    if (classes_.contains(name)) return name; // Konstruktor chaqiruvi
+                    if (functionReturns_.contains(name)) {
+                        const std::string& r = functionReturns_[name];
+                        return r.empty() || r == "noma'lum" ? Type::unknown() : Type::known(r);
+                    }
+                    if (classes_.contains(name)) return Type::known(name);
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
-                    std::string objType = inferType(mac->getObject());
-                    if (classes_.contains(objType)) {
-                        std::string ret = classMethodReturn(objType, mac->getMemberName());
-                        if (ret != "noma'lum") return ret;
+                    Type objType = inferTypeT(mac->getObject());
+                    if (objType.isKnown() && classes_.contains(objType.name)) {
+                        std::string ret = classMethodReturn(objType.name, mac->getMemberName());
+                        if (ret != "noma'lum") return Type::known(ret);
                     }
                 }
                 break;
             }
             default: break;
         }
-        return "noma'lum";
+        return Type::unknown();
+    }
+
+    // Legacy wrapper: returns "noma'lum" for both Unknown and Polymorphic.
+    // Existing call sites still go through here; new code should prefer
+    // inferTypeT() and check isKnown() before comparing names.
+    std::string inferType(const Expression* expr) {
+        return inferTypeT(expr).toLegacyString();
     }
 
     void enterScope() {
