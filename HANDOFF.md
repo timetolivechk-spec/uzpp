@@ -4,7 +4,7 @@
 > for deeper context (file map, hard-won gotchas, architecture).
 > `NEXT_SESSION_PLAN.md` has prioritised work suggestions.
 
-Last updated: end of session ending 2026-05-18 (after the hardening pass).
+Last updated: end of session ending 2026-05-19 (matematika+sinov ports + hardening).
 
 ---
 
@@ -12,13 +12,13 @@ Last updated: end of session ending 2026-05-18 (after the hardening pass).
 
 | Metric | Value |
 |---|---|
-| **Positive tests** | **72/72** (Windows MSYS2 g++ 15.2) |
-| **Negative tests** | **47/47** caught (4 in `pending/` — known gaps) |
+| **Positive tests** | **74/74** (Windows MSYS2 g++ 15.2) |
+| **Negative tests** | **51/51** caught (0 pending — all four ex-pending tests now caught) |
 | **frontend_smoke** | green |
-| **Linux CI** | 70/72 (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — Ubuntu toolchain gates, not uz++ bugs) |
-| **Stdlib ports** | 3 self-hosted (`matn`, `xatoliklar`, `vaqt`) — remaining stdlib still C++ |
+| **Linux CI** | 72/74 (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — Ubuntu toolchain gates, not uz++ bugs) |
+| **Stdlib ports** | 5 self-hosted (`matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`) — remaining stdlib still C++ |
 | **Latest pushed tag** | `v2.1.9` (Marketplace + GitHub Release live) |
-| **Local commits ahead of `origin/main`** | **16** (none pushed this session) |
+| **Local commits ahead of `origin/main`** | **18** (none pushed this session) |
 
 ### Local commits queue (in order, oldest → newest)
 
@@ -39,6 +39,8 @@ b765e16  docs(plan): record stress-test findings + 71/71 + 29/29 negative
 6e1a881  feat(lexer): accept Unicode (UTF-8) identifiers — Cyrillic, CJK, Arabic
 8cf7f45  test(negative): +18 regression-pins (lexer/parser/type/cpp_level)
 01eb21e  docs(plan): mark hardening progress (72/72 + 47/47)
+43789ac  docs: HANDOFF.md — self-handoff brief for the next session
+6792652  feat(stdlib+lang): matematika+sinov ports, compiler hardening, 4 pending → caught
 ```
 
 ### Working tree
@@ -57,7 +59,7 @@ cd /c/Users/MSN/uz++                                   # main repo on `main` bra
 # Build
 cmake --build build_wt 2>&1 | tail -3
 
-# Positive regression (expects 72/72)
+# Positive regression (expects 74/74)
 pass=0; fail=0; failed=""
 for f in tests/*.uzpp; do
   ./build_wt/uzpp.exe qurish "$f" 2>&1 | grep -q "MUVAFFAQIYAT: Dastur tayyor" && pass=$((pass+1)) || { fail=$((fail+1)); failed="$failed $(basename $f)"; }
@@ -65,14 +67,14 @@ done
 echo "REGRESSION: $pass/$((pass+fail))"
 [ -n "$failed" ] && echo "FAIL:$failed"
 
-# Negative tests (expects 47 caught / 0 missed)
+# Negative tests (expects 51 caught / 0 missed)
 bash tests/negative/run.sh build_wt/uzpp.exe 2>&1 | tail -5
 
 # Frontend smoke (assertion-based unit tests)
 ./build_wt/uzpp_frontend_tests.exe
 ```
 
-If anything's not 72/72 + 47/47 + smoke green, STOP — investigate before
+If anything's not 74/74 + 51/51 + smoke green, STOP — investigate before
 adding features. The local commits queue assumes this baseline.
 
 ---
@@ -212,7 +214,7 @@ this session:
 
 1. **Don't push or bump versions without explicit user OK.** User has said
    so 5+ times. Local commits only by default.
-2. **Don't edit `stdlib/matn.hpp` / `xatoliklar.hpp` / `vaqt.hpp` by hand.**
+2. **Don't edit `stdlib/{matn,xatoliklar,vaqt,matematika,sinov}.hpp` by hand.**
    Generated artefacts. Edit the `.uzpp` source and regenerate (3f).
 3. **Don't reintroduce `_`-mangling for apostrophes.** `o'lcham` must stay
    `oʼlcham` (U+02BC). `tests/test_apostrof.uzpp` pins this.
@@ -239,6 +241,12 @@ this session:
 12. **Apostrophe (U+0027) → U+02BC mapping** in `CodeGen::safeIdent`. UTF-8
     high bytes (>= 0x80) pass through verbatim as identifier characters
     (Unicode identifier support — `tests/test_unicode_identifiers.uzpp`).
+13. **`parseVariableDeclaration` rejects keyword-as-varname** but with an
+    allowlist `{asosiy, main, yangi, bosh, bekor}`. `yangi`/`bosh`/`bekor`
+    are alias keywords that the parser/codegen handle via lookahead or
+    `localScopes_`. If you extend `isUzbekKeyword`, check whether any new
+    entry should be added to the allowlist (`tests/frontend_smoke.cpp:493`
+    pins `butun yangi = 5` as valid).
 
 ---
 
@@ -248,12 +256,13 @@ In rough priority order. The user picks; don't preempt.
 
 ### 🟢 Tiny wins (each: half-session or less)
 
-- **Fix the `asosiy()` return-type check.** Currently `matn asosiy() { ... }`
-  silently compiles and the wrapper drops the return value. Pinned in
-  `tests/negative/pending/type_main_with_args_invalid.uzpp`. ~10 LOC in
-  the `transpile()` method right after the existing missing-asosiy check.
+- **`asosiy()` return-type check** — done in 6792652 (parsing-time error).
+- **Compile-time div-by-zero** — done in 6792652 (`10 / 0` flagged in TypeChecker).
+- **Empty `moslash { }`** — done in 6792652 (parse error).
+- **Keyword-as-varname guard** — done in 6792652 with allowlist (gotcha #13).
 - **`mantiq`/`mantiqiy` warning cleanup** — already done in 848cc20.
 - **Module partitions** — already done in 2eeb3aa.
+- **LSP hover with inferred types** — done in 6792652.
 
 ### 🟡 Stdlib ports — repeat the matn/xatoliklar/vaqt pattern
 
@@ -261,10 +270,8 @@ Order of difficulty (LOC of original .hpp):
 
 - **`jurnal`** (93) — logging. Trivial.
 - **`apparat`** (100) — hardware utilities.
-- **`sinov`** (102) — testing framework.
 - **`platforma`** (99) — platform detection.
 - **`veb_ui`** (136) — UI primitives.
-- **`matematika`** (312) — `<cmath>` wrappers + statistics. Mechanical.
 - **`kripto`** (276) — hash/encrypt. Needs careful UTF-8 handling.
 - **`json`** (324) — variant + shared_ptr recursion. **AMBITIOUS** — may
   surface TypeChecker gaps for recursive types. Allocate 2 sessions.
@@ -273,12 +280,14 @@ Order of difficulty (LOC of original .hpp):
 - **`tarmoq`** (572) — HTTP server + client. Big.
 - **`oyna`** (674) — OpenGL/X11 graphics. Big + platform-specific.
 
+(Done so far: `matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`.)
+
 ### 🟡 LSP polish
 
 - **Type-mismatch quick-fix smarter** (currently in 2eeb3aa it offers
   `statik_otkazish<T>(...)` — make it actually parse the expression and
   emit a clean wrap).
-- **Hover with inferred types** for `o'zgaruvchan` vars.
+- ~~**Hover with inferred types** for `o'zgaruvchan` vars.~~ Done in 6792652.
 - **Semantic-tokens for class members** (currently only top-level names).
 
 ### 🔴 Multi-session work (don't pick without runway)
@@ -290,10 +299,12 @@ Order of difficulty (LOC of original .hpp):
 
 ### Push & release (only on user request)
 
-- 16 local commits accumulated. A push + tag `v2.2.0` would ship:
-  - 3rd stdlib port (vaqt), AST-aware LSP, namespace aliases (working),
-    module partitions, inline-comments formatter, Unicode identifiers,
-    code actions expansion, asosiy() check, MinGW slim-down.
+- 18 local commits accumulated. A push + tag `v2.2.0` would ship:
+  - 5 self-hosted stdlib modules (`matn`, `xatoliklar`, `vaqt`, `matematika`,
+    `sinov`), AST-aware LSP, namespace aliases (working), module partitions,
+    inline-comments formatter, Unicode identifiers, code actions expansion,
+    asosiy() check, keyword-as-varname guard, compile-time div-by-zero,
+    LSP hover with inferred types, MinGW slim-down.
 - See section 3b for the exact procedure.
 
 ---
