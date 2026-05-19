@@ -40,6 +40,23 @@ bool typecheckSnippet(const std::string& source,
     return ok;
 }
 
+// Run TypeChecker and collect inferred types of all auto-style declarations
+// (`o'zgaruvchan x = ...`) keyed by the variable's declared name. Useful for
+// pinning that inferType() actually computes a Known type for a given form.
+std::unordered_map<std::string, std::string> inferAutoTypes(const std::string& source) {
+    uzpp::Lexer lexer(source);
+    const auto tokens = lexer.tokenize();
+    uzpp::Parser parser(tokens);
+    const auto program = parser.parse();
+    uzpp::TypeChecker checker;
+    checker.check(program.get());
+    std::unordered_map<std::string, std::string> out;
+    for (const auto& [var, type] : checker.getInferredAutoTypes()) {
+        out[var->getName()] = type;
+    }
+    return out;
+}
+
 } // namespace
 
 int main() {
@@ -539,6 +556,55 @@ int main() {
         assert(cpp.find("o" + apos_utf8 + "lcham") != std::string::npos);
         // Must NOT use the legacy `_` mangling.
         assert(cpp.find("o_lcham") == std::string::npos);
+    }
+
+    {
+        // Phase 1.3: inferType covers expression node kinds previously left
+        // as "noma'lum". Each case pins the Known result so a regression in
+        // inferTypeT() surfaces immediately rather than silently degrading
+        // LSP hover and false-positive diagnostics.
+
+        // Unary negation: -5 stays butun.
+        {
+            auto m = inferAutoTypes("butun asosiy() { o'zgaruvchan x = -5; qaytarish 0; }");
+            assert(m["x"] == "butun");
+        }
+        // Logical not: !true is mantiqiy.
+        {
+            auto m = inferAutoTypes("butun asosiy() { o'zgaruvchan b = !rost; qaytarish 0; }");
+            assert(m["b"] == "mantiqiy");
+        }
+        // Address-of and dereference round-trip.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() { butun y = 5; o'zgaruvchan p = &y; o'zgaruvchan d = *p; qaytarish 0; }");
+            assert(m["p"] == "butun*");
+            assert(m["d"] == "butun");
+        }
+        // Ternary with matching branches.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() { o'zgaruvchan t = 1 < 2 ? 10 : 20; qaytarish 0; }");
+            assert(m["t"] == "butun");
+        }
+        // Ternary with promotion: butun + haqiqiy → haqiqiy.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() { o'zgaruvchan t = 1 < 2 ? 10 : 2.5; qaytarish 0; }");
+            assert(m["t"] == "haqiqiy");
+        }
+        // Assignment expression evaluates to its value.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() { butun y = 0; o'zgaruvchan v = (y = 5); qaytarish 0; }");
+            assert(m["v"] == "butun");
+        }
+        // Increment preserves operand type.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() { butun y = 0; o'zgaruvchan v = ++y; qaytarish 0; }");
+            assert(m["v"] == "butun");
+        }
     }
 
     std::cout << "uzpp frontend smoke tests passed\n";

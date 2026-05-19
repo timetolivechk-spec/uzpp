@@ -215,6 +215,83 @@ private:
                 }
                 break;
             }
+            case ASTNodeType::UnaryExpression: {
+                auto un = static_cast<const UnaryExpression*>(expr);
+                Type inner = inferTypeT(un->getExpression());
+                switch (un->getOperator()) {
+                    case UnaryExpression::UnaryOp::LogicalNot:
+                        return Type::known("mantiqiy");
+                    case UnaryExpression::UnaryOp::AddressOf:
+                        if (inner.isKnown()) return Type::known(inner.name + "*");
+                        return Type::unknown();
+                    case UnaryExpression::UnaryOp::Dereference:
+                        if (inner.isKnown() && !inner.name.empty() && inner.name.back() == '*') {
+                            return Type::known(inner.name.substr(0, inner.name.size() - 1));
+                        }
+                        return Type::unknown();
+                    case UnaryExpression::UnaryOp::New:
+                        // `yangi Foo(...)` constructs a Foo* — operand is the type name expression
+                        if (inner.isKnown()) return Type::known(inner.name + "*");
+                        return Type::unknown();
+                    case UnaryExpression::UnaryOp::Delete:
+                        return Type::known("bosh");
+                    case UnaryExpression::UnaryOp::Plus:
+                    case UnaryExpression::UnaryOp::Minus:
+                    case UnaryExpression::UnaryOp::BitwiseNot:
+                    case UnaryExpression::UnaryOp::PreIncrement:
+                    case UnaryExpression::UnaryOp::PreDecrement:
+                    case UnaryExpression::UnaryOp::PostIncrement:
+                    case UnaryExpression::UnaryOp::PostDecrement:
+                        return inner; // preserves Known/Unknown propagation
+                }
+                return Type::unknown();
+            }
+            case ASTNodeType::TernaryExpression: {
+                auto tern = static_cast<const TernaryExpression*>(expr);
+                Type t = inferTypeT(tern->getThenExpr());
+                Type e = inferTypeT(tern->getElseExpr());
+                // Agree → that type; one Known, one Unknown → the Known one;
+                // disagree or both Unknown → Unknown (don't pretend).
+                if (t.isKnown() && e.isKnown()) {
+                    if (typesEquivalent(t.name, e.name)) return t;
+                    // Numeric promotion: butun + haqiqiy → haqiqiy
+                    if ((t.name == "haqiqiy" && e.name == "butun") ||
+                        (t.name == "butun" && e.name == "haqiqiy")) return Type::known("haqiqiy");
+                    return Type::unknown();
+                }
+                if (t.isKnown()) return t;
+                if (e.isKnown()) return e;
+                return Type::unknown();
+            }
+            case ASTNodeType::AssignmentExpression: {
+                // C++ assignment expression evaluates to the value (or the target lvalue).
+                // Prefer the value side; fall back to target.
+                auto asgn = static_cast<const AssignmentExpression*>(expr);
+                Type v = inferTypeT(asgn->getValue());
+                if (v.isKnown()) return v;
+                return inferTypeT(asgn->getTarget());
+            }
+            case ASTNodeType::AwaitExpression: {
+                // kutish expr / chiqar_qadam expr — operand's "co_await result type"
+                // requires awaitable-trait tracking we don't yet do. Honest: Unknown.
+                return Type::unknown();
+            }
+            case ASTNodeType::ThrowExpression: {
+                // `throw expr` has type `void` in C++ but is a "never" in practice.
+                // Mark Unknown — using its value is already a category error.
+                return Type::unknown();
+            }
+            case ASTNodeType::LambdaExpression: {
+                // Lambdas have anonymous closure types. We can later represent these
+                // as a synthetic "@lambda<ret(args...)>" but for now: Unknown.
+                return Type::unknown();
+            }
+            case ASTNodeType::PipelineExpression: {
+                // `left |> right` desugars to `right(left)` — right's return type
+                // could be inferred from functionReturns_, but the pipeline syntax
+                // is mostly used with std::ranges adaptors. Honest: Unknown.
+                return Type::unknown();
+            }
             default: break;
         }
         return Type::unknown();
