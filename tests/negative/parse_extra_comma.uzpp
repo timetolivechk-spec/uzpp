@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: parse: argumentlar ro'yxatida ortiqcha vergul
+ulash "uzpp_runtime.hpp"
+funksiya foo(butun a, butun b) -> butun {
+    qaytarish a + b;
+}
+butun asosiy() {
+    qaytarish foo(1, , 2);  // ortiqcha vergul
+}

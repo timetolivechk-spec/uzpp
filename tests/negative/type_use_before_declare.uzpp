@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: cpp_level: e'lon qilinmagan o'zgaruvchidan foydalanish
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    yozish << nomavjud_ozgaruvchi << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,0 +1,5 @@
+// XATOLIK_KUTILMOQDA: parse: shablon parametrsiz <>
+ulash "uzpp_runtime.hpp"
+shablon <>
+funksiya foo() -> butun { qaytarish 0; }
+butun asosiy() { qaytarish 0; }

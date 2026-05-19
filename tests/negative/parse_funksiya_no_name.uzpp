@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: parse: funksiya kalit so'zidan keyin nom yo'q
+ulash "uzpp_runtime.hpp"
+funksiya () -> butun {
+    qaytarish 0;
+}
+butun asosiy() { qaytarish 0; }

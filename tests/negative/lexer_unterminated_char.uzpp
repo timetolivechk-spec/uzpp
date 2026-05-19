@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: lexer: yopilmagan belgi literal
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    belgi c = 'a;  // yopilmagan: yopuvchi tirnoq yo'q
+    qaytarish 0;
+}

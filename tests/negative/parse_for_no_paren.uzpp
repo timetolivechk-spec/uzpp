@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: parse: uchun (...) qavslari yo'q
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    uchun butun i = 0; i < 5; i = i + 1 {  // qavs yo'q
+        yozish << i << qator_oxiri;
+    }
+    qaytarish 0;
+}

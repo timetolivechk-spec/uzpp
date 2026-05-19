@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: type: o'zgarmas o'zgaruvchiga qiymat berish
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    o'zgarmas butun x = 5;
+    x = 10;
+    qaytarish 0;
+}

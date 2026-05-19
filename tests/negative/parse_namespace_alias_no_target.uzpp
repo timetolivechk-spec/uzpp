@@ -1,0 +1,4 @@
+// XATOLIK_KUTILMOQDA: parse: namespace alias da target yo'q
+ulash "uzpp_runtime.hpp"
+nomlar_fazosi Qisqa = ;  // target identifier yo'q
+butun asosiy() { qaytarish 0; }

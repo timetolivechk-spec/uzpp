@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: cpp_level: int turida noma'lum metod chaqirilmoqda
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    butun x = 5;
+    x.salom();  // butun da .salom() yo'q
+    qaytarish 0;
+}

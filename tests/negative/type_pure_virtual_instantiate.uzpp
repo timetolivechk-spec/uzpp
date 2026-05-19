@@ -1,0 +1,10 @@
+// XATOLIK_KUTILMOQDA: cpp_level: mavhum sinfdan obyekt yaratish
+ulash "uzpp_runtime.hpp"
+sinf Shakl {
+ochiq:
+    mavhum funksiya yuza() -> haqiqiy;
+};
+butun asosiy() {
+    Shakl s;  // pure virtual mavhum sinf — instance qilib bo'lmaydi
+    qaytarish 0;
+}

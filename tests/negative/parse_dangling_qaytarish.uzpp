@@ -1,0 +1,4 @@
+// XATOLIK_KUTILMOQDA: parse: qaytarish keyword global scope da
+ulash "uzpp_runtime.hpp"
+qaytarish 5;  // top-level qaytarish — sintaksis xatosi
+butun asosiy() { qaytarish 0; }

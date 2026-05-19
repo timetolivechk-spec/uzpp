@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: lexer: yopilmagan raw string
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    matn s = R"(salom
+    qaytarish 0;
+}

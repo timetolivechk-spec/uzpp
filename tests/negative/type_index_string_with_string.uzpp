@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: cpp_level: matnni matn bilan indekslash
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    matn s = "salom";
+    belgi c = s["index"];  // string indeks bilan emas
+    yozish << c << qator_oxiri;
+    qaytarish 0;
+}

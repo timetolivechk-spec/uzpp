@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: parse: agar (...) qavslari yo'q
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    agar 1 == 1 {  // qavs yo'q
+        yozish << "ha" << qator_oxiri;
+    }
+    qaytarish 0;
+}

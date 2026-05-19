@@ -1,0 +1,6 @@
+// XATOLIK_KUTILMOQDA: cpp_level: konstantani 0 ga bo'lish — compile-time xato (uz++ talab qilmaydi, lekin g++ talab qiladi)
+ulash "uzpp_runtime.hpp"
+butun asosiy() {
+    sobit_ifoda butun x = 10 / 0;  // 0 ga bo'lish
+    qaytarish x;
+}

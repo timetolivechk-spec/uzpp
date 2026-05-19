@@ -1,0 +1,5 @@
+// XATOLIK_KUTILMOQDA: cpp_level: asosiy() noto'g'ri qaytish turi (matn o'rniga butun bo'lishi kerak)
+ulash "uzpp_runtime.hpp"
+matn asosiy() {
+    qaytarish "noto'g'ri qaytish turi";
+}

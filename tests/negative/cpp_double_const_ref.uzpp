@@ -1,0 +1,9 @@
+// XATOLIK_KUTILMOQDA: cpp_level: ikkita o'zgarmas modifikatori (mantiqsiz)
+ulash "uzpp_runtime.hpp"
+funksiya foo(o'zgarmas o'zgarmas matn& s) -> matn {
+    qaytarish s;
+}
+butun asosiy() {
+    yozish << foo("hi") << qator_oxiri;
+    qaytarish 0;
+}

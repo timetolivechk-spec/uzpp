@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: parse: sinf nomidan keyin nom yo'q
+ulash "uzpp_runtime.hpp"
+sinf {
+ochiq:
+    butun x;
+};
+butun asosiy() { qaytarish 0; }
