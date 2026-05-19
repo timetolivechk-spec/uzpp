@@ -607,6 +607,52 @@ int main() {
         }
     }
 
+    {
+        // Phase 1.4: Polimorf mode — template function bodies must not emit
+        // spurious return-type-mismatch warnings, because at instantiation
+        // the type parameter could match.
+
+        auto hasReturnMismatchWarning = [](const std::vector<uzpp::SemanticError>& warnings) {
+            for (const auto& w : warnings) {
+                if (w.message.find("qaytarishi kerak") != std::string::npos) return true;
+            }
+            return false;
+        };
+
+        // (a) Returning a T-typed param from a butun-typed function:
+        //     inferred is Polimorf("T") → isAniq() false → no warning.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> funksiya f(T x) -> butun { qaytarish x; } "
+                "butun asosiy() { qaytarish f(5); }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (b) Returning a concrete butun from a T-returning template function:
+        //     currentReturnType_ ("T") is in currentTemplateParams_ → suppressed.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> funksiya g(T x) -> T { qaytarish 5; } "
+                "butun asosiy() { qaytarish g(5); }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (c) Non-template function still warns on a real mismatch — we didn't
+        //     accidentally suppress legitimate diagnostics.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "funksiya h(matn s) -> butun { qaytarish s; } "
+                "butun asosiy() { qaytarish h(\"hi\"); }",
+                nullptr, &warnings);
+            assert(hasReturnMismatchWarning(warnings));
+        }
+    }
+
     std::cout << "uzpp frontend smoke tests passed\n";
     return 0;
 }

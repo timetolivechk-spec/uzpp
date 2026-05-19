@@ -68,6 +68,10 @@ private:
     std::unordered_map<std::string, ClassInfo> classes_;
     std::unordered_map<std::string, std::string> typeAliases_; // tur X = Y
     std::unordered_set<std::string> templateFunctions_;
+    // Hozir tekshirilayotgan shablon funksiyasining tur parametrlari
+    // (`shablon<tur T, tur U>` dan T, U). Tan ichida T turidagi identifikator
+    // Aniq("T") emas, Polimorf("T") sifatida xulosalanadi — diagnostika jim qoladi.
+    std::unordered_set<std::string> currentTemplateParams_;
     // For LSP inlay hints: maps `o'zgaruvchan x = ...` declarations to the
     // inferred type of the initializer (only set when inference succeeded).
     std::unordered_map<const VariableDeclaration*, std::string> inferredAutoTypes_;
@@ -96,6 +100,34 @@ private:
         // double: haqiqiy == ikkilangan
         if ((a == "haqiqiy" && b == "ikkilangan") || (a == "ikkilangan" && b == "haqiqiy")) return true;
         return false;
+    }
+
+    // Evristika: nom shablon tur parametriga o'xshaydimi (T, U, K, TKey, ...)?
+    // Bosh harfdan boshlanadi, faqat alfanumerik/underscore, ma'lum konkret
+    // turlar ro'yxatida emas. Bir-ikkita yolg'on musbat (masalan, foydalanuvchi
+    // o'zining T degan sinfini yozsa) — diagnostikani jim qoladi, halokat emas.
+    bool looksLikeTemplateParam(const std::string& name) const {
+        if (name.empty()) return false;
+        unsigned char c0 = static_cast<unsigned char>(name[0]);
+        if (!(c0 >= 'A' && c0 <= 'Z')) return false;
+        for (char c : name) {
+            unsigned char u = static_cast<unsigned char>(c);
+            if (!((u >= 'A' && u <= 'Z') || (u >= 'a' && u <= 'z') ||
+                  (u >= '0' && u <= '9') || u == '_')) return false;
+        }
+        if (classes_.contains(name)) return false;
+        if (typeAliases_.contains(name)) return false;
+        // Stdlib-da ma'lum bo'lgan bosh harfli turlar — shablon parametri emas
+        static const std::unordered_set<std::string> wellKnownTypes = {
+            "Json", "Natija", "Tanlov", "Matn", "RegEx", "Matematika",
+            "Vektor2", "Vektor3", "Matritsa2x2", "Qiymat", "OqimHovuz",
+            "VazifaJavob", "TestTo'plami",
+            "INT_MAX", "INT_MIN", "UINT_MAX", "SIZE_MAX",
+            "DBL_MAX", "FLT_MAX", "EXIT_SUCCESS", "EXIT_FAILURE",
+            "EOF", "NULL", "Grafika", "Hodisalar", "Vidjetlar"
+        };
+        if (wellKnownTypes.contains(name)) return false;
+        return true;
     }
 
     Token getTokenForNode(const ASTNode* node) {
@@ -147,6 +179,9 @@ private:
                         (*it)[name].used = true;
                         const std::string& t = (*it)[name].type;
                         if (t.empty() || t == "noma'lum") return Type::nomalum();
+                        // Joriy shablon parametriga teng bo'lsa — Polimorf,
+                        // aks holda Aniq. Polimorf diagnostikada jim qabul qilinadi.
+                        if (currentTemplateParams_.contains(t)) return Type::polimorf(t);
                         return Type::aniq(t);
                     }
                 }
@@ -556,7 +591,7 @@ private:
             case ASTNodeType::FunctionDeclaration: {
                 auto func = static_cast<const FunctionDeclaration*>(node);
                 declareVar(func->getName(), "funktsiya", func->getFunctionToken());
-                
+
                 std::vector<std::string> pTypes;
                 std::size_t minArgs = 0;
                 for (const auto& p : func->getParameters()) {
@@ -568,17 +603,34 @@ private:
                 functionParams_[func->getName()] = pTypes;
                 functionMinArgs_[func->getName()] = minArgs;
                 functionReturns_[func->getName()] = func->getReturnType();
-                
+
                 std::string prevRet = currentReturnType_;
                 currentReturnType_ = func->getReturnType();
-                
+
                 bool oldAsync = currentFunctionIsAsync_;
                 currentFunctionIsAsync_ = func->isAsync();
-                
+
                 bool savedReachable = reachable_;
                 bool savedReported = reportedUnreachable_;
                 reachable_ = true;
                 reportedUnreachable_ = false;
+
+                // Shablon funksiyalari uchun: signaturaga nazar tashlab, shablon
+                // tur parametri ko'rinishidagi nomlarni currentTemplateParams_ ga
+                // qo'shamiz. Bu funksiya tanasi davomida T-li ifodalar Polimorf
+                // sifatida xulosalanadi va diagnostika jim qoladi.
+                auto savedTemplateParams = currentTemplateParams_;
+                bool isTemplate = templateFunctions_.contains(func->getName());
+                if (isTemplate) {
+                    for (const auto& p : func->getParameters()) {
+                        if (looksLikeTemplateParam(p.type)) {
+                            currentTemplateParams_.insert(p.type);
+                        }
+                    }
+                    if (looksLikeTemplateParam(func->getReturnType())) {
+                        currentTemplateParams_.insert(func->getReturnType());
+                    }
+                }
 
                 enterScope();
                 for (const auto& p : func->getParameters()) {
@@ -589,6 +641,7 @@ private:
                 }
                 exitScope();
 
+                currentTemplateParams_ = savedTemplateParams;
                 reachable_ = savedReachable;
                 reportedUnreachable_ = savedReported;
                 currentReturnType_ = prevRet;
@@ -771,7 +824,12 @@ private:
                     retInferred = inferTypeT(ret->getValue());
                 }
 
-                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan" && retInferred.isAniq()) {
+                // Shablon parametri qaytariladigan tur sifatida ko'rsatilgan bo'lsa
+                // (`-> T`), aniq nima qaytarilgani ahamiyatga ega emas — instansiyalashda T
+                // mos kelishi ham mumkin. Bu yerda ham diagnostikani jim qoldiramiz.
+                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan"
+                    && retInferred.isAniq()
+                    && !currentTemplateParams_.contains(currentReturnType_)) {
                     std::string expResolved = resolveType(currentReturnType_);
                     std::string gotResolved = resolveType(retInferred.name);
                     if (expResolved != gotResolved) {
