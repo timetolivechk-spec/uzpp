@@ -15,30 +15,31 @@ struct SemanticError {
     int column;
 };
 
-// Tri-state type representation for honest inference.
-// - Known(name)        — we determined a concrete type ("butun", "vektor<matn>", "Foo")
-// - Unknown            — we couldn't infer (our limitation, not the user's fault)
-// - Polymorphic(param) — template type parameter, will be concrete at instantiation
+// Uch-holatli tur tasviri ("tri-state" — halol tur xulosasi uchun).
+// uz++ — o'zbek sintaksisli til; bu yerdagi terminologiya ham o'zbekcha:
+//   - Aniq(nomi)     — biz aniq turni belgiladik ("butun", "vektor<matn>", "Foo")
+//   - Nomalum        — xulosa qilolmadik (bizning cheklov, foydalanuvchining xatosi emas)
+//   - Polimorf(param) — shablon tur parametri, instansiyalashda aniq bo'ladi
 //
-// Diagnostics MUST only fire when comparing Known × Known. Unknown × _ and
-// Polymorphic × _ are silently accepted. This eliminates false-positive
-// warnings that previously fired on expressions like *p, &x, ternary, etc.
+// Diagnostika faqat Aniq × Aniq solishtirganda chiqarilishi shart.
+// Nomalum × _ va Polimorf × _ — jim qabul qilinadi. Bu *p, &x, ternar va h.k.
+// ifodalardagi noto'g'ri ogohlantirishlarni butunlay yo'q qiladi.
 struct Type {
-    enum class Kind { Known, Unknown, Polymorphic };
-    Kind kind = Kind::Unknown;
-    std::string name; // Known: type name; Polymorphic: template-param name; Unknown: empty
+    enum class Kind { Aniq, Nomalum, Polimorf };
+    Kind kind = Kind::Nomalum;
+    std::string name; // Aniq: tur nomi; Polimorf: shablon-param nomi; Nomalum: bo'sh
 
-    static Type known(std::string n) { return Type{Kind::Known, std::move(n)}; }
-    static Type unknown() { return Type{Kind::Unknown, {}}; }
-    static Type polymorphic(std::string p) { return Type{Kind::Polymorphic, std::move(p)}; }
+    static Type aniq(std::string n)     { return Type{Kind::Aniq, std::move(n)}; }
+    static Type nomalum()                { return Type{Kind::Nomalum, {}}; }
+    static Type polimorf(std::string p)  { return Type{Kind::Polimorf, std::move(p)}; }
 
-    bool isKnown() const { return kind == Kind::Known; }
-    bool isUnknown() const { return kind == Kind::Unknown; }
-    bool isPolymorphic() const { return kind == Kind::Polymorphic; }
+    bool isAniq()     const { return kind == Kind::Aniq; }
+    bool isNomalum()  const { return kind == Kind::Nomalum; }
+    bool isPolimorf() const { return kind == Kind::Polimorf; }
 
-    // For backward compatibility with code paths that still use plain strings:
-    // Known → name, Unknown/Polymorphic → "noma'lum" (the legacy sentinel).
-    std::string toLegacyString() const { return isKnown() ? name : "noma'lum"; }
+    // Eski string-asosli kod yo'llari uchun moslashuvchi konvertatsiya:
+    // Aniq → nomi, Nomalum/Polimorf → "noma'lum" (eskirib qolgan sentinel).
+    std::string toLegacyString() const { return isAniq() ? name : "noma'lum"; }
 };
 
 class TypeChecker {
@@ -115,26 +116,26 @@ private:
         return Token{TokenType::Identifier, "", 0, 0};
     }
 
-    // Primary type-inference routine. Returns a tri-state Type:
-    //   Known(name)  — concrete type determined
-    //   Unknown      — we couldn't infer (silent in diagnostics)
-    //   Polymorphic  — not yet emitted here; reserved for template-body inference
+    // Tur xulosasi (type inference) ning asosiy yo'li. Uch-holatli Type qaytaradi:
+    //   Aniq(nomi)  — aniq tur belgilandi
+    //   Nomalum     — xulosa qilolmadik (diagnostikada jim)
+    //   Polimorf    — hozircha bu yerda chiqarilmaydi; shablon tanasi xulosasiga qoldirilgan
     //
-    // All call sites that gate diagnostics on type info should check .isKnown()
-    // before comparing names. The legacy wrapper inferType() returns a plain
-    // string for code paths that still expect the old contract.
+    // Diagnostikani turga bog'lab tekshiradigan barcha joylar nomlarni
+    // solishtirgunga qadar .isAniq() ni tekshirishi kerak. Eskirib qolgan
+    // inferType() o'rovi oddiy string qaytaradi — eski kontraktga muhtoj kod uchun.
     Type inferTypeT(const Expression* expr) {
-        if (!expr) return Type::unknown();
+        if (!expr) return Type::nomalum();
         switch (expr->getType()) {
             case ASTNodeType::LiteralExpression: {
                 auto lit = static_cast<const LiteralExpression*>(expr);
                 switch(lit->getLiteralType()) {
-                    case LiteralExpression::LiteralType::Integer: return Type::known("butun");
-                    case LiteralExpression::LiteralType::Float: return Type::known("haqiqiy");
+                    case LiteralExpression::LiteralType::Integer: return Type::aniq("butun");
+                    case LiteralExpression::LiteralType::Float: return Type::aniq("haqiqiy");
                     case LiteralExpression::LiteralType::String:
-                    case LiteralExpression::LiteralType::FormatString: return Type::known("matn");
-                    case LiteralExpression::LiteralType::Character: return Type::known("belgi");
-                    case LiteralExpression::LiteralType::Boolean: return Type::known("mantiqiy");
+                    case LiteralExpression::LiteralType::FormatString: return Type::aniq("matn");
+                    case LiteralExpression::LiteralType::Character: return Type::aniq("belgi");
+                    case LiteralExpression::LiteralType::Boolean: return Type::aniq("mantiqiy");
                 }
                 break;
             }
@@ -145,8 +146,8 @@ private:
                     if (it->contains(name)) {
                         (*it)[name].used = true;
                         const std::string& t = (*it)[name].type;
-                        if (t.empty() || t == "noma'lum") return Type::unknown();
-                        return Type::known(t);
+                        if (t.empty() || t == "noma'lum") return Type::nomalum();
+                        return Type::aniq(t);
                     }
                 }
                 break;
@@ -155,34 +156,34 @@ private:
                 auto bin = static_cast<const BinaryExpression*>(expr);
                 std::string op = bin->getOperator();
                 if (op == "==" || op == "!=" || op == "<" || op == ">" || op == "<=" || op == ">=" || op == "&&" || op == "||" || op == "va" || op == "yoki") {
-                    return Type::known("mantiqiy");
+                    return Type::aniq("mantiqiy");
                 }
                 Type leftType = inferTypeT(bin->getLeft());
                 Type rightType = inferTypeT(bin->getRight());
                 // Promotion rules apply only when both sides have a known type
-                if (leftType.isKnown() && rightType.isKnown()) {
-                    if (leftType.name == "haqiqiy" || rightType.name == "haqiqiy") return Type::known("haqiqiy");
-                    if (leftType.name == "matn" || rightType.name == "matn") return Type::known("matn");
+                if (leftType.isAniq() && rightType.isAniq()) {
+                    if (leftType.name == "haqiqiy" || rightType.name == "haqiqiy") return Type::aniq("haqiqiy");
+                    if (leftType.name == "matn" || rightType.name == "matn") return Type::aniq("matn");
                     return leftType;
                 }
-                if (leftType.isKnown()) return leftType;
-                if (rightType.isKnown()) return rightType;
-                return Type::unknown();
+                if (leftType.isAniq()) return leftType;
+                if (rightType.isAniq()) return rightType;
+                return Type::nomalum();
             }
             case ASTNodeType::MemberAccess: {
                 auto mac = static_cast<const MemberAccess*>(expr);
                 Type objType = inferTypeT(mac->getObject());
-                if (objType.isKnown() && classes_.contains(objType.name)) {
+                if (objType.isAniq() && classes_.contains(objType.name)) {
                     std::string ret = classMethodReturn(objType.name, mac->getMemberName());
-                    if (ret != "noma'lum") return Type::known(ret);
+                    if (ret != "noma'lum") return Type::aniq(ret);
                 }
                 break;
             }
             case ASTNodeType::SubscriptAccess: {
                 auto sub = static_cast<const SubscriptAccess*>(expr);
                 Type arrType = inferTypeT(sub->getArray());
-                if (arrType.isKnown() && arrType.name.starts_with("vektor<") && arrType.name.back() == '>') {
-                    return Type::known(arrType.name.substr(7, arrType.name.length() - 8));
+                if (arrType.isAniq() && arrType.name.starts_with("vektor<") && arrType.name.back() == '>') {
+                    return Type::aniq(arrType.name.substr(7, arrType.name.length() - 8));
                 }
                 break;
             }
@@ -193,24 +194,24 @@ private:
                     if (name == "__uzpp_array") {
                         if (!call->getArguments().empty()) {
                             Type elem = inferTypeT(call->getArguments()[0].get());
-                            return Type::known("vektor<" + (elem.isKnown() ? elem.name : "noma'lum") + ">");
+                            return Type::aniq("vektor<" + (elem.isAniq() ? elem.name : "noma'lum") + ">");
                         }
-                        return Type::known("vektor<noma'lum>");
+                        return Type::aniq("vektor<noma'lum>");
                     }
                     if (name == "__uzpp_dict") {
-                        return Type::known("lug'at<matn, noma'lum>");
+                        return Type::aniq("lug'at<matn, noma'lum>");
                     }
                     if (functionReturns_.contains(name)) {
                         const std::string& r = functionReturns_[name];
-                        return r.empty() || r == "noma'lum" ? Type::unknown() : Type::known(r);
+                        return r.empty() || r == "noma'lum" ? Type::nomalum() : Type::aniq(r);
                     }
-                    if (classes_.contains(name)) return Type::known(name);
+                    if (classes_.contains(name)) return Type::aniq(name);
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
                     Type objType = inferTypeT(mac->getObject());
-                    if (objType.isKnown() && classes_.contains(objType.name)) {
+                    if (objType.isAniq() && classes_.contains(objType.name)) {
                         std::string ret = classMethodReturn(objType.name, mac->getMemberName());
-                        if (ret != "noma'lum") return Type::known(ret);
+                        if (ret != "noma'lum") return Type::aniq(ret);
                     }
                 }
                 break;
@@ -220,21 +221,21 @@ private:
                 Type inner = inferTypeT(un->getExpression());
                 switch (un->getOperator()) {
                     case UnaryExpression::UnaryOp::LogicalNot:
-                        return Type::known("mantiqiy");
+                        return Type::aniq("mantiqiy");
                     case UnaryExpression::UnaryOp::AddressOf:
-                        if (inner.isKnown()) return Type::known(inner.name + "*");
-                        return Type::unknown();
+                        if (inner.isAniq()) return Type::aniq(inner.name + "*");
+                        return Type::nomalum();
                     case UnaryExpression::UnaryOp::Dereference:
-                        if (inner.isKnown() && !inner.name.empty() && inner.name.back() == '*') {
-                            return Type::known(inner.name.substr(0, inner.name.size() - 1));
+                        if (inner.isAniq() && !inner.name.empty() && inner.name.back() == '*') {
+                            return Type::aniq(inner.name.substr(0, inner.name.size() - 1));
                         }
-                        return Type::unknown();
+                        return Type::nomalum();
                     case UnaryExpression::UnaryOp::New:
                         // `yangi Foo(...)` constructs a Foo* — operand is the type name expression
-                        if (inner.isKnown()) return Type::known(inner.name + "*");
-                        return Type::unknown();
+                        if (inner.isAniq()) return Type::aniq(inner.name + "*");
+                        return Type::nomalum();
                     case UnaryExpression::UnaryOp::Delete:
-                        return Type::known("bosh");
+                        return Type::aniq("bosh");
                     case UnaryExpression::UnaryOp::Plus:
                     case UnaryExpression::UnaryOp::Minus:
                     case UnaryExpression::UnaryOp::BitwiseNot:
@@ -242,64 +243,64 @@ private:
                     case UnaryExpression::UnaryOp::PreDecrement:
                     case UnaryExpression::UnaryOp::PostIncrement:
                     case UnaryExpression::UnaryOp::PostDecrement:
-                        return inner; // preserves Known/Unknown propagation
+                        return inner; // Aniq/Nomalum holati operanddan saqlanadi
                 }
-                return Type::unknown();
+                return Type::nomalum();
             }
             case ASTNodeType::TernaryExpression: {
                 auto tern = static_cast<const TernaryExpression*>(expr);
                 Type t = inferTypeT(tern->getThenExpr());
                 Type e = inferTypeT(tern->getElseExpr());
-                // Agree → that type; one Known, one Unknown → the Known one;
-                // disagree or both Unknown → Unknown (don't pretend).
-                if (t.isKnown() && e.isKnown()) {
+                // Mos kelsa → o'sha tur; bittasi Aniq, ikkinchisi Nomalum → Aniq bo'lganini;
+                // mos kelmasa yoki ikkalasi Nomalum → Nomalum (yolg'on aytmaymiz).
+                if (t.isAniq() && e.isAniq()) {
                     if (typesEquivalent(t.name, e.name)) return t;
                     // Numeric promotion: butun + haqiqiy → haqiqiy
                     if ((t.name == "haqiqiy" && e.name == "butun") ||
-                        (t.name == "butun" && e.name == "haqiqiy")) return Type::known("haqiqiy");
-                    return Type::unknown();
+                        (t.name == "butun" && e.name == "haqiqiy")) return Type::aniq("haqiqiy");
+                    return Type::nomalum();
                 }
-                if (t.isKnown()) return t;
-                if (e.isKnown()) return e;
-                return Type::unknown();
+                if (t.isAniq()) return t;
+                if (e.isAniq()) return e;
+                return Type::nomalum();
             }
             case ASTNodeType::AssignmentExpression: {
                 // C++ assignment expression evaluates to the value (or the target lvalue).
                 // Prefer the value side; fall back to target.
                 auto asgn = static_cast<const AssignmentExpression*>(expr);
                 Type v = inferTypeT(asgn->getValue());
-                if (v.isKnown()) return v;
+                if (v.isAniq()) return v;
                 return inferTypeT(asgn->getTarget());
             }
             case ASTNodeType::AwaitExpression: {
                 // kutish expr / chiqar_qadam expr — operand's "co_await result type"
-                // requires awaitable-trait tracking we don't yet do. Honest: Unknown.
-                return Type::unknown();
+                // awaitable-trait kuzatishni talab qiladi — hozircha yo'q. Halol: Nomalum.
+                return Type::nomalum();
             }
             case ASTNodeType::ThrowExpression: {
                 // `throw expr` has type `void` in C++ but is a "never" in practice.
-                // Mark Unknown — using its value is already a category error.
-                return Type::unknown();
+                // Nomalum deb belgilash — qiymatini ishlatish allaqachon kategoriya xatosi.
+                return Type::nomalum();
             }
             case ASTNodeType::LambdaExpression: {
                 // Lambdas have anonymous closure types. We can later represent these
-                // as a synthetic "@lambda<ret(args...)>" but for now: Unknown.
-                return Type::unknown();
+                // keyinchalik "@lambda<ret(args...)>" sintetik turi bilan ko'rsatsa bo'ladi, hozircha: Nomalum.
+                return Type::nomalum();
             }
             case ASTNodeType::PipelineExpression: {
                 // `left |> right` desugars to `right(left)` — right's return type
                 // could be inferred from functionReturns_, but the pipeline syntax
-                // is mostly used with std::ranges adaptors. Honest: Unknown.
-                return Type::unknown();
+                // ko'pincha std::ranges adapterlari bilan ishlatiladi. Halol: Nomalum.
+                return Type::nomalum();
             }
             default: break;
         }
-        return Type::unknown();
+        return Type::nomalum();
     }
 
-    // Legacy wrapper: returns "noma'lum" for both Unknown and Polymorphic.
+    // Eskirib qolgan o'rov: Nomalum va Polimorf uchun "noma'lum" qaytaradi.
     // Existing call sites still go through here; new code should prefer
-    // inferTypeT() and check isKnown() before comparing names.
+    // inferTypeT() ga o'tib, nomlarni solishtirgunga qadar isAniq() ni tekshirish kerak.
     std::string inferType(const Expression* expr) {
         return inferTypeT(expr).toLegacyString();
     }
@@ -516,11 +517,11 @@ private:
                     Type inferred = inferTypeT(var->getInitializer());
 
                     if (declaredType == "ozgaruvchan" || declaredType == "o'zgaruvchan" || declaredType == "ozgarmas") {
-                        if (inferred.isKnown()) {
+                        if (inferred.isAniq()) {
                             inferredAutoTypes_[var] = inferred.name;
                         }
                         declaredType = inferred.toLegacyString(); // Type inference
-                    } else if (inferred.isKnown() && declaredType != "noma'lum" &&
+                    } else if (inferred.isAniq() && declaredType != "noma'lum" &&
                                !typesEquivalent(inferred.name, declaredType)) {
                         const std::string& inferredType = inferred.name;
                         if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiq" || declaredType == "mantiqiy" || declaredType == "haqiqiy" || declaredType == "ikkilangan") &&
@@ -764,13 +765,13 @@ private:
             }
             case ASTNodeType::ReturnStatement: {
                 auto ret = static_cast<const ReturnStatement*>(node);
-                Type retInferred = Type::known("bosh");
+                Type retInferred = Type::aniq("bosh");
                 if (ret->getValue()) {
                     checkExpr(ret->getValue());
                     retInferred = inferTypeT(ret->getValue());
                 }
 
-                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan" && retInferred.isKnown()) {
+                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan" && retInferred.isAniq()) {
                     std::string expResolved = resolveType(currentReturnType_);
                     std::string gotResolved = resolveType(retInferred.name);
                     if (expResolved != gotResolved) {
@@ -913,7 +914,7 @@ private:
                 Type target = inferTypeT(asgn->getTarget());
                 Type value = inferTypeT(asgn->getValue());
 
-                if (target.isKnown() && value.isKnown() &&
+                if (target.isAniq() && value.isAniq() &&
                     !typesEquivalent(target.name, value.name)) {
                     const std::string& targetType = target.name;
                     const std::string& valueType = value.name;
@@ -955,7 +956,7 @@ private:
                 checkExpr(sub->getIndex());
                 Type idx = inferTypeT(sub->getIndex());
                 // Allow butun (int) and matn (string) — matn is valid for map/JSON subscript
-                if (idx.isKnown() && idx.name != "butun" && idx.name != "matn") {
+                if (idx.isAniq() && idx.name != "butun" && idx.name != "matn") {
                     reportWarning("Massiv indeksi 'butun' (int) yoki 'matn' (string) bo'lishi kerak, lekin '" + idx.name + "' berildi.", sub->getBracketToken());
                 }
                 // C++23 multidim: also check extra indices
@@ -1008,7 +1009,7 @@ private:
                             for (size_t i = 0; i < gotArgs; ++i) {
                                 Type arg = inferTypeT(call->getArguments()[i].get());
                                 std::string expBase = stripRef(expectedParams[i]);
-                                if (arg.isKnown() && expectedParams[i] != "ozgaruvchan" &&
+                                if (arg.isAniq() && expectedParams[i] != "ozgaruvchan" &&
                                     !typesEquivalent(arg.name, expectedParams[i]) && !typesEquivalent(arg.name, expBase)) {
                                     if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && arg.name == "butun")) {
                                         if (!classIsSubtype(arg.name, expBase)) {
@@ -1022,7 +1023,7 @@ private:
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
                     Type obj = inferTypeT(mac->getObject());
-                    if (obj.isKnown() && classes_.contains(obj.name)) {
+                    if (obj.isAniq() && classes_.contains(obj.name)) {
                         std::string methodName = mac->getMemberName();
                         if (classes_[obj.name].methodParams.contains(methodName)) {
                             const auto& expectedParams = classes_[obj.name].methodParams[methodName];
@@ -1031,7 +1032,7 @@ private:
                             } else {
                                 for (size_t i = 0; i < expectedParams.size(); ++i) {
                                     Type arg = inferTypeT(call->getArguments()[i].get());
-                                    if (arg.isKnown() && expectedParams[i] != "ozgaruvchan" &&
+                                    if (arg.isAniq() && expectedParams[i] != "ozgaruvchan" &&
                                         !typesEquivalent(arg.name, expectedParams[i])) {
                                         if (!((expectedParams[i] == "haqiqiy" || expectedParams[i] == "ikkilangan") && arg.name == "butun")) {
                                             reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + arg.name + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
@@ -1075,7 +1076,7 @@ private:
                 checkExpr(mac->getObject());
 
                 Type obj = inferTypeT(mac->getObject());
-                if (obj.isKnown() && classes_.contains(obj.name)) {
+                if (obj.isAniq() && classes_.contains(obj.name)) {
                     if (!classHasMember(obj.name, mac->getMemberName())) {
                         reportError("Sinf '" + obj.name + "' da '" + mac->getMemberName() + "' nomli maydon yoki metod topilmadi.", mac->getAccessToken());
                     }
