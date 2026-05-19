@@ -9,6 +9,8 @@
 
 namespace uzpp {
 
+class TypeChecker;
+
 class LspServer {
 public:
     void run();
@@ -35,6 +37,8 @@ private:
     std::string buildCompletions();
     std::string buildHover(const std::string& word);
     std::string getWordAtPosition(const std::string& text, int line, int character);
+    // Returns inferred type for an o'zgaruvchan/o'zgarmas variable at the given position
+    std::string getInferredTypeAtPosition(const std::string& uri, int line, int character, const std::string& word);
     std::string buildDocumentSymbols(const Program* program);
     std::string findDefinition(const std::string& uri, const std::string& word);
     // AST-based definition lookup — walks the full AST (not just top-level)

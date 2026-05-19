@@ -26,9 +26,9 @@ butun faktorial(butun n) {
     qaytarish n * faktorial(n - 1);
 }
 
-butun fibonacci(butun n) {
+butun fibonachchi(butun n) {
     agar (n <= 1) qaytarish n;
-    qaytarish fibonacci(n - 1) + fibonacci(n - 2);
+    qaytarish fibonachchi(n - 1) + fibonachchi(n - 2);
 }
 
 // --- Shablon (Generic) funksiya ---
@@ -49,9 +49,9 @@ butun asosiy() {
 
     // Rekursiya
     yozish << "7! = " << faktorial(7) << qator_oxiri;
-    yozish << "Fibonacci(10): ";
+    yozish << "Fibonachchi(10): ";
     uchun (butun i = 0; i <= 10; i++) {
-        yozish << fibonacci(i) << " ";
+        yozish << fibonachchi(i) << " ";
     }
     yozish << qator_oxiri;
 

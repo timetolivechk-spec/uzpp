@@ -3,9 +3,9 @@
 ulash "uzpp_runtime.hpp"
 ulash "matematika.hpp"
 
-uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+uzpp::Natija<haqiqiy> xavfsiz_bo'lish(haqiqiy a, haqiqiy b) {
     agar (b == 0.0) {
-        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bo'lish mumkin emas!");
     }
     qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
 }

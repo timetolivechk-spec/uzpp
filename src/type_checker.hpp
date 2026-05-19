@@ -283,7 +283,7 @@ private:
             "yagona_korsatkich", "aqlli_korsatkich", "yagona", "umumiy",
             // Oqimlar va sinxronizatsiya
             "oqim", "qulf", "qulflangan_guard", "kelajak", "oqim_boshla",
-            "OqimPool", "VazifaJavob",
+            "OqimHovuz", "VazifaJavob",
             // Fayl I/O
             "fayl_oqish", "fayl_yozish",
             // Modifikatorlar
@@ -347,6 +347,10 @@ public:
     const std::string* getInferredAutoType(const VariableDeclaration* var) const {
         const auto it = inferredAutoTypes_.find(var);
         return it != inferredAutoTypes_.end() ? &it->second : nullptr;
+    }
+
+    const std::unordered_map<const VariableDeclaration*, std::string>& getInferredAutoTypes() const {
+        return inferredAutoTypes_;
     }
 
     bool check(const Program* program) {
@@ -920,6 +924,19 @@ private:
                 auto bin = static_cast<const BinaryExpression*>(expr);
                 checkExpr(bin->getLeft());
                 checkExpr(bin->getRight());
+
+                // Kompilyatsiya vaqtida nolga bo'lish / nolga qoldiqni tekshirish
+                std::string op = bin->getOperator();
+                if ((op == "/" || op == "%" || op == "mod")) {
+                    const Expression* right = bin->getRight();
+                    if (right->getType() == ASTNodeType::LiteralExpression) {
+                        auto lit = static_cast<const LiteralExpression*>(right);
+                        if (lit->getLiteralType() == LiteralExpression::LiteralType::Integer && lit->getValue() == "0") {
+                            reportError("Nolga bo'lish yoki nolga qoldiq aniqlab bo'lmaydi.", bin->getOperatorToken());
+                        }
+                    }
+                }
+
                 break;
             }
             case ASTNodeType::MemberAccess: {

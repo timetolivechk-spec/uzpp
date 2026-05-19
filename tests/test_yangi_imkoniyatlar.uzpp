@@ -57,9 +57,9 @@ bosh matn_testi() {
 // ===== Matematika moduli testi =====
 
 bosh matematika_testi() {
-    yozish << "PI = " << uzpp::Matematika::PI << qator_oxiri;
+    yozish << "PI = " << uzpp::Matematika::PI() << qator_oxiri;
     yozish << "sqrt(2) = " << uzpp::Matematika::ildiz(2.0) << qator_oxiri;
-    yozish << "sin(PI/2) = " << uzpp::Matematika::sin(uzpp::Matematika::PI / 2.0) << qator_oxiri;
+    yozish << "sin(PI/2) = " << uzpp::Matematika::sin(uzpp::Matematika::PI() / 2.0) << qator_oxiri;
     yozish << "2^10 = " << uzpp::Matematika::daraja(2, 10) << qator_oxiri;
     yozish << "Tasodifiy [1,100]: " << uzpp::Matematika::tasodifiy_son(1, 100) << qator_oxiri;
 

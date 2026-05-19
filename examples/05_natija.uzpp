@@ -6,9 +6,9 @@ ulash "matematika.hpp"
 
 // --- Xavfsiz matematika operatsiyalari ---
 
-uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
+uzpp::Natija<haqiqiy> xavfsiz_bo'lish(haqiqiy a, haqiqiy b) {
     agar (b == 0.0) {
-        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bolish mumkin emas!");
+        qaytarish uzpp::Natija<haqiqiy>::xato("Nolga bo'lish mumkin emas!");
     }
     qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(a / b);
 }
@@ -53,10 +53,10 @@ bosh natijani_chiqar(matn tavsif, uzpp::Natija<haqiqiy> r) {
 // --- Asosiy dastur ---
 
 butun asosiy() {
-    yozish << "=== Xavfsiz bolish ===" << qator_oxiri;
-    natijani_chiqar("10 / 2", xavfsiz_bolish(10.0, 2.0));
-    natijani_chiqar("7 / 3", xavfsiz_bolish(7.0, 3.0));
-    natijani_chiqar("5 / 0", xavfsiz_bolish(5.0, 0.0));
+    yozish << "=== Xavfsiz bo'lish ===" << qator_oxiri;
+    natijani_chiqar("10 / 2", xavfsiz_bo'lish(10.0, 2.0));
+    natijani_chiqar("7 / 3", xavfsiz_bo'lish(7.0, 3.0));
+    natijani_chiqar("5 / 0", xavfsiz_bo'lish(5.0, 0.0));
 
     yozish << qator_oxiri << "=== Xavfsiz ildiz ===" << qator_oxiri;
     natijani_chiqar("sqrt(16)", xavfsiz_ildiz(16.0));

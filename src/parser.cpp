@@ -276,7 +276,7 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // Boshqalar
         "sanab_olish", "tushuncha", "shart", "makro", "ulash_kutubxona",
         "o'n", "asosiy", "yayin", "kutilish", "hammasi", "yoxud",
-        "nomlari", "vazifi", "ustidan_yozish", "sikldan", "satr", "son",
+        "nomlari", "vazifi", "ustidan_yozish", "sikldan", "satr",
         "xotira", "fayl", "yagona", "umumiy", "null",
         // Casting
         "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
@@ -1412,6 +1412,10 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
         cases.push_back(std::move(matchCase));
     }
     
+    if (cases.empty()) {
+        throw ParseError("Moslash kamida bitta 'holat' yoki 'boshqa' talab qiladi " + formatLocation(matchToken));
+    }
+    
     if (isAtEnd() || peek().value != "}") {
         throw ParseError("Kutilgan '}' moslash oxirida " + formatLocation(peek()));
     }
@@ -2395,6 +2399,20 @@ std::unique_ptr<LinkStatement> Parser::parseLinkStatement() {
 }
 
 std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std::string& typeName, const std::string& varName, bool isConstExpr, bool isConstEval, bool isConstInit) {
+    // asosiy/main — ruxsat etilgan funksiya nomlari, o'zgaruvchi sifatida emas.
+    // yangi/bosh/bekor — alias kalit so'zlar: parser lookahead (yangi → new) yoki
+    // codegen localScopes_ orqali soyalash (bosh/bekor) qo'llab-quvvatlanadi.
+    static const std::vector<std::string> shadowableKeywords{
+        "asosiy", "main", "yangi", "bosh", "bekor"
+    };
+    bool isShadowable = false;
+    for (const auto& kw : shadowableKeywords) {
+        if (varName == kw) { isShadowable = true; break; }
+    }
+    if (!isShadowable && isUzbekKeyword(varName)) {
+        throw ParseError("Kalit so'z o'zgaruvchi nomi sifatida ishlatilishi mumkin emas: `" + varName + "`");
+    }
+
     Token token;
     token.type = TokenType::Identifier;
     token.value = varName;

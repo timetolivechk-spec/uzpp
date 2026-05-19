@@ -1,0 +1,85 @@
+// uz++ — `sinov` kutubxonasini sinovchi test.
+// `ulash "sinov.uzpp"` orqali ishlatilishini tekshiradi.
+// Matematika funksiyalarini sinovdan o'tkazadi.
+
+ulash "uzpp_runtime.hpp"
+ulash "sinov.uzpp"
+ulash "matematika.uzpp"
+
+butun asosiy() {
+    uzpp::Sinov::TestTo'plami sinovlar("Sinov kutubxonasi + Matematika testlari");
+
+    // Sinov kutubxonasining o'zini sinash
+    sinovlar.test_qoshish("tasdiqlash rost", []() {
+        uzpp::Sinov::tasdiqlash(2 + 2 == 4);
+    });
+
+    sinovlar.test_qoshish("tasdiqlash_teng butun", []() {
+        uzpp::Sinov::tasdiqlash_teng(42, 42);
+    });
+
+    sinovlar.test_qoshish("tasdiqlash_yaqin", []() {
+        uzpp::Sinov::tasdiqlash_yaqin(3.14, 3.14, 0.001);
+    });
+
+    // Matematika funksiyalarini sinash
+    sinovlar.test_qoshish("modul manfiy son", []() {
+        uzpp::Sinov::tasdiqlash_teng(5, uzpp::Matematika::modul(-5));
+    });
+
+    sinovlar.test_qoshish("modul musbat son", []() {
+        uzpp::Sinov::tasdiqlash_teng(3, uzpp::Matematika::modul(3));
+    });
+
+    sinovlar.test_qoshish("ildiz 16", []() {
+        uzpp::Sinov::tasdiqlash_yaqin(4.0, uzpp::Matematika::ildiz(16.0));
+    });
+
+    sinovlar.test_qoshish("daraja 2^10", []() {
+        uzpp::Sinov::tasdiqlash_yaqin(1024.0, uzpp::Matematika::daraja(2.0, 10.0));
+    });
+
+    sinovlar.test_qoshish("ekub 12 va 8", []() {
+        uzpp::Sinov::tasdiqlash(uzpp::Matematika::ekub(12, 8) == 4);
+    });
+
+    sinovlar.test_qoshish("ekuk 12 va 8", []() {
+        uzpp::Sinov::tasdiqlash(uzpp::Matematika::ekuk(12, 8) == 24);
+    });
+
+    sinovlar.test_qoshish("tub_sonMi 17", []() {
+        uzpp::Sinov::tasdiqlash(uzpp::Matematika::tub_sonMi(17));
+    });
+
+    sinovlar.test_qoshish("tub_sonMi 15 emas", []() {
+        uzpp::Sinov::tasdiqlash(!uzpp::Matematika::tub_sonMi(15));
+    });
+
+    sinovlar.test_qoshish("faktorial 5", []() {
+        uzpp::Sinov::tasdiqlash(uzpp::Matematika::faktorial(5) == 120);
+    });
+
+    sinovlar.test_qoshish("kombinatsiya C(5,2)=10", []() {
+        uzpp::Sinov::tasdiqlash(uzpp::Matematika::kombinatsiya(5, 2) == 10);
+    });
+
+    // Vektor2 testi
+    sinovlar.test_qoshish("Vektor2 uzunlik 3-4-5", []() {
+        uzpp::Matematika::Vektor2 v;
+        v.x = 3.0;
+        v.y = 4.0;
+        uzpp::Sinov::tasdiqlash_yaqin(5.0, v.uzunlik());
+    });
+
+    sinovlar.test_qoshish("Vektor2 qo'shish", []() {
+        uzpp::Matematika::Vektor2 a;
+        a.x = 1.0; a.y = 2.0;
+        uzpp::Matematika::Vektor2 b;
+        b.x = 3.0; b.y = 4.0;
+        o'zgaruvchan c = a + b;
+        uzpp::Sinov::tasdiqlash_yaqin(4.0, c.x);
+        uzpp::Sinov::tasdiqlash_yaqin(6.0, c.y);
+    });
+
+    qaytarish sinovlar.ishga_tushirish();
+}

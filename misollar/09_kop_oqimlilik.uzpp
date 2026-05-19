@@ -32,7 +32,7 @@ butun asosiy() {
 
     // Thread Pool bilan ishlash
     yozish << "\nOqim havzasi bilan ishlash:" << qator_oxiri;
-    uzpp::OqimPool havza(4);
+    uzpp::OqimHovuz havza(4);
 
     uchun (butun i = 0; i < 4; i++) {
         butun num = i + 1;

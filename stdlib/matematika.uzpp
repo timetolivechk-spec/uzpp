@@ -1,0 +1,502 @@
+// uz++ — Matematika (math) kutubxonasi, uz++ tilida qayta yozilgan.
+// Bu fayl `stdlib/matematika.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+
+ulash <cmath>
+ulash <random>
+ulash <algorithm>
+ulash <numeric>
+ulash <vector>
+ulash <stdexcept>
+ulash <limits>
+ulash <array>
+
+nomlar_fazosi uzpp::Matematika {
+
+// ===== KONSTANTALAR =====
+
+funksiya PI() -> double { qaytarish 3.14159265358979323846; }
+funksiya E_soni() -> double { qaytarish 2.71828182845904523536; }
+funksiya PHI() -> double { qaytarish 1.61803398874989484820; } // Oltin nisbat
+funksiya SQRT2() -> double { qaytarish 1.41421356237309504880; }
+funksiya LN2() -> double { qaytarish 0.69314718055994530942; }
+funksiya LN10() -> double { qaytarish 2.30258509299404568402; }
+funksiya SONSIZLIK() -> double { qaytarish std::numeric_limits<double>::infinity(); }
+funksiya NAN_SON() -> double { qaytarish std::numeric_limits<double>::quiet_NaN(); }
+
+// ===== ASOSIY FUNKSIYALAR =====
+
+shablon <tur T>
+funksiya modul(T x) -> T {
+    qaytarish std::abs(x);
+}
+
+shablon <tur T, tur U>
+funksiya daraja(T x, U y) -> auto {
+    qaytarish std::pow(x, y);
+}
+
+shablon <tur T>
+funksiya ildiz(T x) -> auto {
+    qaytarish std::sqrt(x);
+}
+
+shablon <tur T>
+funksiya kub_ildiz(T x) -> auto {
+    qaytarish std::cbrt(x);
+}
+
+shablon <tur T>
+funksiya yuqori_yaxlitlash(T x) -> T {
+    qaytarish statik_otkazish<T>(std::ceil(x));
+}
+
+shablon <tur T>
+funksiya quyi_yaxlitlash(T x) -> T {
+    qaytarish statik_otkazish<T>(std::floor(x));
+}
+
+shablon <tur T>
+funksiya yaxlitlash(T x) -> T {
+    qaytarish statik_otkazish<T>(std::round(x));
+}
+
+shablon <tur T>
+funksiya kesish(T x) -> T {
+    qaytarish statik_otkazish<T>(std::trunc(x));
+}
+
+shablon <tur T>
+funksiya ishorat(T x) -> butun {
+    agar (x > T(0)) {
+        qaytarish 1;
+    }
+    agar (x < T(0)) {
+        qaytarish -1;
+    }
+    qaytarish 0;
+}
+
+shablon <tur T>
+funksiya sonMi(T x) -> mantiqiy {
+    qaytarish !std::isnan(x);
+}
+
+shablon <tur T>
+funksiya cheksizMi(T x) -> mantiqiy {
+    qaytarish std::isinf(x);
+}
+
+// ===== LOGARIFM VA EKSPONENTA =====
+
+shablon <tur T>
+funksiya ln(T x) -> haqiqiy {
+    qaytarish std::log(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya log10(T x) -> haqiqiy {
+    qaytarish std::log10(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya log2(T x) -> haqiqiy {
+    qaytarish std::log2(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T, tur B>
+funksiya log_asosi(T x, B base) -> haqiqiy {
+    qaytarish std::log(statik_otkazish<haqiqiy>(x)) / std::log(statik_otkazish<haqiqiy>(base));
+}
+
+shablon <tur T>
+funksiya exp(T x) -> haqiqiy {
+    qaytarish std::exp(statik_otkazish<haqiqiy>(x));
+}
+
+// ===== TRIGONOMETRIYA =====
+
+shablon <tur T>
+funksiya sin(T x) -> haqiqiy {
+    qaytarish std::sin(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya cos(T x) -> haqiqiy {
+    qaytarish std::cos(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya tan(T x) -> haqiqiy {
+    qaytarish std::tan(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya asin(T x) -> haqiqiy {
+    qaytarish std::asin(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya acos(T x) -> haqiqiy {
+    qaytarish std::acos(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya atan(T x) -> haqiqiy {
+    qaytarish std::atan(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T, tur U>
+funksiya atan2(T y, U x) -> haqiqiy {
+    qaytarish std::atan2(statik_otkazish<haqiqiy>(y), statik_otkazish<haqiqiy>(x));
+}
+
+funksiya darajadan_radianga(haqiqiy daraja) -> haqiqiy {
+    qaytarish daraja * PI() / 180.0;
+}
+
+funksiya radiandan_darajaga(haqiqiy radian) -> haqiqiy {
+    qaytarish radian * 180.0 / PI();
+}
+
+// ===== GIPERBOLIK FUNKSIYALAR =====
+
+shablon <tur T>
+funksiya sinh(T x) -> haqiqiy {
+    qaytarish std::sinh(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya cosh(T x) -> haqiqiy {
+    qaytarish std::cosh(statik_otkazish<haqiqiy>(x));
+}
+
+shablon <tur T>
+funksiya tanh(T x) -> haqiqiy {
+    qaytarish std::tanh(statik_otkazish<haqiqiy>(x));
+}
+
+// ===== MIN / MAX / ORALIQ =====
+
+shablon <tur T, tur U>
+funksiya eng_katta(T x, U y) -> auto {
+    qaytarish x > y ? x : y;
+}
+
+shablon <tur T, tur U>
+funksiya eng_kichik(T x, U y) -> auto {
+    qaytarish x < y ? x : y;
+}
+
+shablon <tur T>
+funksiya oraliqda_cheklash(T x, T quyi, T yuqori) -> T {
+    qaytarish std::clamp(x, quyi, yuqori);
+}
+
+shablon <tur T>
+funksiya chiziqli_interpolatsiya(T a, T b, haqiqiy t) -> T {
+    qaytarish statik_otkazish<T>(a + (b - a) * t);
+}
+
+// ===== QOLDIQ VA BO'LINUVCHANLIK =====
+
+funksiya ekub(uzun_uzun a, uzun_uzun b) -> uzun_uzun {
+    toki (b != 0) {
+        o'zgaruvchan t = b;
+        b = a % b;
+        a = t;
+    }
+    qaytarish a;
+}
+
+funksiya ekuk(uzun_uzun a, uzun_uzun b) -> uzun_uzun {
+    qaytarish a / ekub(a, b) * b;
+}
+
+funksiya toqMi(uzun_uzun n) -> mantiqiy {
+    qaytarish n % 2 != 0;
+}
+
+funksiya juftMi(uzun_uzun n) -> mantiqiy {
+    qaytarish n % 2 == 0;
+}
+
+funksiya tub_sonMi(uzun_uzun n) -> mantiqiy {
+    agar (n < 2) {
+        qaytarish yolg'on;
+    }
+    agar (n == 2 || n == 3) {
+        qaytarish rost;
+    }
+    agar (n % 2 == 0 || n % 3 == 0) {
+        qaytarish yolg'on;
+    }
+    uzun_uzun i = 5;
+    toki (i * i <= n) {
+        agar (n % i == 0 || n % (i + 2) == 0) {
+            qaytarish yolg'on;
+        }
+        i = i + 6;
+    }
+    qaytarish rost;
+}
+
+funksiya faktorial(butun n) -> uzun_uzun {
+    agar (n < 0) {
+        irgitish std::invalid_argument("Faktorial manfiy son uchun aniqlanmagan");
+    }
+    agar (n > 20) {
+        irgitish std::overflow_error("Faktorial juda katta");
+    }
+    uzun_uzun natija = 1;
+    uchun (butun i = 2; i <= n; i = i + 1) {
+        natija = natija * i;
+    }
+    qaytarish natija;
+}
+
+funksiya kombinatsiya(butun n, butun k) -> uzun_uzun {
+    agar (k < 0 || k > n) {
+        qaytarish 0;
+    }
+    agar (k == 0 || k == n) {
+        qaytarish 1;
+    }
+    k = std::min(k, n - k);
+    uzun_uzun natija = 1;
+    uchun (butun i = 0; i < k; i = i + 1) {
+        natija = natija * (n - i) / (i + 1);
+    }
+    qaytarish natija;
+}
+
+// ===== TASODIFIY SONLAR =====
+
+funksiya tasodifiy_dvigatel() -> std::mt19937& {
+    statik std::random_device rd;
+    statik std::mt19937 gen(rd());
+    qaytarish gen;
+}
+
+funksiya tasodifiy_son(butun min, butun max) -> butun {
+    std::uniform_int_distribution<> d(min, max);
+    qaytarish d(tasodifiy_dvigatel());
+}
+
+funksiya tasodifiy_kasr(haqiqiy min = 0.0, haqiqiy max = 1.0) -> haqiqiy {
+    std::uniform_real_distribution<> d(min, max);
+    qaytarish d(tasodifiy_dvigatel());
+}
+
+funksiya normal_taqsimot(haqiqiy ort = 0.0, haqiqiy sigma = 1.0) -> haqiqiy {
+    std::normal_distribution<> d(ort, sigma);
+    qaytarish d(tasodifiy_dvigatel());
+}
+
+shablon <tur T>
+funksiya aralashtir(vektor<T>& v) -> bosh {
+    std::shuffle(v.begin(), v.end(), tasodifiy_dvigatel());
+}
+
+// ===== STATISTIKA =====
+
+shablon <tur Container>
+funksiya ortacha(o'zgarmas Container& c) -> haqiqiy {
+    agar (c.empty()) {
+        irgitish std::invalid_argument("Bo'sh to'plamning o'rtachasi yo'q");
+    }
+    haqiqiy yigindi = 0.0;
+    uchun (hajm_turi i = 0; i < c.size(); i = i + 1) {
+        yigindi = yigindi + statik_otkazish<haqiqiy>(c[i]);
+    }
+    qaytarish yigindi / statik_otkazish<haqiqiy>(c.size());
+}
+
+shablon <tur Container>
+funksiya dispersiya(o'zgarmas Container& c) -> haqiqiy {
+    agar (c.size() < 2) {
+        irgitish std::invalid_argument("Dispersiya kamida 2 element talab qiladi");
+    }
+    haqiqiy m = ortacha(c);
+    haqiqiy yigindi = 0.0;
+    uchun (hajm_turi i = 0; i < c.size(); i = i + 1) {
+        haqiqiy d = statik_otkazish<haqiqiy>(c[i]) - m;
+        yigindi = yigindi + d * d;
+    }
+    qaytarish yigindi / statik_otkazish<haqiqiy>(c.size());
+}
+
+shablon <tur Container>
+funksiya standart_chetlanish(o'zgarmas Container& c) -> haqiqiy {
+    qaytarish std::sqrt(dispersiya(c));
+}
+
+shablon <tur Container>
+funksiya eng_katta_el(o'zgarmas Container& c) -> auto {
+    agar (c.empty()) {
+        irgitish std::invalid_argument("Bo'sh to'plam");
+    }
+    qaytarish *std::max_element(c.begin(), c.end());
+}
+
+shablon <tur Container>
+funksiya eng_kichik_el(o'zgarmas Container& c) -> auto {
+    agar (c.empty()) {
+        irgitish std::invalid_argument("Bo'sh to'plam");
+    }
+    qaytarish *std::min_element(c.begin(), c.end());
+}
+
+shablon <tur Container>
+funksiya yigindisi(o'zgarmas Container& c) -> haqiqiy {
+    haqiqiy s = 0.0;
+    uchun (hajm_turi i = 0; i < c.size(); i = i + 1) {
+        s = s + statik_otkazish<haqiqiy>(c[i]);
+    }
+    qaytarish s;
+}
+
+// ===== 2D VA 3D VEKTORLAR =====
+
+tuzilma Vektor2 {
+    haqiqiy x = 0.0;
+    haqiqiy y = 0.0;
+
+    Vektor2 operator+(o'zgarmas Vektor2& b) o'zgarmas {
+        Vektor2 natija;
+        natija.x = x + b.x;
+        natija.y = y + b.y;
+        qaytarish natija;
+    }
+    Vektor2 operator-(o'zgarmas Vektor2& b) o'zgarmas {
+        Vektor2 natija;
+        natija.x = x - b.x;
+        natija.y = y - b.y;
+        qaytarish natija;
+    }
+    Vektor2 operator*(haqiqiy s) o'zgarmas {
+        Vektor2 natija;
+        natija.x = x * s;
+        natija.y = y * s;
+        qaytarish natija;
+    }
+    Vektor2 operator/(haqiqiy s) o'zgarmas {
+        Vektor2 natija;
+        natija.x = x / s;
+        natija.y = y / s;
+        qaytarish natija;
+    }
+
+    haqiqiy uzunlik() o'zgarmas {
+        qaytarish std::sqrt(x*x + y*y);
+    }
+    haqiqiy uzunlik_sq() o'zgarmas {
+        qaytarish x*x + y*y;
+    }
+    Vektor2 normallashtirish() o'zgarmas {
+        haqiqiy l = uzunlik();
+        qaytarish l > 0 ? *this / l : *this;
+    }
+    haqiqiy skalyar_kopaytma(o'zgarmas Vektor2& b) o'zgarmas {
+        qaytarish x*b.x + y*b.y;
+    }
+    haqiqiy vektor_kopaytma(o'zgarmas Vektor2& b) o'zgarmas {
+        qaytarish x*b.y - y*b.x;
+    }
+    haqiqiy masofaGacha(o'zgarmas Vektor2& b) o'zgarmas {
+        qaytarish (*this - b).uzunlik();
+    }
+};
+
+tuzilma Vektor3 {
+    haqiqiy x = 0.0;
+    haqiqiy y = 0.0;
+    haqiqiy z = 0.0;
+
+    Vektor3 operator+(o'zgarmas Vektor3& b) o'zgarmas {
+        Vektor3 natija;
+        natija.x = x + b.x;
+        natija.y = y + b.y;
+        natija.z = z + b.z;
+        qaytarish natija;
+    }
+    Vektor3 operator-(o'zgarmas Vektor3& b) o'zgarmas {
+        Vektor3 natija;
+        natija.x = x - b.x;
+        natija.y = y - b.y;
+        natija.z = z - b.z;
+        qaytarish natija;
+    }
+    Vektor3 operator*(haqiqiy s) o'zgarmas {
+        Vektor3 natija;
+        natija.x = x * s;
+        natija.y = y * s;
+        natija.z = z * s;
+        qaytarish natija;
+    }
+    Vektor3 operator/(haqiqiy s) o'zgarmas {
+        Vektor3 natija;
+        natija.x = x / s;
+        natija.y = y / s;
+        natija.z = z / s;
+        qaytarish natija;
+    }
+
+    haqiqiy uzunlik() o'zgarmas {
+        qaytarish std::sqrt(x*x + y*y + z*z);
+    }
+    Vektor3 normallashtirish() o'zgarmas {
+        haqiqiy l = uzunlik();
+        qaytarish l > 0 ? *this / l : *this;
+    }
+    haqiqiy skalyar_kopaytma(o'zgarmas Vektor3& b) o'zgarmas {
+        qaytarish x*b.x + y*b.y + z*b.z;
+    }
+    Vektor3 vektor_kopaytma(o'zgarmas Vektor3& b) o'zgarmas {
+        Vektor3 natija;
+        natija.x = y*b.z - z*b.y;
+        natija.y = z*b.x - x*b.z;
+        natija.z = x*b.y - y*b.x;
+        qaytarish natija;
+    }
+    haqiqiy masofaGacha(o'zgarmas Vektor3& b) o'zgarmas {
+        qaytarish (*this - b).uzunlik();
+    }
+};
+
+// ===== MATRITSA (2x2) =====
+
+tuzilma Matritsa2x2 {
+    std::array<std::array<haqiqiy, 2>, 2> m;
+
+    haqiqiy determinant() o'zgarmas {
+        qaytarish m[0][0]*m[1][1] - m[0][1]*m[1][0];
+    }
+
+    Matritsa2x2 operator*(o'zgarmas Matritsa2x2& b) o'zgarmas {
+        Matritsa2x2 r;
+        uchun (butun i = 0; i < 2; i = i + 1) {
+            uchun (butun j = 0; j < 2; j = j + 1) {
+                uchun (butun k = 0; k < 2; k = k + 1) {
+                    r.m[i][j] = r.m[i][j] + m[i][k] * b.m[k][j];
+                }
+            }
+        }
+        qaytarish r;
+    }
+
+    Matritsa2x2 teskari() o'zgarmas {
+        haqiqiy d = determinant();
+        agar (d == 0.0) {
+            irgitish std::runtime_error("Teskari matritsa yo'q (det = 0)");
+        }
+        Matritsa2x2 natija;
+        natija.m[0][0] = m[1][1] / d;
+        natija.m[0][1] = -m[0][1] / d;
+        natija.m[1][0] = -m[1][0] / d;
+        natija.m[1][1] = m[0][0] / d;
+        qaytarish natija;
+    }
+};
+
+} // namespace uzpp::Matematika

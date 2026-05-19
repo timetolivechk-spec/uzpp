@@ -212,8 +212,8 @@ public:
     }
 
 private:
-    friend class OqimPooliPrivate;
-    friend class OqimPool;
+    friend class OqimHovuzIchki;
+    friend class OqimHovuz;
     
     mutable std::mutex mutex_;
     mutable std::condition_variable aytishnomasi_;
@@ -238,7 +238,7 @@ private:
     }
 };
 
-class OqimPooliPrivate {
+class OqimHovuzIchki {
 public:
     struct VazifaNavbati: public TasqTask {
         std::shared_ptr<VazifaJavob> javob;
@@ -249,9 +249,9 @@ public:
     };
 };
 
-class OqimPool {
+class OqimHovuz {
 public:
-    explicit OqimPool(std::size_t ischilarSoni = 4) {
+    explicit OqimHovuz(std::size_t ischilarSoni = 4) {
         if (ischilarSoni == 0) {
             ischilarSoni = std::thread::hardware_concurrency();
         }
@@ -261,14 +261,14 @@ public:
         }
     }
     
-    ~OqimPool() {
+    ~OqimHovuz() {
         toxtatish();
     }
     
-    OqimPool(const OqimPool&) = delete;
-    OqimPool& operator=(const OqimPool&) = delete;
-    OqimPool(OqimPool&&) = delete;
-    OqimPool& operator=(OqimPool&&) = delete;
+    OqimHovuz(const OqimHovuz&) = delete;
+    OqimHovuz& operator=(const OqimHovuz&) = delete;
+    OqimHovuz(OqimHovuz&&) = delete;
+    OqimHovuz& operator=(OqimHovuz&&) = delete;
     
     // Vazifani qo'shish (blocking qilmay)
     std::shared_ptr<VazifaJavob> vazifaQosh(TasqTask::Function func) {
@@ -281,7 +281,7 @@ public:
                 return javob;
             }
             
-            OqimPooliPrivate::VazifaNavbati taskQo(func, javob);
+            OqimHovuzIchki::VazifaNavbati taskQo(func, javob);
             vazifalar_.push_back(taskQo);
         }
         
@@ -298,7 +298,7 @@ public:
         }
     }
     
-    // Thread poolni to'xtatish
+    // Thread poolni toxtatish
     void toxtatish() {
         {
             std::lock_guard<std::mutex> lock(vazifaMutex_);
@@ -319,14 +319,14 @@ public:
 
 private:
     std::vector<std::jthread> ishchilar_;
-    std::deque<OqimPooliPrivate::VazifaNavbati> vazifalar_;
+    std::deque<OqimHovuzIchki::VazifaNavbati> vazifalar_;
     mutable std::mutex vazifaMutex_;
     std::condition_variable aytishnomasi_;
     bool toxtab_ = false;
     
     void ishchiSikli() {
         while (true) {
-            OqimPooliPrivate::VazifaNavbati vazifa;
+            OqimHovuzIchki::VazifaNavbati vazifa;
             
             {
                 std::unique_lock<std::mutex> lock(vazifaMutex_);

@@ -8,27 +8,27 @@ butun asosiy() {
     butun     son      = 42;           // int
     haqiqiy   raqam    = 3.14159;      // double
     matn      ism      = "Akbar";      // std::string
-    mantiqiy  togri    = rost;         // bool = true
-    mantiqiy  noto_gri = yolg'on;      // bool = false
+    mantiqiy  to'g'ri   = rost;         // bool = true
+    mantiqiy  noto'g'ri = yolg'on;      // bool = false
 
     yozish << "butun:    " << son     << qator_oxiri;
     yozish << "haqiqiy:  " << raqam   << qator_oxiri;
     yozish << "matn:     " << ism     << qator_oxiri;
-    yozish << "mantiqiy: " << togri   << qator_oxiri;
+    yozish << "mantiqiy: " << to'g'ri  << qator_oxiri;
 
     // Avtomatik tur aniqlash (auto)
-    ozgaruvchan a = 100;
-    ozgaruvchan b = 3.14;
-    ozgaruvchan s = "uz++";
+    o'zgaruvchan a = 100;
+    o'zgaruvchan b = 3.14;
+    o'zgaruvchan s = "uz++";
 
     yozish << "auto butun:   " << a << qator_oxiri;
     yozish << "auto haqiqiy: " << b << qator_oxiri;
     yozish << "auto matn:    " << s << qator_oxiri;
 
     // O'zgarmas (const)
-    ozgarmas haqiqiy PI       = 3.14159265358979;
-    ozgarmas haqiqiy EULER    = 2.71828182845904;
-    ozgarmas matn    DASTUR   = "uz++";
+    o'zgarmas haqiqiy PI       = 3.14159265358979;
+    o'zgarmas haqiqiy EULER    = 2.71828182845904;
+    o'zgarmas matn    DASTUR   = "uz++";
 
     yozish << "PI = " << PI     << qator_oxiri;
     yozish << "E  = " << EULER  << qator_oxiri;

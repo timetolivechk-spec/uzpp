@@ -1,102 +1,128 @@
 #pragma once
-
-#include "platforma.hpp"
-
-#if !defined(UZPP_EMBEDDED)
+#ifndef UZPP_GEN_SINOV_HPP_
+#define UZPP_GEN_SINOV_HPP_
+#line 1 "C:\\Users\\MSN\\uz++\\stdlib\\sinov.uzpp"
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <functional>
-#include <stdexcept>
-#include <chrono>
-#include "jurnal.hpp"
-#endif
-
 namespace uzpp::Sinov {
-
-// Krossplatfoman Unit-Test muhiti (faqat kompyuterlar tizimida)
-#if !defined(UZPP_EMBEDDED)
-
-inline void assertKutish(bool holat, const std::string& xabar = "Kutilgan qiymat tasdiqlanmadi") {
-    if (!holat) {
-        throw std::runtime_error("Sinov XATOSI: " + xabar);
+    inline auto tasdiqlash(bool shart, const std::string& xabar = "")->void
+    {
+        if(! shart)
+            {
+                std::string xato = "Tasdiqlash barbod";
+                if(! xabar.empty())
+                    {
+                        (xato =((xato + ": ") + xabar));
+                    }
+                throw std::runtime_error(xato);
+            }
+    }
+    template <typename T >
+ inline auto tasdiqlash_teng(const T& kutilgan, const T& qiymat, const std::string& xabar = "")->void
+    {
+        if(!(kutilgan == qiymat))
+            {
+                throw std::runtime_error(("Tenglik barbod: kutilgan != qiymat" +(xabar.empty() ? std::string(""):(std::string(" — ") + xabar))));
+            }
+    }
+    inline auto tasdiqlash_yaqin(double kutilgan, double qiymat, double epsilon = 0.0001, const std::string& xabar = "")->void
+    {
+        double farq =(kutilgan - qiymat);
+        if((farq < 0))
+            {
+                (farq = - farq);
+            }
+        if((farq > epsilon))
+            {
+                throw std::runtime_error(("Yaqinlik barbod: farq > epsilon" +(xabar.empty() ? std::string(""):(std::string(" — ") + xabar))));
+            }
+    }
+    class TestToʼplami {
+    public:
+        std::string nomi_;
+        std::vector<std::function<void()>> testlar_;
+        std::vector<std::string> nomlar_;
+        TestToʼplami(const std::string& nom) : nomi_ ( nom )
+        {
+        }
+        void test_qoshish(const std::string& nom, std::function<void()> test)
+        {
+            nomlar_.push_back(nom);
+            testlar_.push_back(test);
+        }
+        int ishga_tushirish()
+        {
+            (std::cout << std::endl);
+            ((std::cout << "=============================================") << std::endl);
+            (((std::cout << "  ") << nomi_) << std::endl);
+            ((std::cout << "=============================================") << std::endl);
+            int otdi = 0;
+            int quladi = 0;
+            std::vector<std::string> qulagan_nomlar;
+            for(std::size_t i = 0;(i < testlar_.size());(i =(i + 1)))
+                {
+                    (((((((std::cout << "  [") <<(i + 1)) << "/") << testlar_.size()) << "] ") << nomlar_[i]) << " ... ");
+                    try
+                        {
+                            testlar_[i]();
+                            ((std::cout << "OTDI") << std::endl);
+                            (otdi =(otdi + 1));
+                        }
+                    catch(std :: exception & e)
+                        {
+                            ((std::cout << "QULADI") << std::endl);
+                            (((std::cout << "        Sabab: ") << e.what()) << std::endl);
+                            (quladi =(quladi + 1));
+                            qulagan_nomlar.push_back(nomlar_[i]);
+                        }
+                    catch(...)
+                        {
+                            ((std::cout << "QULADI") << std::endl);
+                            ((std::cout << "        Sabab: noma'lum xato") << std::endl);
+                            (quladi =(quladi + 1));
+                            qulagan_nomlar.push_back(nomlar_[i]);
+                        }
+                }
+            ((std::cout << "---------------------------------------------") << std::endl);
+            (((std::cout << "  Jami:  ") <<(otdi + quladi)) << std::endl);
+            (((std::cout << "  O'tdi: ") << otdi) << std::endl);
+            (((std::cout << "  Quladi:") << quladi) << std::endl);
+            if((quladi > 0))
+                {
+                    (std::cout << std::endl);
+                    ((std::cout << "  Qulagan testlar:") << std::endl);
+                    for(std::size_t i = 0;(i < qulagan_nomlar.size());(i =(i + 1)))
+                        {
+                            (((std::cout << "    - ") << qulagan_nomlar[i]) << std::endl);
+                        }
+                }
+            ((std::cout << "=============================================") << std::endl);
+            return quladi;
+        }
+    };
+    inline auto test_bajar(const std::string& nom, std::function<void()> test)->bool
+    {
+        (((std::cout << "  ") << nom) << " ... ");
+        try
+            {
+                test();
+                ((std::cout << "OTDI") << std::endl);
+                return true;
+            }
+        catch(std :: exception & e)
+            {
+                (((std::cout << "QULADI: ") << e.what()) << std::endl);
+                return false;
+            }
+        catch(...)
+            {
+                ((std::cout << "QULADI: noma'lum xato") << std::endl);
+                return false;
+            }
     }
 }
-
-template<typename T1, typename T2>
-inline void assertTenglik(const T1& a, const T2& b, const std::string& xabar = "Tenglik kutildi") {
-    if (a != b) {
-        throw std::runtime_error("Sinov XATOSI: Qiymatlar teng emas (" + xabar + ")");
-    }
-}
-
-class SinovlarToplami {
-    struct TestYozuv {
-        std::string nom;
-        std::function<void()> funksiya;
-    };
-    std::vector<TestYozuv> testlar_;
-    
-public:
-    void testQoshish(const std::string& nom, std::function<void()> f) {
-        testlar_.push_back({nom, std::move(f)});
-    }
-    
-    void ishgaTushirish() {
-        int muvaffaqiyat = 0;
-        int xatolar = 0;
-        
-        Jurnal::Logger::malumot("=== SINOVLAR BOSHLANDI ===");
-        
-        for (const auto& t : testlar_) {
-            try {
-                t.funksiya();
-                Jurnal::Logger::malumot("[O'TDI] " + t.nom);
-                muvaffaqiyat++;
-            } catch (const std::exception& e) {
-                Jurnal::Logger::xato("[YIQILDI] " + t.nom + " -> " + e.what());
-                xatolar++;
-            } catch (...) {
-                Jurnal::Logger::xato("[YIQILDI] " + t.nom + " -> Noma'lum xato");
-                xatolar++;
-            }
-        }
-        
-        Jurnal::Logger::malumot("Natija: O'tdi = " + std::to_string(muvaffaqiyat) + ", Yiqildi = " + std::to_string(xatolar));
-        if (xatolar > 0) {
-            throw std::runtime_error("Dastur testlardan o'tmadi!");
-        }
-    }
-};
-
-class BenchToplami {
-    struct BenchYozuv {
-        std::string nom;
-        std::function<void()> funksiya;
-    };
-    std::vector<BenchYozuv> benchlar_;
-    
-public:
-    void benchQoshish(const std::string& nom, std::function<void()> f) {
-        benchlar_.push_back({nom, std::move(f)});
-    }
-    
-    void ishgaTushirish() {
-        Jurnal::Logger::malumot("=== BENCHMARKLAR BOSHLANDI ===");
-        for (const auto& b : benchlar_) {
-            // Warmup (Keshlarni qizitish)
-            b.funksiya();
-            auto start = std::chrono::high_resolution_clock::now();
-            for (int i = 0; i < 1000; i++) {
-                b.funksiya();
-            }
-            auto end = std::chrono::high_resolution_clock::now();
-            double davomiyligiMs = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
-            double bittaMs = davomiyligiMs / 1000.0;
-            Jurnal::Logger::malumot("[BENCH] " + b.nom + " -> Jami (1000 marta): " + std::to_string(davomiyligiMs) + " ms | O'rtacha 1 ta: " + std::to_string(bittaMs) + " ms");
-        }
-    }
-};
-
 #endif
-
-} // namespace uzpp::Sinov

@@ -166,9 +166,8 @@ function getTerminal() {
 /** Build the terminal invocation line for a given uzpp verb and file. */
 function buildRunCommand(context, verb, filePath) {
     const compiler = findCompilerPath(context);
-    // On Windows with a .bat wrapper: invoke via & in PowerShell
-    if (process.platform === 'win32' && compiler.endsWith('.bat')) {
-        // & invokes the batch file in a subprocess — CWD change is isolated
+    // On Windows PowerShell, quoted paths must be invoked with & operator
+    if (process.platform === 'win32') {
         return `& "${compiler}" ${verb} "${filePath}"`;
     }
     return `"${compiler}" ${verb} "${filePath}"`;

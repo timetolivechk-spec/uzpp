@@ -15,11 +15,11 @@ butun asosiy() {
     yozish << "10*10    = " << v2.get() << qator_oxiri;
     yozish << "3^2+4^2  = " << v3.get() << qator_oxiri;
 
-    // OqimPool testi
-    yozish << "--- OqimPool ---" << qator_oxiri;
+    // OqimHovuz testi
+    yozish << "--- OqimHovuz ---" << qator_oxiri;
     vektor<butun> natijalar = [0, 0, 0, 0, 0];
     {
-        uzpp::OqimPool hovuz(3);
+        uzpp::OqimHovuz hovuz(3);
         uchun (butun i = 0; i < 5; i++) {
             hovuz.vazifaQosh([&natijalar, i]() {
                 natijalar[i] = (i + 1) * (i + 1);

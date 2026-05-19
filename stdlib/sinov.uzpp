@@ -1,0 +1,127 @@
+// uz++ — Sinov (testing) kutubxonasi, uz++ tilida yozilgan.
+// Bu fayl `stdlib/sinov.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+
+ulash <exception>
+ulash <functional>
+ulash <iostream>
+ulash <stdexcept>
+ulash <string>
+ulash <vector>
+
+nomlar_fazosi uzpp::Sinov {
+
+// ===== TASDIQLASH (ASSERTIONS) =====
+
+funksiya tasdiqlash(mantiqiy shart, o'zgarmas matn& xabar = "") -> bosh {
+    agar (!shart) {
+        matn xato = "Tasdiqlash barbod";
+        agar (!xabar.empty()) {
+            xato = xato + ": " + xabar;
+        }
+        irgitish std::runtime_error(xato);
+    }
+}
+
+shablon <tur T>
+funksiya tasdiqlash_teng(o'zgarmas T& kutilgan, o'zgarmas T& qiymat, o'zgarmas matn& xabar = "") -> bosh {
+    agar (!(kutilgan == qiymat)) {
+        irgitish std::runtime_error("Tenglik barbod: kutilgan != qiymat" +
+            (xabar.empty() ? matn("") : matn(" — ") + xabar));
+    }
+}
+
+funksiya tasdiqlash_yaqin(haqiqiy kutilgan, haqiqiy qiymat, haqiqiy epsilon = 0.0001, o'zgarmas matn& xabar = "") -> bosh {
+    haqiqiy farq = kutilgan - qiymat;
+    agar (farq < 0) {
+        farq = -farq;
+    }
+    agar (farq > epsilon) {
+        irgitish std::runtime_error("Yaqinlik barbod: farq > epsilon" +
+            (xabar.empty() ? matn("") : matn(" — ") + xabar));
+    }
+}
+
+// ===== TEST TO'PLAMI =====
+
+sinf TestTo'plami {
+    matn nomi_;
+    vektor<std::function<void()>> testlar_;
+    vektor<matn> nomlar_;
+
+ochiq:
+    TestTo'plami(o'zgarmas matn& nom) : nomi_(nom) {}
+
+    bosh test_qoshish(o'zgarmas matn& nom, std::function<void()> test) {
+        nomlar_.push_back(nom);
+        testlar_.push_back(test);
+    }
+
+    butun ishga_tushirish() {
+        yozish << qator_oxiri;
+        yozish << "=============================================" << qator_oxiri;
+        yozish << "  " << nomi_ << qator_oxiri;
+        yozish << "=============================================" << qator_oxiri;
+
+        butun otdi = 0;
+        butun quladi = 0;
+        vektor<matn> qulagan_nomlar;
+
+        uchun (hajm_turi i = 0; i < testlar_.size(); i = i + 1) {
+            yozish << "  [" << (i + 1) << "/" << testlar_.size() << "] "
+                   << nomlar_[i] << " ... ";
+
+            urinish {
+                testlar_[i]();
+                yozish << "OTDI" << qator_oxiri;
+                otdi = otdi + 1;
+            } ushlash (std::exception& e) {
+                yozish << "QULADI" << qator_oxiri;
+                yozish << "        Sabab: " << e.what() << qator_oxiri;
+                quladi = quladi + 1;
+                qulagan_nomlar.push_back(nomlar_[i]);
+            } ushlash (...) {
+                yozish << "QULADI" << qator_oxiri;
+                yozish << "        Sabab: noma'lum xato" << qator_oxiri;
+                quladi = quladi + 1;
+                qulagan_nomlar.push_back(nomlar_[i]);
+            }
+        }
+
+        yozish << "---------------------------------------------" << qator_oxiri;
+        yozish << "  Jami:  " << (otdi + quladi) << qator_oxiri;
+        yozish << "  O'tdi: " << otdi << qator_oxiri;
+        yozish << "  Quladi:" << quladi << qator_oxiri;
+
+        agar (quladi > 0) {
+            yozish << qator_oxiri;
+            yozish << "  Qulagan testlar:" << qator_oxiri;
+            uchun (hajm_turi i = 0; i < qulagan_nomlar.size(); i = i + 1) {
+                yozish << "    - " << qulagan_nomlar[i] << qator_oxiri;
+            }
+        }
+
+        yozish << "=============================================" << qator_oxiri;
+        qaytarish quladi;
+    }
+};
+
+// ===== SODDA TEST FUNKSIYASI (bitta test uchun) =====
+
+funksiya test_bajar(o'zgarmas matn& nom, std::function<void()> test) -> mantiqiy {
+    yozish << "  " << nom << " ... ";
+
+    urinish {
+        test();
+        yozish << "OTDI" << qator_oxiri;
+        qaytarish rost;
+    } ushlash (std::exception& e) {
+        yozish << "QULADI: " << e.what() << qator_oxiri;
+        qaytarish yolg'on;
+    } ushlash (...) {
+        yozish << "QULADI: noma'lum xato" << qator_oxiri;
+        qaytarish yolg'on;
+    }
+}
+
+} // namespace uzpp::Sinov

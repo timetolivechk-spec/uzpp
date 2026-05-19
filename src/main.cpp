@@ -281,11 +281,13 @@ public:
             // because the runner wraps tests in its own main().
             if (!isTestMode && !isBenchMode) {
                 bool hasAsosiy = false;
+                std::string asosiyRetType;
                 for (const auto& node : program->getChildren()) {
                     if (node->getType() == ASTNodeType::FunctionDeclaration) {
                         const auto* fn = static_cast<const FunctionDeclaration*>(node.get());
                         if (fn->getName() == "asosiy" || fn->getName() == "main") {
                             hasAsosiy = true;
+                            asosiyRetType = fn->getReturnType();
                             break;
                         }
                     }
@@ -297,6 +299,17 @@ public:
                               << "  Misol:\n"
                               << "    butun asosiy() {\n"
                               << "        yozish << \"Salom, dunyo!\" << qator_oxiri;\n"
+                              << "        qaytarish 0;\n"
+                              << "    }\n";
+                    return false;
+                }
+                // asosiy() faqat `butun` qaytarishi kerak (C++ standarti)
+                if (!asosiyRetType.empty() && asosiyRetType != "butun") {
+                    std::cerr << "\033[1m" << inputFile.filename().string() << ":\033[0m "
+                              << "\033[1;31mxato\033[0m: `asosiy()` qaytish turi `butun` bo'lishi kerak, "
+                              << "`" << asosiyRetType << "` emas.\n"
+                              << "  To'g'ri shakl:\n"
+                              << "    butun asosiy() {\n"
                               << "        qaytarish 0;\n"
                               << "    }\n";
                     return false;

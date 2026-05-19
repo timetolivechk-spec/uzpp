@@ -298,20 +298,35 @@ void LspServer::handleMessage(const std::string& content) {
         }
 
         std::string uri = extractJsonString(content, "uri");
-        // LSP spec doesn't send a "word" — extract it from the cached document
-        // at the given position. (Bug fix: previous code used extractJsonString(content,"word")
-        // which never matched, so hover always saw empty word and returned null.)
         std::string word;
         if (!uri.empty() && documentCache_.contains(uri)) {
             word = getWordAtPosition(documentCache_[uri], hoverLine, hoverChar);
         }
 
+        // First try keyword documentation
         std::string hoverContent = buildHover(word);
+
+        // If no keyword doc, try inferred type for o'zgaruvchan/o'zgarmas variables
+        if (hoverContent.empty() && !word.empty() && !uri.empty() && documentCache_.contains(uri)) {
+            std::string inferredType = getInferredTypeAtPosition(uri, hoverLine, hoverChar, word);
+            if (!inferredType.empty()) {
+                hoverContent = "**`" + word + "`** → `" + inferredType + "` *(tur avtomatik aniqlangan)*";
+            }
+        }
+
         std::string response;
         if (hoverContent.empty()) {
             response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":null}";
         } else {
-            response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + hoverContent + "\"}}}";
+            // Escape the content for JSON
+            std::string escaped;
+            for (char c : hoverContent) {
+                if (c == '"') escaped += "\\\"";
+                else if (c == '\\') escaped += "\\\\";
+                else if (c == '\n') escaped += "\\n";
+                else escaped += c;
+            }
+            response = "{\"jsonrpc\":\"2.0\",\"id\":" + idStr + ",\"result\":{\"contents\":{\"kind\":\"markdown\",\"value\":\"" + escaped + "\"}}}";
         }
         sendMessage(response);
     }
@@ -646,7 +661,7 @@ std::string LspServer::buildHover(const std::string& word) {
         {"sorash", "**llm.sorash**(\"Salom, sen kimsan?\") — Neyrotarmoqdan asinxron/sinxron javob oladi."},
         {"VebUI::tugma", "**VebUI::tugma(\"Matn\")** — HTML `<button>` elementini yaratadi."},
         // Natija / Tanlov
-        {"Natija",       "**`uzpp::Natija<T, E>`** — Xatolikni qiymat sifatida ifodalovchi tur (Result type).\\n\\n```\\nuzpp::Natija<butun> bolish(butun a, butun b) {\\n    agar (b == 0) qaytarish uzpp::Natija<butun>::xato(\"Nol!\");\\n    qaytarish uzpp::Natija<butun>::muvaffaqiyat(a / b);\\n}\\n```"},
+        {"Natija",       "**`uzpp::Natija<T, E>`** — Xatolikni qiymat sifatida ifodalovchi tur (Result type).\\n\\n```\\nuzpp::Natija<butun> bo'lish(butun a, butun b) {\\n    agar (b == 0) qaytarish uzpp::Natija<butun>::xato(\"Nol!\");\\n    qaytarish uzpp::Natija<butun>::muvaffaqiyat(a / b);\\n}\\n```"},
         {"Tanlov",       "**`uzpp::Tanlov<T>`** — Mavjud (`bor`) yoki yo'q (`yoq`) qiymat (Option type).\\n\\n```\\nuzpp::Tanlov<matn> topish(vektor<matn>& v, butun i) {\\n    agar (i < v.size()) qaytarish uzpp::Tanlov<matn>::bor(v[i]);\\n    qaytarish uzpp::Tanlov<matn>::yoq();\\n}\\n```"},
         {"yaroqliMi",    "**`natija.yaroqliMi()`** → `mantiqiy` — Natija muvaffaqiyatlimi?"},
         {"xatoliMi",     "**`natija.xatoliMi()`** → `mantiqiy` — Natija xatolikmi?"},
@@ -682,6 +697,34 @@ std::string LspServer::buildHover(const std::string& word) {
     auto it = docs.find(word);
     if (it != docs.end()) return it->second;
     return "";
+}
+
+// Walks the AST to find a VariableDeclaration at (targetLine, targetChar)
+// and returns its inferred type from the TypeChecker. Returns ""
+// if not found or type couldn't be inferred.
+std::string LspServer::getInferredTypeAtPosition(const std::string& uri, int targetLine, int targetChar, const std::string& word) {
+    auto it = documentCache_.find(uri);
+    if (it == documentCache_.end()) return "";
+
+    try {
+        Lexer lexer(it->second);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+
+        TypeChecker checker;
+        checker.check(program.get());
+
+        // Iterate all inferred auto types, find the one at cursor position
+        for (const auto& [var, type] : checker.getInferredAutoTypes()) {
+            const auto& tok = var->getDeclToken();
+            // LSP uses 0-based lines, uzpp tokens use 1-based
+            if (tok.line - 1 == targetLine && var->getName() == word) {
+                return type;
+            }
+        }
+        return "";
+    } catch (...) { return ""; }
 }
 
 // Implementation of missing LSP methods
