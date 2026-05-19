@@ -436,15 +436,16 @@ private:
                 
                 if (var->getInitializer()) {
                     checkExpr(var->getInitializer());
-                    std::string inferredType = inferType(var->getInitializer());
+                    Type inferred = inferTypeT(var->getInitializer());
 
                     if (declaredType == "ozgaruvchan" || declaredType == "o'zgaruvchan" || declaredType == "ozgarmas") {
-                        if (inferredType != "noma'lum") {
-                            inferredAutoTypes_[var] = inferredType;
+                        if (inferred.isKnown()) {
+                            inferredAutoTypes_[var] = inferred.name;
                         }
-                        declaredType = inferredType; // Type inference
-                    } else if (inferredType != "noma'lum" && declaredType != "noma'lum" &&
-                               !typesEquivalent(inferredType, declaredType)) {
+                        declaredType = inferred.toLegacyString(); // Type inference
+                    } else if (inferred.isKnown() && declaredType != "noma'lum" &&
+                               !typesEquivalent(inferred.name, declaredType)) {
+                        const std::string& inferredType = inferred.name;
                         if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiq" || declaredType == "mantiqiy" || declaredType == "haqiqiy" || declaredType == "ikkilangan") &&
                             (inferredType == "butun" || inferredType == "matn" || inferredType == "mantiq" || inferredType == "mantiqiy" || inferredType == "haqiqiy" || inferredType == "ikkilangan")) {
                             if (!((declaredType == "haqiqiy" || declaredType == "ikkilangan") && inferredType == "butun")) {
@@ -686,19 +687,19 @@ private:
             }
             case ASTNodeType::ReturnStatement: {
                 auto ret = static_cast<const ReturnStatement*>(node);
-                std::string retType = "bosh";
+                Type retInferred = Type::known("bosh");
                 if (ret->getValue()) {
                     checkExpr(ret->getValue());
-                    retType = inferType(ret->getValue());
+                    retInferred = inferTypeT(ret->getValue());
                 }
-                
-                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan") {
+
+                if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan" && retInferred.isKnown()) {
                     std::string expResolved = resolveType(currentReturnType_);
-                    std::string gotResolved = resolveType(retType);
-                    if (expResolved != gotResolved && retType != "noma'lum") {
+                    std::string gotResolved = resolveType(retInferred.name);
+                    if (expResolved != gotResolved) {
                         if (!((expResolved == "haqiqiy" || expResolved == "ikkilangan") && gotResolved == "butun")) {
                             if (!classIsSubtype(gotResolved, expResolved)) {
-                                reportWarning("Funksiya '" + currentReturnType_ + "' qaytarishi kerak, lekin '" + retType + "' qaytarilmoqda.", ret->getReturnToken());
+                                reportWarning("Funksiya '" + currentReturnType_ + "' qaytarishi kerak, lekin '" + retInferred.name + "' qaytarilmoqda.", ret->getReturnToken());
                             }
                         }
                     }
@@ -831,12 +832,14 @@ private:
                 auto asgn = static_cast<const AssignmentExpression*>(expr);
                 checkExpr(asgn->getTarget());
                 checkExpr(asgn->getValue());
-                
-                std::string targetType = inferType(asgn->getTarget());
-                std::string valueType = inferType(asgn->getValue());
-                
-                if (targetType != "noma'lum" && valueType != "noma'lum" &&
-                    !typesEquivalent(targetType, valueType)) {
+
+                Type target = inferTypeT(asgn->getTarget());
+                Type value = inferTypeT(asgn->getValue());
+
+                if (target.isKnown() && value.isKnown() &&
+                    !typesEquivalent(target.name, value.name)) {
+                    const std::string& targetType = target.name;
+                    const std::string& valueType = value.name;
                     if ((targetType == "butun" || targetType == "matn" || targetType == "mantiq" || targetType == "mantiqiy" || targetType == "haqiqiy" || targetType == "ikkilangan") &&
                         (valueType == "butun" || valueType == "matn" || valueType == "mantiq" || valueType == "mantiqiy" || valueType == "haqiqiy" || valueType == "ikkilangan")) {
                         if (!((targetType == "haqiqiy" || targetType == "ikkilangan") && valueType == "butun")) {
@@ -873,10 +876,10 @@ private:
                 auto sub = static_cast<const SubscriptAccess*>(expr);
                 checkExpr(sub->getArray());
                 checkExpr(sub->getIndex());
-                std::string indexType = inferType(sub->getIndex());
+                Type idx = inferTypeT(sub->getIndex());
                 // Allow butun (int) and matn (string) — matn is valid for map/JSON subscript
-                if (indexType != "noma'lum" && indexType != "butun" && indexType != "matn") {
-                    reportWarning("Massiv indeksi 'butun' (int) yoki 'matn' (string) bo'lishi kerak, lekin '" + indexType + "' berildi.", sub->getBracketToken());
+                if (idx.isKnown() && idx.name != "butun" && idx.name != "matn") {
+                    reportWarning("Massiv indeksi 'butun' (int) yoki 'matn' (string) bo'lishi kerak, lekin '" + idx.name + "' berildi.", sub->getBracketToken());
                 }
                 // C++23 multidim: also check extra indices
                 for (const auto& extra : sub->getExtraIndices()) {
@@ -926,14 +929,13 @@ private:
                                 return t;
                             };
                             for (size_t i = 0; i < gotArgs; ++i) {
-                                std::string argType = inferType(call->getArguments()[i].get());
+                                Type arg = inferTypeT(call->getArguments()[i].get());
                                 std::string expBase = stripRef(expectedParams[i]);
-                                if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" &&
-                                    !typesEquivalent(argType, expectedParams[i]) && !typesEquivalent(argType, expBase)) {
-                                    if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && argType == "butun")) {
-                                        // Suppress if argType is a subclass of expBase
-                                        if (!classIsSubtype(argType, expBase)) {
-                                            reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + argType + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
+                                if (arg.isKnown() && expectedParams[i] != "ozgaruvchan" &&
+                                    !typesEquivalent(arg.name, expectedParams[i]) && !typesEquivalent(arg.name, expBase)) {
+                                    if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && arg.name == "butun")) {
+                                        if (!classIsSubtype(arg.name, expBase)) {
+                                            reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + arg.name + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
                                         }
                                     }
                                 }
@@ -942,20 +944,20 @@ private:
                     }
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
-                    std::string objType = inferType(mac->getObject());
-                    if (objType != "noma'lum" && classes_.contains(objType)) {
+                    Type obj = inferTypeT(mac->getObject());
+                    if (obj.isKnown() && classes_.contains(obj.name)) {
                         std::string methodName = mac->getMemberName();
-                        if (classes_[objType].methodParams.contains(methodName)) {
-                            const auto& expectedParams = classes_[objType].methodParams[methodName];
+                        if (classes_[obj.name].methodParams.contains(methodName)) {
+                            const auto& expectedParams = classes_[obj.name].methodParams[methodName];
                             if (expectedParams.size() != call->getArguments().size()) {
                                 reportError("Metod '" + methodName + "' " + std::to_string(expectedParams.size()) + " ta argument kutadi, lekin " + std::to_string(call->getArguments().size()) + " ta berildi.", call->getCallToken());
                             } else {
                                 for (size_t i = 0; i < expectedParams.size(); ++i) {
-                                    std::string argType = inferType(call->getArguments()[i].get());
-                                    if (argType != "noma'lum" && expectedParams[i] != "ozgaruvchan" &&
-                                        !typesEquivalent(argType, expectedParams[i])) {
-                                        if (!((expectedParams[i] == "haqiqiy" || expectedParams[i] == "ikkilangan") && argType == "butun")) {
-                                            reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + argType + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
+                                    Type arg = inferTypeT(call->getArguments()[i].get());
+                                    if (arg.isKnown() && expectedParams[i] != "ozgaruvchan" &&
+                                        !typesEquivalent(arg.name, expectedParams[i])) {
+                                        if (!((expectedParams[i] == "haqiqiy" || expectedParams[i] == "ikkilangan") && arg.name == "butun")) {
+                                            reportWarning("Argument " + std::to_string(i+1) + " turi mos emas: '" + expectedParams[i] + "' kutilgan, lekin '" + arg.name + "' berildi.", getTokenForNode(call->getArguments()[i].get()));
                                         }
                                     }
                                 }
@@ -995,10 +997,10 @@ private:
                 auto mac = static_cast<const MemberAccess*>(expr);
                 checkExpr(mac->getObject());
 
-                std::string objType = inferType(mac->getObject());
-                if (objType != "noma'lum" && classes_.contains(objType)) {
-                    if (!classHasMember(objType, mac->getMemberName())) {
-                        reportError("Sinf '" + objType + "' da '" + mac->getMemberName() + "' nomli maydon yoki metod topilmadi.", mac->getAccessToken());
+                Type obj = inferTypeT(mac->getObject());
+                if (obj.isKnown() && classes_.contains(obj.name)) {
+                    if (!classHasMember(obj.name, mac->getMemberName())) {
+                        reportError("Sinf '" + obj.name + "' da '" + mac->getMemberName() + "' nomli maydon yoki metod topilmadi.", mac->getAccessToken());
                     }
                 }
 
