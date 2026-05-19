@@ -6,9 +6,9 @@
 
 ## Current state at a glance
 
-- **71/71 tests pass locally** + **29/29 negative tests** (Windows MSYS2 g++ 15.2).
-  Linux CI = 69/71 (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` —
-  both gated on Ubuntu toolchain, not uz++ bugs).
+- **72/72 tests pass locally** + **47/47 negative tests** (4 in `pending/`)
+  (Windows MSYS2 g++ 15.2). Linux CI = 70/72 (`test_deducing_this` +
+  `test_coyield` in `.ci_skip_linux` — both gated on Ubuntu toolchain).
 - **Latest tag pushed: `v2.1.9`** (VSCode extension texts refresh).
 - **Local commits ahead of origin** (not yet pushed — 10):
   - `51beb10` fix(cli): catch missing asosiy() with a helpful message
@@ -336,39 +336,44 @@ removing parts of WinLibs that uzpp never invokes.
   reader on top of the current line-buffer parser. ~100 LOC, but
   requires a Windows test setup to validate.
 
-## Known fragile points uncovered by stress testing (NOT yet fixed)
+## Known fragile points
 
-Captured here so the next agent doesn't have to rediscover them. None
-are top priority — most have workarounds — but each is a real "if user
-hits this, error is unhelpful" trap.
+After the hardening pass that included this section, three of the four
+original fragile points were resolved or downgraded. Updated list:
 
-1. **Char-literal escape sequences** (`belgi c = '\\n';`, `'\\t'`, `'\\\\'`).
-   Lexer reports `XATO: Yopilmagan belgi literal` because it doesn't
-   recognise `\\<char>` as an escaped single byte. Workaround: write the
-   numeric value (`belgi c = 10;` for `\n`). Real fix: ~20 LOC in
-   `src/lexer.cpp` char-literal handler.
+1. ~~**Char-literal escape sequences**~~ — false alarm. Lexer already
+   handles `\n`, `\t`, `\\`, `\'`, `\0`, `\r` correctly. Earlier stress
+   test was confused by bash heredoc shell-escape interaction. Verified
+   working (`'\n'` → ASCII 10, `'\t'` → 9, `'\\'` → 92, etc.).
 
-2. **Non-ASCII identifiers** (Cyrillic, Japanese, etc — except the
-   `'` → U+02BC apostrophe path which is already wired). Lexer rejects
-   them as "Noto'g'ri ifoda". Workaround: ASCII Latin / digits / `_` /
-   `'` only. Real fix: extend lexer's "is identifier char" check to
-   accept all Unicode XID_Continue codepoints. Bigger lexer work,
-   ~80 LOC.
+2. ~~**Non-ASCII identifiers**~~ — fixed in commit 6e1a881
+   (`feat(lexer): accept Unicode (UTF-8) identifiers`). Cyrillic, CJK,
+   Arabic identifiers now work. Test: `tests/test_unicode_identifiers.uzpp`.
 
-3. **Uz++ type aliases inside template argument lists.** Codegen
-   doesn't translate `butun` → `int` etc. inside `<...>` of a qualified
-   identifier like `std::function<butun(butun)>`. The whole
+3. **Uz++ type aliases inside template argument lists** — still open.
+   Codegen doesn't translate `butun` → `int` etc. inside `<...>` of a
+   qualified identifier like `std::function<butun(butun)>`. The whole
    `<butun(butun)>` is treated as opaque text. Result: g++ rejects with
    `'butun' is not a type`. Workaround: write `std::function<int(int)>`
-   directly. Real fix: harder than it looks — would need codegen to
-   reparse the template-arg blob and run identifierTranslations inside it.
+   directly. Real fix: codegen would need to reparse the template-arg
+   blob and apply identifierTranslations inside it. ~60 LOC but tricky
+   to get right with nested templates.
 
-4. **Disk-space / linker error confusion.** Already documented in
-   memory as gotcha #6, but worth restating in test-runner output:
-   when `df -h /c` < 5 % free, `ld returned 1 exit status` appears
-   silently. The new `parse_missing_asosiy` fix shows the pattern —
-   prefer "diagnose then refuse" over "let collect2 emit something
-   cryptic".
+4. **Disk-space / linker error confusion.** Already documented in main
+   memory as gotcha #6: when `df -h /c` < 5 % free, `ld returned 1 exit
+   status` appears silently. The `parse_missing_asosiy` fix shows the
+   pattern — prefer "diagnose then refuse" over "let collect2 emit
+   something cryptic". If a similar disk-aware preflight check is worth
+   adding in `compileGenerated`, it's ~20 LOC.
+
+5. **`matn asosiy()` (or any non-`butun` return type)** — found while
+   filling out negative tests. Currently uzpp generates
+   `std::string _uzpp_user_main()` and the main wrapper drops the
+   return value silently. Compiles, runs, but semantically wrong.
+   `tests/negative/pending/type_main_with_args_invalid.uzpp` pins it.
+   Fix: in the same place as the new "asosiy() missing" check
+   (`main.cpp:transpile()`), also verify the return type is `butun` /
+   `int` / `void`. ~10 LOC.
 
 ## Found in the last session (consider for future polish)
 
