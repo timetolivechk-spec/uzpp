@@ -182,6 +182,10 @@ private:
     std::unordered_map<std::string, ClassInfo> classes_;
     std::unordered_map<std::string, std::string> typeAliases_; // tur X = Y
     std::unordered_set<std::string> templateFunctions_;
+    // Shablon sinflari: GroupNode ichida o'ralgan ClassDeclaration nomi.
+    // Phase 2.3: bunday sinflarning metodlari tekshirilganda, sinf signaturadan
+    // aniqlangan shablon tur parametrlari currentTemplateParams_ ga qo'shiladi.
+    std::unordered_set<std::string> templateClasses_;
     // Hozir tekshirilayotgan shablon funksiyasining tur parametrlari
     // (`shablon<tur T, tur U>` dan T, U). Tan ichida T turidagi identifikator
     // Aniq("T") emas, Polimorf("T") sifatida xulosalanadi — diagnostika jim qoladi.
@@ -808,10 +812,34 @@ private:
                 }
                 classes_[cls->getName()] = info;
 
+                // Phase 2.3: shablon sinfi bo'lsa, uning tur parametrlari
+                // (T, U, ...) ni signaturadan aniqlab currentTemplateParams_
+                // ga qo'shamiz — metod tanasi davomida T-li ifodalar Polimorf
+                // sifatida xulosalanadi.
+                auto savedClassTemplateParams = currentTemplateParams_;
+                bool isClassTemplate = templateClasses_.contains(cls->getName());
+                if (isClassTemplate) {
+                    for (const auto& member : cls->getMembers()) {
+                        if (looksLikeTemplateParam(member.type)) {
+                            currentTemplateParams_.insert(member.type);
+                        }
+                    }
+                    for (const auto& method : cls->getMethods()) {
+                        if (looksLikeTemplateParam(method->returnType)) {
+                            currentTemplateParams_.insert(method->returnType);
+                        }
+                        for (const auto& p : method->params) {
+                            if (looksLikeTemplateParam(p.type)) {
+                                currentTemplateParams_.insert(p.type);
+                            }
+                        }
+                    }
+                }
+
                 for (const auto& method : cls->getMethods()) {
                     std::string prevRet = currentReturnType_;
                     currentReturnType_ = method->returnType.empty() ? "bosh" : method->returnType;
-                    
+
                     bool oldAsync = currentFunctionIsAsync_;
                     currentFunctionIsAsync_ = false; // Hozircha sinf metodlari parserda asinxron qilinmagan
                     
@@ -864,6 +892,8 @@ private:
                     currentReturnType_ = prevRet;
                     currentFunctionIsAsync_ = oldAsync;
                 }
+                // Phase 2.3: sinf shablon parametrlarini olib tashlash
+                currentTemplateParams_ = savedClassTemplateParams;
                 break;
             }
             case ASTNodeType::StatementList: {
@@ -1015,6 +1045,10 @@ private:
                     if (child->getType() == ASTNodeType::FunctionDeclaration) {
                         auto fn = static_cast<const FunctionDeclaration*>(child.get());
                         templateFunctions_.insert(fn->getName());
+                    } else if (child->getType() == ASTNodeType::ClassDeclaration) {
+                        // Phase 2.3: shablon sinflarini ham nishonlash
+                        auto cls = static_cast<const ClassDeclaration*>(child.get());
+                        templateClasses_.insert(cls->getName());
                     }
                     checkNode(child.get());
                 }

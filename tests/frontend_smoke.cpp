@@ -742,6 +742,61 @@ int main() {
         }
     }
 
+    {
+        // Phase 2.3: Polimorf mode for template *class* bodies. Method
+        // bodies inside `shablon<tur T> sinf X { ... }` must not emit
+        // false return-type warnings, mirroring Phase 1.4 for functions.
+
+        auto hasReturnMismatchWarning = [](const std::vector<uzpp::SemanticError>& warnings) {
+            for (const auto& w : warnings) {
+                if (w.message.find("qaytarishi kerak") != std::string::npos) return true;
+            }
+            return false;
+        };
+
+        // (a) Template class with a T-typed field returned from a butun-typed
+        //     method: under old code, `qiymat` was Aniq("T") → warning fired.
+        //     Now T is in currentTemplateParams_ → Polimorf → silent.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> sinf Yashik {"
+                "  ochiq: T qiymat;"
+                "  funksiya olish() -> butun { qaytarish qiymat; }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (b) Template class returning concrete butun from a T-typed method:
+        //     currentReturnType_ ("T") is in template params → suppressed.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> sinf Quti {"
+                "  ochiq: funksiya bering() -> T { qaytarish 42; }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (c) Non-template class with a real mismatch — STILL warns
+        //     (proves Phase 2.3 didn't accidentally silence all class methods).
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "sinf Aniq {"
+                "  ochiq: matn s;"
+                "  funksiya berish() -> butun { qaytarish s; }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(hasReturnMismatchWarning(warnings));
+        }
+    }
+
     std::cout << "uzpp frontend smoke tests passed\n";
     return 0;
 }
