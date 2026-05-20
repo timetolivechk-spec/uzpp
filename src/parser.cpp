@@ -276,7 +276,7 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // Boshqalar
         "sanab_olish", "tushuncha", "shart", "makro", "ulash_kutubxona",
         "o'n", "asosiy", "yayin", "kutilish", "hammasi", "yoxud",
-        "nomlari", "vazifi", "ustidan_yozish", "sikldan", "satr",
+        "nomlari", "vazifi", "ustidan_yozish", "sikldan",
         "xotira", "fayl", "yagona", "umumiy", "null",
         // Casting
         "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
