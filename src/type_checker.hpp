@@ -222,6 +222,31 @@ private:
         return false;
     }
 
+    // Phase 2.4: tur nomi joriy shablon parametrlaridan birortasini o'z ichiga
+    // oladimi? `vektor<T>`, `lug'at<matn, T>`, `Foo<T>*` kabi kompozit nomlarni
+    // qamrab oladi. Belgilar (`<`, `>`, `,`, `*`, `&`, bo'sh joy) bo'yicha
+    // qismlash, har bir bo'lakni currentTemplateParams_ bilan tekshirish.
+    // Aniq("vektor<T>") ni Polimorf qiladi → diagnostika jim qoladi.
+    bool typeMentionsTemplateParam(const std::string& typeName) const {
+        if (typeName.empty() || currentTemplateParams_.empty()) return false;
+        // To'liq mos kelish (oddiy holat: T, U)
+        if (currentTemplateParams_.contains(typeName)) return true;
+        // Bo'laklarga ajratish
+        std::string token;
+        for (char c : typeName) {
+            if (c == '<' || c == '>' || c == ',' || c == '*' || c == '&' || c == ' ') {
+                if (!token.empty()) {
+                    if (currentTemplateParams_.contains(token)) return true;
+                    token.clear();
+                }
+            } else {
+                token += c;
+            }
+        }
+        if (!token.empty() && currentTemplateParams_.contains(token)) return true;
+        return false;
+    }
+
     // Evristika: nom shablon tur parametriga o'xshaydimi (T, U, K, TKey, ...)?
     // Bosh harfdan boshlanadi, faqat alfanumerik/underscore, ma'lum konkret
     // turlar ro'yxatida emas. Bir-ikkita yolg'on musbat (masalan, foydalanuvchi
@@ -302,6 +327,9 @@ private:
                         // Joriy shablon parametriga teng bo'lsa — Polimorf,
                         // aks holda Aniq. Polimorf diagnostikada jim qabul qilinadi.
                         if (currentTemplateParams_.contains(t)) return Type::polimorf(t);
+                        // Phase 2.4: kompozit tur (vektor<T>, Foo<T>*) tarkibida
+                        // shablon parametri bo'lsa — butun tur ham Polimorf bo'ladi.
+                        if (typeMentionsTemplateParam(t)) return Type::polimorf(t);
                         return Type::aniq(t);
                     }
                 }
@@ -990,11 +1018,14 @@ private:
                 }
 
                 // Shablon parametri qaytariladigan tur sifatida ko'rsatilgan bo'lsa
-                // (`-> T`), aniq nima qaytarilgani ahamiyatga ega emas — instansiyalashda T
-                // mos kelishi ham mumkin. Bu yerda ham diagnostikani jim qoldiramiz.
+                // (`-> T` yoki `-> vektor<T>`), aniq nima qaytarilgani ahamiyatga
+                // ega emas — instansiyalashda T mos kelishi ham mumkin.
+                // Phase 2.4: kompozit qaytaruvchi turlar (vektor<T>, Foo<T>*) ham
+                // qamrab olinadi typeMentionsTemplateParam orqali.
                 if (!currentReturnType_.empty() && currentReturnType_ != "ozgaruvchan" && currentReturnType_ != "o'zgaruvchan"
                     && retInferred.isAniq()
-                    && !currentTemplateParams_.contains(currentReturnType_)) {
+                    && !currentTemplateParams_.contains(currentReturnType_)
+                    && !typeMentionsTemplateParam(currentReturnType_)) {
                     std::string expResolved = resolveType(currentReturnType_);
                     std::string gotResolved = resolveType(retInferred.name);
                     if (expResolved != gotResolved) {

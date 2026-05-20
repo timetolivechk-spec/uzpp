@@ -797,6 +797,81 @@ int main() {
         }
     }
 
+    {
+        // Phase 2.4: composite types containing template params (vektor<T>,
+        // Foo<T>*) are treated as Polimorf. Phase 2.3 only handled bare T —
+        // composites slipped through and re-triggered the false warning.
+
+        auto hasReturnMismatchWarning = [](const std::vector<uzpp::SemanticError>& warnings) {
+            for (const auto& w : warnings) {
+                if (w.message.find("qaytarishi kerak") != std::string::npos) return true;
+            }
+            return false;
+        };
+
+        // (a) Template class with a `vektor<T>` field returned from butun-typed
+        //     method. Old: scope type "vektor<T>" → Aniq → warning.
+        //     New: typeMentionsTemplateParam(true) → Polimorf → silent.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> sinf Ro'yxat {"
+                "  ochiq: vektor<T> elementlar;"
+                "  funksiya olish() -> butun { qaytarish elementlar; }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (b) Template function with composite return type `-> vektor<T>`
+        //     returning concrete value. Suppressed via the second check.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "shablon<tur T> funksiya bor_qil(T x) -> vektor<T> { qaytarish 0; } "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(!hasReturnMismatchWarning(warnings));
+        }
+
+        // (c) Auto-typed variable inferred as composite-with-template-param
+        //     surfaces as Polimorf in the LSP API (kind preserved across the
+        //     boundary added in Phase 2.2).
+        {
+            auto k = inferAutoTypeKinds(
+                "shablon<tur T> sinf Quti {"
+                "  ochiq: vektor<T> e;"
+                "  funksiya birinchi() -> T {"
+                "    o'zgaruvchan ref = e;"
+                "    qaytarish 0;"
+                "  }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }");
+            // `ref = e` — e has scope type "vektor<T>" which mentions T.
+            // After Phase 2.4: inferTypeT returns Polimorf("vektor<T>").
+            // Stored via the isAniq() || isPolimorf() gate from Phase 2.2.
+            assert(k.contains("ref"));
+            assert(k["ref"].isPolimorf());
+            assert(k["ref"].aniqNomi() == "vektor<T>");
+        }
+
+        // (d) Negative control: outside a template (no currentTemplateParams_),
+        //     a real composite mismatch must still warn. Verifies
+        //     typeMentionsTemplateParam doesn't blanket-silence composites.
+        {
+            std::vector<uzpp::SemanticError> warnings;
+            typecheckSnippet(
+                "sinf Konteyner {"
+                "  ochiq: vektor<butun> m;"
+                "  funksiya berish() -> butun { qaytarish m; }"
+                "}; "
+                "butun asosiy() { qaytarish 0; }",
+                nullptr, &warnings);
+            assert(hasReturnMismatchWarning(warnings));
+        }
+    }
+
     std::cout << "uzpp frontend smoke tests passed\n";
     return 0;
 }
