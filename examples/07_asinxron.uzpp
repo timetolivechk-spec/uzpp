@@ -26,10 +26,10 @@ haqiqiy pi_hisoblash(butun takror) {
 // --- Oqim havzasi misoli ---
 
 bosh oqim_havzasi_misol() {
-    yozish << "=== OqimPool misoli ===" << qator_oxiri;
+    yozish << "=== OqimHovuz misoli ===" << qator_oxiri;
 
     vektor<butun> natijalar(5);
-    uzpp::OqimPool hovuz(4);
+    uzpp::OqimHovuz hovuz(4);
 
     uchun (butun i = 0; i < 5; i++) {
         hovuz.vazifaQosh([&natijalar, i]() {

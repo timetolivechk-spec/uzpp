@@ -823,7 +823,7 @@ std::string LspServer::buildSemanticTokens(const std::string& text) {
         {"statik",0},{"ulash",0},{"eksport",0},{"import",0},{"modul",0},{"nomlar_fazosi",0},
         {"urinish",0},{"ushlash",0},{"irgitish",0},{"asinxron",0},{"kutish",0},{"chiqar_qadam",0},
         {"yangi",0},{"o'chirish",0},{"ochirish",0},{"ko'chirish",0},{"va",0},{"yoki",0},
-        {"rost",0},{"yolg'on",0},{"noto'g'ri",0},{"to'g'ri",0},{"null",0},
+        {"rost",0},{"yolg'on",0},{"null",0},
         {"moslash",0},{"holat",0},{"boshqa",0},{"sanab_olish",0},{"tushuncha",0},{"makro",0},
         {"o'zgaruvchan",0},{"ozgaruvchan",0},{"o'zgarmas",0},{"ozgarmas",0},
         {"sobit_ifoda",0},{"sobit_baholash",0},{"sobit_boshlangich",0},

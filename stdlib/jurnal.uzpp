@@ -1,0 +1,123 @@
+// uz++ — Jurnal (logging) kutubxonasi, uz++ tilida yozilgan.
+// Bu fayl `stdlib/jurnal.hpp` ning manba'si (header.hpp avtomatik tarzda
+// uzpp transpilatori orqali shu fayldan generatsiya qilinadi).
+
+ulash <chrono>
+ulash <ctime>
+ulash <iomanip>
+ulash <iostream>
+ulash <mutex>
+ulash <sstream>
+ulash <string>
+
+nomlar_fazosi uzpp::Jurnal {
+
+// ===== DARAJA (SEVERITY LEVELS) =====
+
+sanab_olish Daraja {
+    JIM     = 0,  // hech narsa chiqmaydi
+    XATO    = 1,  // faqat xatolar
+    OGOH    = 2,  // xatolar + ogohlantirishlar
+    MALUMOT = 3,  // hammasi
+    TUZATISH = 4  // debug ma'lumotlar
+};
+
+// ===== HOLAT (GLOBAL STATE — MEYERS SINGLETON) =====
+
+tuzilma JurnalHolati {
+    Daraja joriy_daraja;
+    mantiqiy vaqt_damgasi;
+    std::mutex jurnal_mutex;
+};
+
+funksiya holat_olish() -> JurnalHolati& {
+    statik JurnalHolati jh;
+    statik mantiqiy birinchi_marta = rost;
+    agar (birinchi_marta) {
+        birinchi_marta = yolg'on;
+        jh.joriy_daraja = Daraja::MALUMOT;
+        jh.vaqt_damgasi = rost;
+    }
+    qaytarish jh;
+}
+
+// ===== YORDAMCHI FUNKSIYALAR =====
+
+funksiya vaqt_damgasini_olish() -> matn {
+    o'zgaruvchan hozirgi_vaqt = std::time(nullptr);
+    o'zgaruvchan mahalliy_vaqt = *std::localtime(&hozirgi_vaqt);
+
+    std::ostringstream ss;
+    ss << std::put_time(&mahalliy_vaqt, "%Y-%m-%d %H:%M:%S");
+    qaytarish ss.str();
+}
+
+funksiya darajani_matnga(Daraja d) -> matn {
+    moslash (d) {
+        holat Daraja::JIM: qaytarish "JIM";
+        holat Daraja::XATO: qaytarish "XATO";
+        holat Daraja::OGOH: qaytarish "OGOHLANTIRISH";
+        holat Daraja::MALUMOT: qaytarish "MALUMOT";
+        holat Daraja::TUZATISH: qaytarish "TUZATISH";
+        boshqa: qaytarish "NOMA'LUM";
+    }
+}
+
+funksiya yozish_agar(Daraja d, o'zgarmas matn& xabar) -> bosh {
+    o'zgaruvchan& h = holat_olish();
+
+    agar (d > h.joriy_daraja) {
+        qaytarish;
+    }
+
+    std::lock_guard<std::mutex> qulf(h.jurnal_mutex);
+
+    agar (h.vaqt_damgasi) {
+        yozish << "[" << vaqt_damgasini_olish() << "] ";
+    }
+    yozish << "[" << darajani_matnga(d) << "] " << xabar << qator_oxiri;
+}
+
+// ===== ASOSIY API =====
+
+funksiya tuzatish(o'zgarmas matn& xabar) -> bosh {
+    yozish_agar(Daraja::TUZATISH, xabar);
+}
+
+funksiya malumot(o'zgarmas matn& xabar) -> bosh {
+    yozish_agar(Daraja::MALUMOT, xabar);
+}
+
+funksiya ogohlantirish(o'zgarmas matn& xabar) -> bosh {
+    yozish_agar(Daraja::OGOH, xabar);
+}
+
+funksiya xato(o'zgarmas matn& xabar) -> bosh {
+    yozish_agar(Daraja::XATO, xabar);
+}
+
+// ===== SOZLASH =====
+
+funksiya daraja_orqatish(Daraja d) -> bosh {
+    holat_olish().joriy_daraja = d;
+}
+
+funksiya joriy_darajani_olish() -> Daraja {
+    qaytarish holat_olish().joriy_daraja;
+}
+
+funksiya vaqt_damgasini_yoqish(mantiqiy yoqish) -> bosh {
+    holat_olish().vaqt_damgasi = yoqish;
+}
+
+// ===== LOGGER SINFI (standart API) =====
+
+sinf Logger {
+ochiq:
+    statik bosh tuzatish(o'zgarmas matn& m) { Jurnal::tuzatish(m); }
+    statik bosh malumot(o'zgarmas matn& m) { Jurnal::malumot(m); }
+    statik bosh ogohlantirish(o'zgarmas matn& m) { Jurnal::ogohlantirish(m); }
+    statik bosh xato(o'zgarmas matn& m) { Jurnal::xato(m); }
+};
+
+} // namespace uzpp::Jurnal

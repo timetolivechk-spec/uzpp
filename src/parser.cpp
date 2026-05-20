@@ -269,15 +269,23 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "asinxron", "kutish",
         // Turlar
         "bosh", "yangi", "bekor",
-        // Mantiq
-        "va", "yoki", "rost", "yolg'on", "noto'g'ri",
+        // Mantiq — har bir C++ tushunchasi uchun bitta uz++ so'z:
+        // `rost` = true (yagona), `yolg'on` = false (yagona).
+        // `to'g'ri`/`noto'g'ri`/`yolgon` ilgari sinonim sifatida ishlatilardi —
+        // endi oddiy identifikator (foydalanuvchi o'zgaruvchi nomi sifatida olishi mumkin).
+        "va", "yoki", "rost", "yolg'on",
         // Moslash
         "moslash", "holat", "boshqa",
-        // Boshqalar
+        // Boshqalar — strukturali kalit so'zlar.
+        // O'chirildi (Phase 2.5): `o'n`/`yagona`/`umumiy` typeMap aliaslari
+        // (deque/unique_ptr/shared_ptr) — gotcha #13 ga ko'ra ularni lokal
+        // o'zgaruvchi nomi sifatida ishlatish mumkin bo'lishi shart, codegen
+        // localScopes_ orqali alias tarjimasini boshqaradi.
+        // Ham o'chirildi: `xotira`/`fayl`/`kutilish`/`hammasi`/`yoxud`/
+        // `nomlari`/`vazifi`/`yayin` — kompilyatorda hech qaerda ishlatilmagan
+        // o'lik reservatsiyalar. Foydalanuvchi kodida oddiy nom sifatida ishlatilishi mumkin.
         "sanab_olish", "tushuncha", "shart", "makro", "ulash_kutubxona",
-        "o'n", "asosiy", "yayin", "kutilish", "hammasi", "yoxud",
-        "nomlari", "vazifi", "ustidan_yozish", "sikldan",
-        "xotira", "fayl", "yagona", "umumiy", "null",
+        "asosiy", "ustidan_yozish", "sikldan", "null",
         // Casting
         "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
         // Type deduction (C++11+)
@@ -731,9 +739,8 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
             LiteralExpression::LiteralType::Character, token.value, token);
     }
     
-    // Boolean literal (true/false)
-    if (current.type == TokenType::Identifier && (current.value == "rost" || current.value == "to'g'ri" ||
-            current.value == "yolg'on" || current.value == "yolgon" || current.value == "noto'g'ri")) {
+    // Boolean literal — yagona shakl: rost (true), yolg'on (false).
+    if (current.type == TokenType::Identifier && (current.value == "rost" || current.value == "yolg'on")) {
         const Token token = advance();
         return std::make_unique<LiteralExpression>(
             LiteralExpression::LiteralType::Boolean, token.value, token);
@@ -986,8 +993,8 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
                 // Collect value as text up to ',' or '}' at current nesting level.
                 // Translate common Uzbek literals/types since this text bypasses codegen.
                 static const std::unordered_map<std::string, std::string> rawTokenMap = {
-                    {"rost", "true"}, {"to'g'ri", "true"},
-                    {"yolg'on", "false"}, {"yolgon", "false"}, {"noto'g'ri", "false"},
+                    {"rost", "true"},
+                    {"yolg'on", "false"},
                     {"butun", "int"}, {"haqiqiy", "double"}, {"kasr", "float"},
                     {"belgi", "char"}, {"mantiqiy", "bool"}, {"bosh", "void"},
                     {"matn", "std::string"}, {"vektor", "std::vector"},

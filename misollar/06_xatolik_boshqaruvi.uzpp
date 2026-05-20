@@ -18,7 +18,7 @@ uzpp::Natija<haqiqiy> xavfsiz_ildiz(haqiqiy x) {
 }
 
 bosh sinab_kor(haqiqiy a, haqiqiy b) {
-    o'zgaruvchan natija = xavfsiz_bolish(a, b);
+    o'zgaruvchan natija = xavfsiz_bo'lish(a, b);
     agar (natija.yaroqliMi()) {
         yozish << a << " / " << b << " = " << natija.qiymat() << qator_oxiri;
     } aks_holda {

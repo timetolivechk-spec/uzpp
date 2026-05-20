@@ -275,8 +275,12 @@ jobs:
                  share/gettext share/aclocal share/gtk-doc lib/python* \
                  include/X11 include/GL include/freetype2 include/gtk* \
                  include/cairo*
-          cd ../..
-          zip -r -q mingw-w64-windows-x64.zip mingw-extract/mingw64
+          # Zip from inside mingw-extract so the archive has `mingw64/` at the
+          # root (not `mingw-extract/mingw64/`). The installer step expects
+          # `Expand-Archive` to produce `dist/winlibs-extracted/mingw64/`.
+          cd ..
+          zip -r -q ../mingw-w64-windows-x64.zip mingw64
+          cd ..
           rm -rf mingw-extract mingw-source.zip
 
       - uses: actions/upload-artifact@v4

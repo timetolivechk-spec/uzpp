@@ -51,6 +51,10 @@ public:
     // responsible for `ulash <X>` statements that pull in any std headers the
     // body actually needs.
     void setHeaderMode(bool value) { headerMode_ = value; }
+    // Bare mode: omit #include "uzpp_runtime.hpp" from the preamble. Useful
+    // when linking against external frameworks (CopperSpice, Qt, etc.) that
+    // may conflict with the uzpp runtime headers.
+    void setBare(bool value) { bare_ = value; }
     // Returns the list of `ulash "X.uzpp"` dependencies discovered while
     // emitting (populated after generate()). Each entry is the raw module
     // name as written (e.g. `matn.uzpp`). Useful for orchestrating recursive
@@ -69,7 +73,9 @@ private:
     std::vector<std::string> benchFunctions_;
     bool hasUserMain_ = false;
     bool userMainHasArgs_ = false;
+    bool userMainTakesArgcArgv_ = false;  // true when asosiy(int, char**)
     bool headerMode_ = false;
+    bool bare_ = false;
     std::vector<std::string> uzppDependencies_;
 
     // Stack of local-name scopes used to suppress keyword translation when a

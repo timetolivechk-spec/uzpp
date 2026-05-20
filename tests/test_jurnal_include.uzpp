@@ -1,0 +1,27 @@
+// uz++ — `jurnal` kutubxonasini sinovchi test.
+
+ulash "uzpp_runtime.hpp"
+ulash "jurnal.uzpp"
+
+butun asosiy() {
+    yozish << "=== Jurnal testi ===" << qator_oxiri;
+
+    uzpp::Jurnal::malumot("Bu oddiy xabar");
+    uzpp::Jurnal::ogohlantirish("Bu ogohlantirish");
+    uzpp::Jurnal::xato("Bu xato xabari");
+    uzpp::Jurnal::tuzatish("Bu tuzatish xabari (debug)");
+
+    yozish << qator_oxiri << "=== Darajani XATO ga tushirish ===" << qator_oxiri;
+    uzpp::Jurnal::daraja_orqatish(uzpp::Jurnal::Daraja::XATO);
+
+    uzpp::Jurnal::malumot("Bu ko'rinmaydi");
+    uzpp::Jurnal::ogohlantirish("Bu ham ko'rinmaydi");
+    uzpp::Jurnal::xato("Bu ko'rinadi");
+
+    yozish << qator_oxiri << "=== Darajani TUZATISH ga ko'tarish ===" << qator_oxiri;
+    uzpp::Jurnal::daraja_orqatish(uzpp::Jurnal::Daraja::TUZATISH);
+
+    uzpp::Jurnal::tuzatish("Debug xabari ko'rindi");
+
+    qaytarish 0;
+}

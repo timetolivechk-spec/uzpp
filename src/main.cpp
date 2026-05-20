@@ -89,6 +89,9 @@ struct CliOptions {
     std::string projectName;
     bool debug = false;
     bool showCpp = false;
+    bool bare = false;
+    std::vector<fs::path> extraIncludeDirs;
+    std::vector<fs::path> extraLinkLibs;
 };
 
 struct BuildLayout {
@@ -257,7 +260,7 @@ public:
         return true;
     }
 
-    bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false) const {
+    bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false, bool bare = false) const {
         std::ifstream input(inputFile, std::ios::binary);
         if (!input.is_open()) {
             std::cerr << "XATO: Fayl topilmadi -> " << inputFile.string() << '\n';
@@ -361,6 +364,7 @@ public:
             }
 
             CodeGen codegen;
+            codegen.setBare(bare);
             const std::string cppCode = codegen.generate(program.get(), inputFile.string(), isTestMode, isBenchMode);
 
             if (outputFile.has_parent_path()) {
@@ -387,7 +391,8 @@ public:
                          BuildTarget target,
                          const std::vector<fs::path>& includeDirs,
                          const std::optional<fs::path>& forcedIncludeHeader,
-                         bool debugMode) const {
+                         bool debugMode,
+                         const std::vector<fs::path>& extraLinkLibs = {}) const {
         std::cout << "[1/2] uz++ kodi C++23 ga transpilatsiya qilindi.\n";
         std::cout << "[2/2] Ikkilik fayl yig'ilmoqda...\n";
 
@@ -402,7 +407,7 @@ public:
         }
 
         const std::string command =
-            buildCompileCommand(cppFile, binaryFile, resolveTarget(target), includeDirs, forcedIncludeHeader, debugMode);
+            buildCompileCommand(cppFile, binaryFile, resolveTarget(target), includeDirs, forcedIncludeHeader, debugMode, extraLinkLibs);
 
         char buffer[256];
         std::string compilerOutput;
@@ -776,7 +781,8 @@ private:
                                     BuildTarget target,
                                     const std::vector<fs::path>& includeDirs,
                                     const std::optional<fs::path>& forcedIncludeHeader,
-                                    bool debugMode) const {
+                                    bool debugMode,
+                                    const std::vector<fs::path>& extraLinkLibs = {}) const {
         std::ostringstream command;
         
         fs::path exeDir = CompilerUtils::getExecutableDir();
@@ -868,6 +874,11 @@ private:
 
         for (const auto& lib : linkedLibs) {
             command << "-l" << lib << " ";
+        }
+
+        // Extra link libraries from -l flags (full paths for .dll.a, .lib, etc.)
+        for (const auto& lib : extraLinkLibs) {
+            command << quote(lib.string()) << " ";
         }
 
         command << "2>&1";
@@ -1110,6 +1121,16 @@ CliOptions parseArguments(int argc, char* argv[]) {
                 options.outputCpp = argument.substr(11);
             } else if (argument == "--show-cpp") {
                 options.showCpp = true;
+            } else if (argument == "--bare") {
+                options.bare = true;
+            } else if (argument == "-I" && index + 1 < argc) {
+                options.extraIncludeDirs.push_back(fs::path(argv[++index]));
+            } else if (startsWith(argument, "-I") && argument.size() > 2) {
+                options.extraIncludeDirs.push_back(fs::path(argument.substr(2)));
+            } else if (argument == "-l" && index + 1 < argc) {
+                options.extraLinkLibs.push_back(fs::path(argv[++index]));
+            } else if (startsWith(argument, "-l") && argument.size() > 2) {
+                options.extraLinkLibs.push_back(fs::path(argument.substr(2)));
             } else if (!argument.empty() && argument[0] != '-') {
                 options.inputFile = argument;
             }
@@ -1486,7 +1507,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            if (!compiler.transpile(layout.inputFile, layout.cppFile, options.mode == CommandMode::Test, options.mode == CommandMode::Bench)) {
+            if (!compiler.transpile(layout.inputFile, layout.cppFile, options.mode == CommandMode::Test, options.mode == CommandMode::Bench, options.bare)) {
                 return 1;
             }
         }
@@ -1501,6 +1522,10 @@ int main(int argc, char* argv[]) {
         }
 
         std::vector<fs::path> includeDirs = collectIncludeDirs(layout);
+        // Extra include directories from -I flags (e.g., CopperSpice)
+        for (const auto& d : options.extraIncludeDirs) {
+            includeDirs.push_back(d);
+        }
         // The build directory holds the .hpp artifacts we just generated for
         // `ulash "X.uzpp"` dependencies — surface it to the compiler too.
         if (!layout.cppFile.parent_path().empty()) {
@@ -1510,7 +1535,8 @@ int main(int argc, char* argv[]) {
 
         std::cout << ">>> C++ kompilyatsiyasi boshlandi...\n" << std::endl;
         if (!compiler.compileToBinary(
-                layout.cppFile, layout.binaryFile, options.target, includeDirs, dependencyBridge, options.debug)) {
+                layout.cppFile, layout.binaryFile, options.target, includeDirs, dependencyBridge, options.debug,
+                options.extraLinkLibs)) {
             return 1;
         }
 

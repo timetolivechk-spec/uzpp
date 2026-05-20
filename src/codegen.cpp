@@ -123,17 +123,24 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
         emitRawToken("int main(int argc, char* argv[]) {");
         emitNewline();
         indentMore();
-        emitRawToken("uzpp::Xatoliklar::xavfsizlikni_yoqish();");
-        emitNewline();
+        if (!bare_) {
+            emitRawToken("uzpp::Xatoliklar::xavfsizlikni_yoqish();");
+            emitNewline();
+        }
         emitRawToken("try {");
         emitNewline();
         indentMore();
         if (userMainHasArgs_) {
-            emitRawToken("std::vector<std::string> _uzpp_args;");
-            emitNewline();
-            emitRawToken("for(int i=0; i<argc; ++i) _uzpp_args.push_back(argv[i]);");
-            emitNewline();
-            emitRawToken("_uzpp_user_main(_uzpp_args);");
+            // When asosiy(int, char**) — pass argc/argv directly
+            if (userMainTakesArgcArgv_) {
+                emitRawToken("_uzpp_user_main(argc, argv);");
+            } else {
+                emitRawToken("std::vector<std::string> _uzpp_args;");
+                emitNewline();
+                emitRawToken("for(int i=0; i<argc; ++i) _uzpp_args.push_back(argv[i]);");
+                emitNewline();
+                emitRawToken("_uzpp_user_main(_uzpp_args);");
+            }
         } else {
             emitRawToken("_uzpp_user_main();");
         }
@@ -184,6 +191,7 @@ void CodeGen::reset() {
     benchFunctions_.clear();
     hasUserMain_ = false;
     userMainHasArgs_ = false;
+    userMainTakesArgcArgv_ = false;
     uzppDependencies_.clear();
 }
 
@@ -199,12 +207,10 @@ void CodeGen::writePreamble(const std::string& sourceName) {
     output_ << "#include <unordered_map>\n";
     output_ << "#include <utility>\n";
     output_ << "#include <source_location>\n";
-    // Stdlib headers are resolved via -I<stdlib_dir> passed to g++ from
-    // main.cpp::collectIncludeDirs(), so emitting just the bare name lets the
-    // generated .cpp live anywhere on disk (random CWD, %TEMP%, network share).
-    // The previous "../stdlib/" prefix only worked when the .cpp ended up in
-    // <repo>/build/ next to a sibling stdlib/ folder.
-    output_ << "#include \"uzpp_runtime.hpp\"\n\n";
+    if (!bare_) {
+        output_ << "#include \"uzpp_runtime.hpp\"\n";
+    }
+    output_ << "\n";
     output_ << "using namespace std;\n\n";
     output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
     lineStart_ = true;
@@ -615,9 +621,9 @@ std::string CodeGen::translateDefaultValue(const std::string& val) const {
     if (!val.empty() && (val.front() == '\'' || val.front() == '"')) {
         return val;
     }
-    // Uz++ kalit so'zlarini C++ ga tarjima qilish
-    if (val == "rost" || val == "to'g'ri") return "true";
-    if (val == "yolg'on" || val == "yolgon" || val == "noto'g'ri") return "false";
+    // Uz++ kalit so'zlarini C++ ga tarjima qilish (har bir tushuncha uchun bitta forma)
+    if (val == "rost") return "true";
+    if (val == "yolg'on") return "false";
     if (val == "bosh" || val == "nullptr") return "nullptr";
     // Qualified-id (e.g. "manba_joyi::current()") — translate the leading identifier
     // so type aliases like `manba_joyi` become `std::source_location` here too.
@@ -1019,8 +1025,8 @@ void CodeGen::visitLiteralExpression(const LiteralExpression* expr) {
     // Mantiqiy qiymatlarni (rost/yolg'on) C++ ga tarjima qilish
     if (expr->getLiteralType() == LiteralExpression::LiteralType::Boolean) {
         const std::string& v = expr->getValue();
-        if (v == "rost" || v == "to'g'ri" || v == "true") { emitRawToken("true"); return; }
-        if (v == "yolg'on" || v == "yolgon" || v == "noto'g'ri" || v == "false") { emitRawToken("false"); return; }
+        if (v == "rost" || v == "true") { emitRawToken("true"); return; }
+        if (v == "yolg'on" || v == "false") { emitRawToken("false"); return; }
     }
     emitRawToken(expr->getValue());
 }
@@ -1668,6 +1674,16 @@ void CodeGen::visitFunctionDeclaration(const FunctionDeclaration* decl) {
         cppFuncName = "_uzpp_user_main";
         hasUserMain_ = true;
         userMainHasArgs_ = !decl->getParameters().empty();
+        // Detect asosiy(int argc, char** argv) — pass argc/argv directly
+        if (decl->getParameters().size() == 2) {
+            const auto& p0 = decl->getParameters()[0];
+            const auto& p1 = decl->getParameters()[1];
+            std::string t0 = getCppType(p0.type);
+            std::string t1 = getCppType(p1.type);
+            if (t0 == "int" && (t1 == "char**" || t1 == "char **")) {
+                userMainTakesArgcArgv_ = true;
+            }
+        }
     }
     if (decl->isTest()) {
         testFunctions_.push_back(cppFuncName);
@@ -2003,9 +2019,13 @@ void CodeGen::visitIncludeStatement(const IncludeStatement* stmt) {
     if (stmt == nullptr) return;
     writeIndentIfNeeded();
     std::string mod = stmt->getModuleName();
-    // Strip surrounding quotes if present (lexer may include them)
+    // Strip surrounding quotes or angle brackets
     if (mod.size() >= 2 && mod.front() == '"' && mod.back() == '"') {
         mod = mod.substr(1, mod.size() - 2);
+    }
+    if (mod.size() >= 2 && mod.front() == '<' && mod.back() == '>') {
+        output_ << "#include " << mod << "\n";
+        return;
     }
     // Skip uzpp_runtime.hpp — already emitted in preamble (program mode only;
     // in header mode the user may genuinely want to depend on uzpp::* types).

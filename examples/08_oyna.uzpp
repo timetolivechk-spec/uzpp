@@ -1,0 +1,22 @@
+// CopperSpice GUI misoli — uz++ da
+// Kompilyatsiya: uzpp qurish 08_oyna.uzpp --bare -I C:/CopperSpice/include -I C:/CopperSpice/include/QtCore -I C:/CopperSpice/include/QtGui -l C:/CopperSpice/lib/libCsCore2.1.dll.a -l C:/CopperSpice/lib/libCsGui2.1.dll.a
+
+ulash <QtGui/QApplication>
+ulash <QtGui/QWidget>
+ulash <QtGui/QPushButton>
+ulash <QtCore/QString>
+
+butun asosiy(butun argc, belgi** argv) {
+    QApplication ilova(argc, argv);
+    
+    QWidget oyna;
+    oyna.setWindowTitle("Salom dunyo! — uz++ + CopperSpice");
+    oyna.resize(400, 300);
+    
+    QPushButton tugma("Meni bosing!", &oyna);
+    tugma.move(150, 120);
+    
+    oyna.show();
+    
+    qaytarish ilova.exec();
+}

@@ -1,93 +1,149 @@
 #pragma once
-
-#include "platforma.hpp"
-#include "vaqt.hpp"
+#ifndef UZPP_GEN_JURNAL_HPP_
+#define UZPP_GEN_JURNAL_HPP_
+#line 1 "C:\\Users\\MSN\\uz++\\stdlib\\jurnal.uzpp"
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <mutex>
+#include <sstream>
 #include <string>
-
-#if !defined(UZPP_EMBEDDED)
-    #include <iostream>
-    #include <fstream>
-    #include <mutex>
-#else
-    // Mikrokontrollerlar uchun UART orqali output (Serial.print kabi)
-    extern void uzpp_embedded_print(const char* matn);
-#endif
-
 namespace uzpp::Jurnal {
+    enum class Daraja {
+        JIM = 0,
+        XATO = 1,
+        OGOH = 2,
+        MALUMOT = 3,
+        TUZATISH = 4
+    };
 
-enum class Daraja {
-    DEBUG,
-    MALUMOT,    // INFO
-    OGOHLANTIRISH, // WARN
-    XATO        // ERROR
-};
-
-class Logger {
-public:
-    static void yozish(Daraja daraja, const std::string& matn) {
-#if !defined(UZPP_EMBEDDED)
-        std::lock_guard<std::mutex> lock(mutex_);
-#endif
-        std::string teg = "[M'ALUMOT]";
-        std::string rang = "\033[0m"; // Reset
-
-        switch (daraja) {
-            case Daraja::DEBUG: teg = "[DEBUG]"; rang = "\033[36m"; break; // Cyan
-            case Daraja::MALUMOT: teg = "[INFO]"; rang = "\033[32m"; break; // Yashil
-            case Daraja::OGOHLANTIRISH: teg = "[OGOHLANTIRISH]"; rang = "\033[33m"; break; // Sariq
-            case Daraja::XATO: teg = "[XATO]"; rang = "\033[31m"; break; // Qizil
+    inline std::string Daraja_nomi (Daraja _v) {
+        switch (_v) {
+            case Daraja::JIM: return "JIM";
+            case Daraja::XATO: return "XATO";
+            case Daraja::OGOH: return "OGOH";
+            case Daraja::MALUMOT: return "MALUMOT";
+            case Daraja::TUZATISH: return "TUZATISH";
+            default: return "?";
         }
-
-        std::string xabar = Vaqt::hozir().formatlash("%H:%M:%S") + " " + teg + " " + matn + "\n";
-
-#if !defined(UZPP_EMBEDDED)
-#if defined(UZPP_OS_ANDROID)
-        // Android uchun Logcat ishlatilishi kerak. Bu mock implementatsiya (kengaytirish qilinadi)
-        std::cout << xabar;
-#else
-        // Windows/Linux PC Output (Rangli)
-        std::cout << rang << xabar << "\033[0m";
-#endif
-#else
-        // Embedded (Arduino/STM32) chiqarish uzpp_embedded_print orqali
-        uzpp_embedded_print(xabar.c_str());
-#endif
     }
-
-    static void debug(const std::string& m) { yozish(Daraja::DEBUG, m); }
-    static void malumot(const std::string& m) { yozish(Daraja::MALUMOT, m); }
-    static void ogohlantirish(const std::string& m) { yozish(Daraja::OGOHLANTIRISH, m); }
-    static void xato(const std::string& m) { yozish(Daraja::XATO, m); }
-
-private:
-#if !defined(UZPP_EMBEDDED)
-    static inline std::mutex mutex_;
-#endif
-};
-
-#if !defined(UZPP_EMBEDDED)
-class Proufayler {
-    std::string nomi_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> boshlanish_;
-public:
-    explicit Proufayler(std::string nomi) 
-        : nomi_(std::move(nomi)), boshlanish_(std::chrono::high_resolution_clock::now()) {}
-    
-    ~Proufayler() {
-        auto tugash = std::chrono::high_resolution_clock::now();
-        auto davomiylik = std::chrono::duration_cast<std::chrono::microseconds>(tugash - boshlanish_).count();
-        double ms = davomiylik / 1000.0;
-        Logger::malumot("[PROFILER] '" + nomi_ + "' bajarildi: " + std::to_string(ms) + " ms");
+    struct JurnalHolati {
+    public:
+        Daraja joriy_daraja;
+        bool vaqt_damgasi;
+        std::mutex jurnal_mutex;
+    };
+    inline auto holat_olish()->JurnalHolati&
+    {
+        static JurnalHolati jh;
+        static bool birinchi_marta = true;
+        if(birinchi_marta)
+            {
+                (birinchi_marta = false);
+                (jh.joriy_daraja = Daraja::MALUMOT);
+                (jh.vaqt_damgasi = true);
+            }
+        return jh;
     }
-};
-#endif
-
-} // namespace uzpp::Jurnal
-
-#if !defined(UZPP_EMBEDDED)
-#define UZPP_CONCAT_IMPL(a, b) a##b
-#define UZPP_CONCAT(a, b) UZPP_CONCAT_IMPL(a, b)
-#define VAQT_OLCHOVI(nom) uzpp::Jurnal::Proufayler UZPP_CONCAT(_proufayler_, __LINE__)(nom)
-#else
-#define VAQT_OLCHOVI(nom)
+    inline auto vaqt_damgasini_olish()->std::string
+    {
+        auto hozirgi_vaqt = std::time(nullptr);
+        auto mahalliy_vaqt = * std::localtime(& hozirgi_vaqt);
+        std::ostringstream ss;
+        (ss << std::put_time(& mahalliy_vaqt, "%Y-%m-%d %H:%M:%S"));
+        return ss.str();
+    }
+    inline auto darajani_matnga(Daraja d)->std::string
+    {
+        {
+            auto&& _match_val_1 = d;
+            if(_match_val_1 == Daraja::JIM)
+                {
+                    return "JIM";
+                }
+            else if(_match_val_1 == Daraja::XATO)
+                {
+                    return "XATO";
+                }
+            else if(_match_val_1 == Daraja::OGOH)
+                {
+                    return "OGOHLANTIRISH";
+                }
+            else if(_match_val_1 == Daraja::MALUMOT)
+                {
+                    return "MALUMOT";
+                }
+            else if(_match_val_1 == Daraja::TUZATISH)
+                {
+                    return "TUZATISH";
+                }
+            else
+                {
+                    return "NOMA'LUM";
+                }
+        }
+    }
+    inline auto yozish_agar(Daraja d, const std::string& xabar)->void
+    {
+        auto& h = holat_olish();
+        if((d > h.joriy_daraja))
+            {
+                return;
+            }
+        std::lock_guard<std::mutex> qulf = std::lock_guard<std::mutex>(h.jurnal_mutex);
+        if(h.vaqt_damgasi)
+            {
+                (((std::cout << "[") << vaqt_damgasini_olish()) << "] ");
+            }
+        (((((std::cout << "[") << darajani_matnga(d)) << "] ") << xabar) << std::endl);
+    }
+    inline auto tuzatish(const std::string& xabar)->void
+    {
+        yozish_agar(Daraja::TUZATISH, xabar);
+    }
+    inline auto malumot(const std::string& xabar)->void
+    {
+        yozish_agar(Daraja::MALUMOT, xabar);
+    }
+    inline auto ogohlantirish(const std::string& xabar)->void
+    {
+        yozish_agar(Daraja::OGOH, xabar);
+    }
+    inline auto xato(const std::string& xabar)->void
+    {
+        yozish_agar(Daraja::XATO, xabar);
+    }
+    inline auto daraja_orqatish(Daraja d)->void
+    {
+        (holat_olish().joriy_daraja = d);
+    }
+    inline auto joriy_darajani_olish()->Daraja
+    {
+        return holat_olish().joriy_daraja;
+    }
+    inline auto vaqt_damgasini_yoqish(bool yoqish)->void
+    {
+        (holat_olish().vaqt_damgasi = yoqish);
+    }
+    class Logger {
+    public:
+        static void tuzatish(const std::string& m)
+        {
+            Jurnal::tuzatish(m);
+        }
+        static void malumot(const std::string& m)
+        {
+            Jurnal::malumot(m);
+        }
+        static void ogohlantirish(const std::string& m)
+        {
+            Jurnal::ogohlantirish(m);
+        }
+        static void xato(const std::string& m)
+        {
+            Jurnal::xato(m);
+        }
+    };
+}
 #endif
