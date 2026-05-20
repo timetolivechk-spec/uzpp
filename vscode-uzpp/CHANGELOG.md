@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.1] — 2026-05-20
+
+### Loyiha tuzilmasi va hujjatlar
+
+- `examples/` papkasi `misollar/` ga birlashtirildi (15 ta misol).
+- Hujjatlar yagona tilga (o'zbek) keltirildi: README, getting-started,
+  CONTRIBUTING, SECURITY, va boshqalar.
+- Ichki AI ishchi hujjatlari (HANDOFF, NEXT_SESSION_PLAN, UZPP_CONTEXT)
+  ommaviy repo'dan olib tashlandi.
+
 ## [2.2.0] — 2026-05-20
 
 ### Til imkoniyatlari (uz++ kompilyatori)

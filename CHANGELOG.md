@@ -2,6 +2,23 @@
 
 Barcha muhim o'zgarishlar shu yerda hujjatlashtiriladi.
 
+## [2.2.1] — 2026-05-20
+
+### Loyiha tuzilmasi va hujjatlar tartibi
+
+- **`examples/` papkasi olib tashlandi** — `misollar/` (o'zbekcha) bilan
+  bir xil maqsadda edi. Unikal misollar `misollar/11..15` ga ko'chirildi.
+  Endi yagona `misollar/` (15 ta misol). Tushuncha: bitta C++ uchun bitta
+  uz++ qoidasi nafaqat til, balki loyiha tuzilmasi uchun ham.
+- **`loyihalar/` olib tashlandi** — bo'sh "playground" papkasi edi.
+- **`HANDOFF.md` / `NEXT_SESSION_PLAN.md` / `UZPP_CONTEXT.md` olib
+  tashlandi** — ichki AI ishchi hujjatlari edi, ommaviy repo'da kerak emas.
+- **Hujjatlar yagona tilga ko'chirildi (o'zbek)** — README, getting-started,
+  stdlib-status, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, issue/PR
+  shablonlari. Texnik atamalar uchun ingliz so'zlari quvirda
+  (`"templates"`, `"closures"` va h.k.).
+- **Installer matnlari soddalashtirildi** — `examples` → `misollar`.
+
 ## [2.2.0] — 2026-05-20
 
 ### Til (uz++ kompilyatori) — hardening pass

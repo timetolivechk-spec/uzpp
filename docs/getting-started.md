@@ -1,12 +1,12 @@
-# uz++ — Boshlang'ich qo'llanma | Getting Started with uz++
+# uz++ — Boshlang'ich qo'llanma
 
-**O'qish vaqti: ~15 daqiqa | Reading time: ~15 minutes**
+**O'qish vaqti: ~15 daqiqa**
 
 ---
 
-## 1. O'rnatish | Installation
+## 1. O'rnatish
 
-### 🪟 Windows — tavsiya etiladi | Recommended
+### 🪟 Windows — tavsiya etiladi
 
 **Eng oson yo'l:** [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe)
 ni yuklab oling va ishga tushiring (~115 MB).
@@ -21,17 +21,23 @@ O'rnatish tugagach yangi PowerShell oynasini oching va tekshiring:
 uzpp --version
 ```
 
-### 🐧 Linux / 🍎 macOS — manba koddan qurish | Build from source
+### 🐧 Linux / 🍎 macOS
 
-Hozircha rasmiy paket yo'q, manba koddan qurish kerak (~3 daqiqa):
+Bir-qatorli o'rnatuvchi (rasmiy):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/installer/unix/install.sh | bash
+```
+
+Yoki manba koddan qurish (~3 daqiqa):
 
 **Ubuntu 24.04:**
 ```bash
-sudo apt-get install gcc-14 g++-14 cmake ninja-build
+sudo apt-get install gcc-15 g++-15 cmake ninja-build
 git clone https://github.com/timetolivechk-spec/uzpp && cd uzpp
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build -DCMAKE_CXX_COMPILER=g++-14
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build -DCMAKE_CXX_COMPILER=g++-15
 cmake --build build
-export PATH="$PWD/build:$PATH"   # PATH ga qo'shing (.bashrc ga ko'chiring)
+export PATH="$PWD/build:$PATH"   # `.bashrc` ga ko'chiring
 ```
 
 **macOS (AppleClang Xcode 16+):**
@@ -62,7 +68,7 @@ cmake --build build
 
 ---
 
-## 2. Birinchi dastur | Your First Program
+## 2. Birinchi dastur
 
 `salom.uzpp` nomli fayl yarating:
 
@@ -103,7 +109,7 @@ uzpp transpile salom.uzpp --show-cpp
 
 ---
 
-## 3. O'zgaruvchilar | Variables
+## 3. O'zgaruvchilar
 
 uz++ da barcha asosiy C++ turlari o'zbek kalit so'zlari bilan yoziladi:
 
@@ -134,7 +140,7 @@ butun asosiy() {
 
 ---
 
-## 4. Shartli ifodalar | Conditionals
+## 4. Shartli ifodalar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -169,7 +175,7 @@ butun asosiy() {
 
 ---
 
-## 5. Tsikllar | Loops
+## 5. Tsikllar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -201,7 +207,7 @@ butun asosiy() {
 
 ---
 
-## 6. Funksiyalar | Functions
+## 6. Funksiyalar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -241,7 +247,7 @@ butun asosiy() {
 
 ---
 
-## 7. Kolleksiyalar | Collections
+## 7. Kolleksiyalar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -273,7 +279,7 @@ butun asosiy() {
 
 ---
 
-## 8. Sinflar | Classes
+## 8. Sinflar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -320,7 +326,7 @@ butun asosiy() {
 
 ---
 
-## 9. Xatolik boshqaruvi | Error Handling
+## 9. Xatolik boshqaruvi
 
 uz++ da ikkita usul mavjud:
 
@@ -379,7 +385,7 @@ butun asosiy() {
 
 ---
 
-## 10. Pattern Matching | Naqsh moslashtirish
+## 10. Naqsh moslashtirish (`pattern matching`)
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -407,7 +413,7 @@ butun asosiy() {
 
 ---
 
-## 11. Shablonlar | Templates
+## 11. Shablonlar
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -449,7 +455,7 @@ butun asosiy() {
 
 ---
 
-## 12. Asinxron dasturlash | Async Programming
+## 12. Asinxron dasturlash
 
 ```uzpp
 ulash "uzpp_runtime.hpp"
@@ -475,7 +481,7 @@ butun asosiy() {
 
 ---
 
-## 13. Buyruqlar | Commands Reference
+## 13. Buyruqlar
 
 | Buyruq | Tavsif |
 |--------|--------|
@@ -487,9 +493,9 @@ butun asosiy() {
 
 ---
 
-## Keyingi qadamlar | Next Steps
+## Keyingi qadamlar
 
-- `misollar/` papkasidagi 10 ta misolni ko'ring
-- `tests/` papkasidagi testlarni o'rganing
+- `misollar/` papkasidagi 15 ta misolni ko'ring
+- `tests/` papkasidagi regression testlarni o'rganing
 - [CONTRIBUTING.md](../CONTRIBUTING.md) orqali hissa qo'shing
 - [GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) da savol bering

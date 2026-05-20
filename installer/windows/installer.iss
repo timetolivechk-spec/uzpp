@@ -93,7 +93,7 @@ Source: "{#SourceRoot}\compiler\*"; DestDir: "{app}\compiler"; Flags: ignorevers
 Source: "{#SourceRoot}\README.txt"; DestDir: "{app}";          Flags: ignoreversion isreadme
 
 [Icons]
-Name: "{group}\uz++ examples"; Filename: "{app}\misollar"; Tasks: startmenu
+Name: "{group}\uz++ misollar"; Filename: "{app}\misollar"; Tasks: startmenu
 Name: "{group}\uz++ on GitHub"; Filename: "{#AppURL}";    Tasks: startmenu
 
 [Registry]
@@ -134,11 +134,10 @@ begin
 end;
 
 [Run]
-; Optional: launch the examples folder when finished, so the user can try
+; Optional: launch misollar folder when finished, so the user can try
 ; misollar\01_salom_dunyo.uzpp immediately.
 Filename: "{win}\explorer.exe"; Parameters: """{app}\misollar"""; \
-    Description: "{cm:LaunchExamples}"; Flags: nowait postinstall skipifsilent
+    Description: "{cm:LaunchMisollar}"; Flags: nowait postinstall skipifsilent
 
 [CustomMessages]
-english.LaunchExamples=Open the examples folder
-russian.LaunchExamples=Открыть папку с примерами
+english.LaunchMisollar=Open the misollar folder

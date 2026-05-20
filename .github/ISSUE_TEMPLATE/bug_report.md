@@ -1,21 +1,19 @@
 ---
-name: Xato hisoboti | Bug Report
-about: uz++ da topilgan xatoni xabarlang | Report a bug found in uz++
+name: Xato hisoboti
+about: uz++ da topilgan xatoni xabarlang
 title: "[BUG] "
 labels: bug
 assignees: ''
 ---
 
-## Xato tavsifi | Bug Description
+## Xato tavsifi
 
 *Xato nima ekanligini aniq va qisqa tushuntiring.*
-*A clear and concise description of what the bug is.*
 
-## Qayta yaratish | Steps to Reproduce
+## Qayta yaratish
 
 ```uzpp
 // Xatoni ko'rsatadigan minimal uz++ kodi
-// Minimal uz++ code that reproduces the bug
 ulash "uzpp_runtime.hpp"
 
 butun asosiy() {
@@ -24,32 +22,32 @@ butun asosiy() {
 }
 ```
 
-**Buyruq | Command:**
+**Buyruq:**
 ```bash
 uzpp qurish fayl.uzpp
 ```
 
-## Kutilgan xulq | Expected Behavior
+## Kutilgan xulq
 
-*Nima bo'lishi kerak edi? / What should have happened?*
+*Nima bo'lishi kerak edi?*
 
-## Haqiqiy xulq | Actual Behavior
+## Haqiqiy xulq
 
-*Nima bo'ldi? / What actually happened?*
+*Nima bo'ldi?*
 
 ```
-# Xato xabari / Error message:
+# Xato xabari:
 ```
 
-## Muhit | Environment
+## Muhit
 
 | | |
 |---|---|
 | OS | Windows / Linux / macOS |
 | uz++ versiyasi | `uzpp --version` natijasi |
-| Kompilyator | GCC 14 / Clang 18 / ... |
+| Kompilyator | GCC 15 / Clang 18 / ... |
 | CMake | 3.20+ |
 
-## Qo'shimcha ma'lumot | Additional Context
+## Qo'shimcha ma'lumot
 
-*Boshqa foydali ma'lumot / Any other relevant information.*
+*Boshqa foydali ma'lumot.*

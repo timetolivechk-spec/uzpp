@@ -1,28 +1,29 @@
-## O'zgarishlar tavsifi | Description of Changes
+## O'zgarishlar tavsifi
 
-*Bu PR nima qiladi? / What does this PR do?*
+*Bu PR nima qiladi?*
 
-## O'zgarish turi | Type of Change
+## O'zgarish turi
 
-- [ ] Xato tuzatish (Bug fix — mavjud funksionallikni buzmaydigan o'zgartirish)
-- [ ] Yangi xususiyat (New feature — mavjud funksionallikni buzmaydigan qo'shimcha)
-- [ ] Buzuvchi o'zgarish (Breaking change — mavjud funksionallikni o'zgartiradi)
-- [ ] Hujjatlar (Documentation — faqat README, hujjatlar o'zgartirish)
-- [ ] Ishlash optimallashtirish (Performance improvement)
-- [ ] Refaktorlash (Refactoring — funksionallik o'zgarmaydi)
+- [ ] Xato tuzatish (mavjud funksionallikni buzmaydigan o'zgartirish)
+- [ ] Yangi xususiyat (mavjud funksionallikni buzmaydigan qo'shimcha)
+- [ ] Buzuvchi o'zgarish (`breaking change` — mavjud funksionallikni o'zgartiradi)
+- [ ] Hujjatlar (faqat README, hujjatlar)
+- [ ] Ishlash optimallashtirish
+- [ ] Refaktorlash (funksionallik o'zgarmaydi)
 
-## Tegishli xato/xususiyat | Related Issue
+## Tegishli xato/xususiyat
 
 Closes #___
 
-## Test | Testing
+## Test
 
 - [ ] `./build/uzpp_frontend_tests` barcha testlar o'tadi
 - [ ] Yangi integratsiya testi qo'shilgan: `tests/test_*.uzpp`
 - [ ] Barcha mavjud `tests/*.uzpp` testlari o'tadi
-- [ ] Misollar (misollar/) hali ham ishlaydi
+- [ ] `tests/negative/` salbiy testlari saqlangan
+- [ ] `misollar/` papkasidagi misollar hali ham ishlaydi
 
-## Tekshiruv ro'yxati | Checklist
+## Tekshiruv ro'yxati
 
 - [ ] Kod loyiha uslubiga mos
 - [ ] O'z-o'zini tekshirish amalga oshirildi
@@ -30,6 +31,6 @@ Closes #___
 - [ ] Hujjatlar yangilandi (agar kerak bo'lsa)
 - [ ] Yangi xato kiritilmadi
 
-## Qo'shimcha izohlar | Additional Notes
+## Qo'shimcha izohlar
 
-*Tekshiruvchi bilishi kerak bo'lgan narsalar / Anything the reviewer should know*
+*Tekshiruvchi bilishi kerak bo'lgan narsalar.*

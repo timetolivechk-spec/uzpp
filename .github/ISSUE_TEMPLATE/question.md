@@ -1,29 +1,28 @@
 ---
-name: Savol | Question
-about: uz++ haqida savol bering | Ask a question about uz++
+name: Savol
+about: uz++ haqida savol bering
 title: "[SAVOL] "
 labels: question
 assignees: ''
 ---
 
-## Savol | Question
+## Savol
 
-*Savolingizni yozing / Write your question*
+*Savolingizni yozing.*
 
-## Kontekst | Context
+## Kontekst
 
-*Bu savolga olib kelgan nima? / What led to this question?*
+*Bu savolga olib kelgan nima?*
 
 ```uzpp
 // Tegishli uz++ kodi (agar mavjud bo'lsa)
-// Relevant uz++ code (if any)
 ```
 
-## Qanday qilib sinab ko'rdingiz | What I've Tried
+## Qanday qilib sinab ko'rdingiz
 
-*Hozircha nima sinab ko'rdingiz? / What have you tried so far?*
+*Hozircha nima sinab ko'rdingiz?*
 
-## Muhit | Environment
+## Muhit
 
 - OS: Windows / Linux / macOS
 - uz++ versiyasi: `uzpp --version`

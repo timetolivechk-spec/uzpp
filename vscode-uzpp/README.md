@@ -19,7 +19,7 @@ Bitta o'rnatuvchi ichida bor:
 |---|---|
 | **uz++ kompilyatori** | Transpayler: `.uzpp` → C++ → binary |
 | **Standart kutubxona** | `stdlib/` — 30+ modul (matn, vaqt, json, tarmoq, ...) |
-| **Misollar** | `misollar/` — 10 ta tayyor `.uzpp` dastur |
+| **Misollar** | `misollar/` — 15 ta tayyor `.uzpp` dastur |
 | **MinGW-w64 GCC 15.2 UCRT** | Bundle C++ kompilyatori — alohida yuklash kerak emas |
 
 - Default joy: `%LOCALAPPDATA%\Programs\uzpp\` (admin huquqlari shart emas).
@@ -40,7 +40,7 @@ Skript:
 - `uzpp` ni `/usr/local/bin/` ga, stdlib ni `/usr/local/lib/uzpp/` ga o'rnatadi.
 - Smoke-test: `uzpp --version`.
 
-Pin qilingan versiya kerak bo'lsa: `UZPP_VERSION=v2.1.8 ./install.sh` (yoki `$HOME` ga: `UZPP_PREFIX=$HOME ./install.sh`).
+Pin qilingan versiya kerak bo'lsa: `UZPP_VERSION=v2.2.0 ./install.sh` (yoki `$HOME` ga: `UZPP_PREFIX=$HOME ./install.sh`).
 
 ---
 
@@ -142,8 +142,8 @@ Kengaytma faqat `github.com/timetolivechk-spec/uzpp` manzilidan komponentlar yuk
 
 ## 📚 Resurslar
 
-- [GitHub](https://github.com/timetolivechk-spec/uzpp) — manba kodi, issues, releases
+- [GitHub](https://github.com/timetolivechk-spec/uzpp) — manba kodi, `issues`, `releases`
 - [Boshlash qo'llanmasi](https://github.com/timetolivechk-spec/uzpp/blob/main/docs/getting-started.md)
-- [Misollar](https://github.com/timetolivechk-spec/uzpp/tree/main/examples)
+- [Misollar](https://github.com/timetolivechk-spec/uzpp/tree/main/misollar)
 - [Muammo bildirish](https://github.com/timetolivechk-spec/uzpp/issues)
-- [So'nggi release (v2.1.8)](https://github.com/timetolivechk-spec/uzpp/releases/tag/v2.1.8)
+- [So'nggi `release`](https://github.com/timetolivechk-spec/uzpp/releases/latest)
