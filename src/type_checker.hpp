@@ -3,6 +3,7 @@
 #include "ast.h"
 #include <string>
 #include <vector>
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 #include <cctype>
@@ -16,30 +17,121 @@ struct SemanticError {
 };
 
 // Uch-holatli tur tasviri ("tri-state" — halol tur xulosasi uchun).
-// uz++ — o'zbek sintaksisli til; bu yerdagi terminologiya ham o'zbekcha:
-//   - Aniq(nomi)     — biz aniq turni belgiladik ("butun", "vektor<matn>", "Foo")
-//   - Nomalum        — xulosa qilolmadik (bizning cheklov, foydalanuvchining xatosi emas)
-//   - Polimorf(param) — shablon tur parametri, instansiyalashda aniq bo'ladi
+// Phase 2: kompozit turlar (ko'rsatkich, havola, shablon) + interning.
 //
-// Diagnostika faqat Aniq × Aniq solishtirganda chiqarilishi shart.
-// Nomalum × _ va Polimorf × _ — jim qabul qilinadi. Bu *p, &x, ternar va h.k.
-// ifodalardagi noto'g'ri ogohlantirishlarni butunlay yo'q qiladi.
+//   - Aniq(nomi)         — konkret tur ("butun", "vektor<matn>", "Foo")
+//   - Nomalum            — xulosa qilolmadik
+//   - Polimorf(param)    — shablon tur parametri (T, U)
+//   - Korsatkich(base)   — ko'rsatkich turi (butun*)
+//   - Havola(base,const) — havola turi (butun&, const matn&)
+//   - Shablon(nomi,args) — shablon misoli (vektor<butun>, lug'at<matn,T>)
+//
+// isAniq() rekursiv: Korsatkich(Polimorf) → yolg'on, Shablon(vektor<T>) → yolg'on.
+// Bu vektor<T> yoki Foo<T>* kabi kompozit turlarda diagnostikani jim qiladi.
+//
+// Interning: Type::aniq("butun") har doim bir xil obyektga ishora qiladi.
 struct Type {
-    enum class Kind { Aniq, Nomalum, Polimorf };
+    enum class Kind : unsigned char {
+        Aniq,       // konkret nomli tur
+        Nomalum,    // noma'lum
+        Polimorf,   // shablon parametri
+        Korsatkich, // ko'rsatkich (T*)
+        Havola,     // havola (T&, const T&)
+        Shablon     // shablon misoli (vektor<T>)
+    };
+
     Kind kind = Kind::Nomalum;
-    std::string name; // Aniq: tur nomi; Polimorf: shablon-param nomi; Nomalum: bo'sh
+    std::string name;           // Aniq/Polimorf/Shablon: nom; Korsatkich/Havola/Nomalum: bo'sh
+    const Type* baseType = nullptr;  // Korsatkich/Havola: asos turi
+    bool isConstRef = false;        // Havola: const T& yoki T&
+    std::vector<Type> templateArgs; // Shablon: argument turlari
 
-    static Type aniq(std::string n)     { return Type{Kind::Aniq, std::move(n)}; }
-    static Type nomalum()                { return Type{Kind::Nomalum, {}}; }
-    static Type polimorf(std::string p)  { return Type{Kind::Polimorf, std::move(p)}; }
+    // ---- fabrikalar ----
+    static Type aniq(std::string n)     { Type t{Kind::Aniq}; t.name = std::move(n); return t; }
+    static Type nomalum()                { return Type{Kind::Nomalum}; }
+    static Type polimorf(std::string p) { Type t{Kind::Polimorf}; t.name = std::move(p); return t; }
+    static Type korsatkich(Type base)   { Type t{Kind::Korsatkich}; t.baseType = intern(base); return t; }
+    static Type havola(Type base, bool konst = false) {
+        Type t{Kind::Havola}; t.baseType = intern(base); t.isConstRef = konst; return t;
+    }
+    static Type shablon(std::string nom, std::vector<Type> args) {
+        Type t{Kind::Shablon}; t.name = std::move(nom); t.templateArgs = std::move(args); return t;
+    }
 
-    bool isAniq()     const { return kind == Kind::Aniq; }
+    // ---- so'rov metodlari ----
+    bool isAniq() const {
+        switch (kind) {
+        case Kind::Aniq: return true;
+        case Kind::Korsatkich:
+        case Kind::Havola: return baseType && baseType->isAniq();
+        case Kind::Shablon:
+            for (const auto& a : templateArgs) if (!a.isAniq()) return false;
+            return true;
+        default: return false;
+        }
+    }
     bool isNomalum()  const { return kind == Kind::Nomalum; }
     bool isPolimorf() const { return kind == Kind::Polimorf; }
 
-    // Eski string-asosli kod yo'llari uchun moslashuvchi konvertatsiya:
-    // Aniq → nomi, Nomalum/Polimorf → "noma'lum" (eskirib qolgan sentinel).
-    std::string toLegacyString() const { return isAniq() ? name : "noma'lum"; }
+    // Accessor: aniq tur nomi (rekursiv to'liq nom qaytaradi)
+    std::string aniqNomi() const {
+        switch (kind) {
+        case Kind::Aniq: return name;
+        case Kind::Polimorf: return name;
+        case Kind::Korsatkich: return baseType ? baseType->aniqNomi() + "*" : "noma'lum*";
+        case Kind::Havola: {
+            std::string s = baseType ? baseType->aniqNomi() : "noma'lum";
+            return isConstRef ? "const " + s + "&" : s + "&";
+        }
+        case Kind::Shablon: {
+            std::string s = name + "<";
+            for (std::size_t i = 0; i < templateArgs.size(); ++i) {
+                if (i > 0) s += ", ";
+                s += templateArgs[i].aniqNomi();
+            }
+            s += ">";
+            return s;
+        }
+        default: return "noma'lum";
+        }
+    }
+
+    // Eski string-asosli kod yo'llari uchun moslashuvchi konvertatsiya
+    std::string toLegacyString() const { return isAniq() ? aniqNomi() : "noma'lum"; }
+
+private:
+    // Tur interningi — bir xil turlar bir xil ko'rsatkichga ega bo'lishini ta'minlaydi.
+    //
+    // Ikki strategiya:
+    //   1) Aniq turlar uchun — nom-bo'yicha kanonik xarita (Type::aniq("butun")
+    //      har doim bir xil ko'rsatkich qaytaradi).
+    //   2) Kompozit turlar uchun — structural kalit (kind+aniqNomi) bo'yicha
+    //      kanonik xarita. Bu Korsatkich(Aniq("butun")) ni har gal bir xil
+    //      obyektga ishora qildiradi va xotira o'sishini ham cheklaydi.
+    //
+    // Saqlash idishlari: std::deque va std::unordered_map — har ikkisi ham
+    // element ko'rsatkichlari uchun kafolatlangan barqaror (push/insert da
+    // ko'chmaydi). std::vector bu yerda noto'g'ri tanlov edi — reallokatsiya
+    // oldindan berilgan ko'rsatkichlarni invalidatsiya qiladi.
+    static const Type* intern(const Type& t) {
+        if (t.kind == Kind::Aniq && t.baseType == nullptr && t.templateArgs.empty()) {
+            static std::unordered_map<std::string, Type> canon;
+            auto [it, _] = canon.try_emplace(t.name, t);
+            return &it->second;
+        }
+        // Kompozit: kind + to'liq nom bo'yicha structural intern.
+        // Kalit shakli: "K:nom" — K bir belgi (P/H/S — Korsatkich/Havola/Shablon).
+        char k = (t.kind == Kind::Korsatkich) ? 'P'
+               : (t.kind == Kind::Havola)     ? 'H'
+               : (t.kind == Kind::Shablon)    ? 'S'
+                                              : '?';
+        std::string key;
+        key.reserve(t.aniqNomi().size() + 2);
+        key += k; key += ':'; key += t.aniqNomi();
+        static std::unordered_map<std::string, Type> compositeCanon;
+        auto [it, _] = compositeCanon.try_emplace(key, t);
+        return &it->second;
+    }
 };
 
 class TypeChecker {
@@ -195,10 +287,11 @@ private:
                 }
                 Type leftType = inferTypeT(bin->getLeft());
                 Type rightType = inferTypeT(bin->getRight());
-                // Promotion rules apply only when both sides have a known type
                 if (leftType.isAniq() && rightType.isAniq()) {
-                    if (leftType.name == "haqiqiy" || rightType.name == "haqiqiy") return Type::aniq("haqiqiy");
-                    if (leftType.name == "matn" || rightType.name == "matn") return Type::aniq("matn");
+                    const std::string& ln = leftType.aniqNomi();
+                    const std::string& rn = rightType.aniqNomi();
+                    if (ln == "haqiqiy" || rn == "haqiqiy") return Type::aniq("haqiqiy");
+                    if (ln == "matn" || rn == "matn") return Type::aniq("matn");
                     return leftType;
                 }
                 if (leftType.isAniq()) return leftType;
@@ -208,8 +301,8 @@ private:
             case ASTNodeType::MemberAccess: {
                 auto mac = static_cast<const MemberAccess*>(expr);
                 Type objType = inferTypeT(mac->getObject());
-                if (objType.isAniq() && classes_.contains(objType.name)) {
-                    std::string ret = classMethodReturn(objType.name, mac->getMemberName());
+                if (objType.isAniq() && classes_.contains(objType.aniqNomi())) {
+                    std::string ret = classMethodReturn(objType.aniqNomi(), mac->getMemberName());
                     if (ret != "noma'lum") return Type::aniq(ret);
                 }
                 break;
@@ -217,8 +310,15 @@ private:
             case ASTNodeType::SubscriptAccess: {
                 auto sub = static_cast<const SubscriptAccess*>(expr);
                 Type arrType = inferTypeT(sub->getArray());
-                if (arrType.isAniq() && arrType.name.starts_with("vektor<") && arrType.name.back() == '>') {
-                    return Type::aniq(arrType.name.substr(7, arrType.name.length() - 8));
+                // Phase 2: shablon turi orqali element turini chiqaramiz
+                if (arrType.isAniq() && arrType.kind == Type::Kind::Shablon &&
+                    arrType.name == "vektor" && arrType.templateArgs.size() == 1) {
+                    return arrType.templateArgs[0];
+                }
+                // Legacy string-based fallback
+                const std::string& an = arrType.aniqNomi();
+                if (arrType.isAniq() && an.starts_with("vektor<") && an.back() == '>') {
+                    return Type::aniq(an.substr(7, an.length() - 8));
                 }
                 break;
             }
@@ -229,7 +329,7 @@ private:
                     if (name == "__uzpp_array") {
                         if (!call->getArguments().empty()) {
                             Type elem = inferTypeT(call->getArguments()[0].get());
-                            return Type::aniq("vektor<" + (elem.isAniq() ? elem.name : "noma'lum") + ">");
+                            return Type::shablon("vektor", {elem});
                         }
                         return Type::aniq("vektor<noma'lum>");
                     }
@@ -244,8 +344,8 @@ private:
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
                     auto mac = static_cast<const MemberAccess*>(call->getCallee());
                     Type objType = inferTypeT(mac->getObject());
-                    if (objType.isAniq() && classes_.contains(objType.name)) {
-                        std::string ret = classMethodReturn(objType.name, mac->getMemberName());
+                    if (objType.isAniq() && classes_.contains(objType.aniqNomi())) {
+                        std::string ret = classMethodReturn(objType.aniqNomi(), mac->getMemberName());
                         if (ret != "noma'lum") return Type::aniq(ret);
                     }
                 }
@@ -258,16 +358,21 @@ private:
                     case UnaryExpression::UnaryOp::LogicalNot:
                         return Type::aniq("mantiqiy");
                     case UnaryExpression::UnaryOp::AddressOf:
-                        if (inner.isAniq()) return Type::aniq(inner.name + "*");
+                        if (inner.isAniq()) return Type::korsatkich(inner);
                         return Type::nomalum();
                     case UnaryExpression::UnaryOp::Dereference:
-                        if (inner.isAniq() && !inner.name.empty() && inner.name.back() == '*') {
-                            return Type::aniq(inner.name.substr(0, inner.name.size() - 1));
+                        if (inner.isAniq() && inner.kind == Type::Kind::Korsatkich && inner.baseType) {
+                            return *inner.baseType;
+                        }
+                        // Legacy string-based fallback
+                        if (inner.isAniq()) {
+                            const std::string& an = inner.aniqNomi();
+                            if (!an.empty() && an.back() == '*')
+                                return Type::aniq(an.substr(0, an.size() - 1));
                         }
                         return Type::nomalum();
                     case UnaryExpression::UnaryOp::New:
-                        // `yangi Foo(...)` constructs a Foo* — operand is the type name expression
-                        if (inner.isAniq()) return Type::aniq(inner.name + "*");
+                        if (inner.isAniq()) return Type::korsatkich(inner);
                         return Type::nomalum();
                     case UnaryExpression::UnaryOp::Delete:
                         return Type::aniq("bosh");
@@ -286,13 +391,13 @@ private:
                 auto tern = static_cast<const TernaryExpression*>(expr);
                 Type t = inferTypeT(tern->getThenExpr());
                 Type e = inferTypeT(tern->getElseExpr());
-                // Mos kelsa → o'sha tur; bittasi Aniq, ikkinchisi Nomalum → Aniq bo'lganini;
-                // mos kelmasa yoki ikkalasi Nomalum → Nomalum (yolg'on aytmaymiz).
                 if (t.isAniq() && e.isAniq()) {
-                    if (typesEquivalent(t.name, e.name)) return t;
+                    if (typesEquivalent(t.aniqNomi(), e.aniqNomi())) return t;
                     // Numeric promotion: butun + haqiqiy → haqiqiy
-                    if ((t.name == "haqiqiy" && e.name == "butun") ||
-                        (t.name == "butun" && e.name == "haqiqiy")) return Type::aniq("haqiqiy");
+                    const std::string& tn = t.aniqNomi();
+                    const std::string& en = e.aniqNomi();
+                    if ((tn == "haqiqiy" && en == "butun") ||
+                        (tn == "butun" && en == "haqiqiy")) return Type::aniq("haqiqiy");
                     return Type::nomalum();
                 }
                 if (t.isAniq()) return t;
@@ -553,12 +658,12 @@ private:
 
                     if (declaredType == "ozgaruvchan" || declaredType == "o'zgaruvchan" || declaredType == "ozgarmas") {
                         if (inferred.isAniq()) {
-                            inferredAutoTypes_[var] = inferred.name;
+                            inferredAutoTypes_[var] = inferred.aniqNomi();
                         }
                         declaredType = inferred.toLegacyString(); // Type inference
                     } else if (inferred.isAniq() && declaredType != "noma'lum" &&
-                               !typesEquivalent(inferred.name, declaredType)) {
-                        const std::string& inferredType = inferred.name;
+                               !typesEquivalent(inferred.aniqNomi(), declaredType)) {
+                        const std::string& inferredType = inferred.aniqNomi();
                         if ((declaredType == "butun" || declaredType == "matn" || declaredType == "mantiq" || declaredType == "mantiqiy" || declaredType == "haqiqiy" || declaredType == "ikkilangan") &&
                             (inferredType == "butun" || inferredType == "matn" || inferredType == "mantiq" || inferredType == "mantiqiy" || inferredType == "haqiqiy" || inferredType == "ikkilangan")) {
                             if (!((declaredType == "haqiqiy" || declaredType == "ikkilangan") && inferredType == "butun")) {

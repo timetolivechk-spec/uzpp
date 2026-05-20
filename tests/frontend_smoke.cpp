@@ -581,6 +581,32 @@ int main() {
             assert(m["p"] == "butun*");
             assert(m["d"] == "butun");
         }
+        // Nested composite (butun** via double address-of). This stresses
+        // Type::intern's stability: a previous vector-backed store would
+        // have invalidated the inner Korsatkich pointer when the outer
+        // Korsatkich was inserted. With deque/map-backed canon, pointers
+        // stay valid and aniqNomi() returns the correct nested string.
+        // Pin many nested types in one snippet to force multiple intern
+        // calls on composite kinds.
+        {
+            auto m = inferAutoTypes(
+                "butun asosiy() {"
+                "  butun a = 1; haqiqiy b = 2.5; matn c = \"x\";"
+                "  o'zgaruvchan pa = &a;"
+                "  o'zgaruvchan ppa = &pa;"
+                "  o'zgaruvchan pb = &b;"
+                "  o'zgaruvchan ppb = &pb;"
+                "  o'zgaruvchan pc = &c;"
+                "  qaytarish 0;"
+                "}");
+            // After all the composites were created, each must still resolve
+            // to its own correct string — proves no use-after-free.
+            assert(m["pa"]  == "butun*");
+            assert(m["ppa"] == "butun**");
+            assert(m["pb"]  == "haqiqiy*");
+            assert(m["ppb"] == "haqiqiy**");
+            assert(m["pc"]  == "matn*");
+        }
         // Ternary with matching branches.
         {
             auto m = inferAutoTypes(
