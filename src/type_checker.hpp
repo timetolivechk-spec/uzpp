@@ -99,6 +99,28 @@ struct Type {
     // Eski string-asosli kod yo'llari uchun moslashuvchi konvertatsiya
     std::string toLegacyString() const { return isAniq() ? aniqNomi() : "noma'lum"; }
 
+    // Foydalanuvchiga ko'rsatish uchun (LSP hover, inlay hints) — Type ning
+    // turini hisobga oluvchi izohli format. Aniq turlar oddiy nomini beradi,
+    // Polimorf shablon parametri ekanini eslatadi, kompozit turlar to'liq
+    // nomi bilan. Nomalum — bo'sh string (hover ko'rinmasligi uchun).
+    std::string tasvirla() const {
+        switch (kind) {
+        case Kind::Aniq: return name;
+        case Kind::Polimorf: return name + " (shablon parametri)";
+        case Kind::Korsatkich: {
+            std::string s = baseType ? baseType->aniqNomi() : "noma'lum";
+            return s + "* (ko'rsatkich)";
+        }
+        case Kind::Havola: {
+            std::string s = baseType ? baseType->aniqNomi() : "noma'lum";
+            return (isConstRef ? "const " + s + "&" : s + "&") + " (havola)";
+        }
+        case Kind::Shablon: return aniqNomi();
+        case Kind::Nomalum: return "";
+        }
+        return "";
+    }
+
 private:
     // Tur interningi — bir xil turlar bir xil ko'rsatkichga ega bo'lishini ta'minlaydi.
     //
@@ -164,9 +186,11 @@ private:
     // (`shablon<tur T, tur U>` dan T, U). Tan ichida T turidagi identifikator
     // Aniq("T") emas, Polimorf("T") sifatida xulosalanadi — diagnostika jim qoladi.
     std::unordered_set<std::string> currentTemplateParams_;
-    // For LSP inlay hints: maps `o'zgaruvchan x = ...` declarations to the
-    // inferred type of the initializer (only set when inference succeeded).
-    std::unordered_map<const VariableDeclaration*, std::string> inferredAutoTypes_;
+    // LSP inlay hints / hover uchun: `o'zgaruvchan x = ...` deklaratsiyalarini
+    // ifoda turi bilan bog'laydi. Phase 2.2 dan beri butun strukturali Type
+    // saqlanadi (oddiy string emas) — bu LSP ga kompozit turlarni (vektor<T>,
+    // Foo*) parchalab ko'rsatish va Polimorf vs Aniq ni ajratish imkonini beradi.
+    std::unordered_map<const VariableDeclaration*, Type> inferredAutoTypes_;
     std::string currentReturnType_ = "";
     bool reachable_ = true;
     bool reportedUnreachable_ = false;
@@ -610,16 +634,19 @@ public:
     const std::unordered_map<std::string, std::vector<std::string>>& getFunctionParams() const { return functionParams_; }
     const std::unordered_map<std::string, std::string>& getFunctionReturns() const { return functionReturns_; }
 
-    // Returns the inferred type for an `o'zgaruvchan`/`o'zgarmas` (auto) variable
-    // declaration with an initializer, recorded during check(). Returns nullptr
-    // if the variable was not declared with auto-type or its initializer's type
-    // could not be inferred.
-    const std::string* getInferredAutoType(const VariableDeclaration* var) const {
+    // `o'zgaruvchan`/`o'zgarmas` (auto) deklaratsiyasi uchun xulosalangan Type
+    // ni qaytaradi (check() vaqtida yozilgan). nullptr — auto-tur emas yoki
+    // boshlovchining turi xulosalanmagan.
+    //
+    // Phase 2.2: Type ko'rsatkichi qaytariladi (avval std::string edi).
+    // Foydalanuvchiga ko'rsatish uchun `.tasvirla()`, oddiy nomi uchun
+    // `.aniqNomi()` chaqirilsin.
+    const Type* getInferredAutoType(const VariableDeclaration* var) const {
         const auto it = inferredAutoTypes_.find(var);
         return it != inferredAutoTypes_.end() ? &it->second : nullptr;
     }
 
-    const std::unordered_map<const VariableDeclaration*, std::string>& getInferredAutoTypes() const {
+    const std::unordered_map<const VariableDeclaration*, Type>& getInferredAutoTypes() const {
         return inferredAutoTypes_;
     }
 
@@ -657,8 +684,11 @@ private:
                     Type inferred = inferTypeT(var->getInitializer());
 
                     if (declaredType == "ozgaruvchan" || declaredType == "o'zgaruvchan" || declaredType == "ozgarmas") {
-                        if (inferred.isAniq()) {
-                            inferredAutoTypes_[var] = inferred.aniqNomi();
+                        // Phase 2.2: butun strukturali Type ni saqlash (oddiy
+                        // string emas) — LSP kompozit turlarni parchalab
+                        // ko'rsatadi va Polimorf vs Aniq ni ajratadi.
+                        if (inferred.isAniq() || inferred.isPolimorf()) {
+                            inferredAutoTypes_[var] = inferred;
                         }
                         declaredType = inferred.toLegacyString(); // Type inference
                     } else if (inferred.isAniq() && declaredType != "noma'lum" &&

@@ -43,6 +43,8 @@ bool typecheckSnippet(const std::string& source,
 // Run TypeChecker and collect inferred types of all auto-style declarations
 // (`o'zgaruvchan x = ...`) keyed by the variable's declared name. Useful for
 // pinning that inferType() actually computes a Known type for a given form.
+// Phase 2.2: getInferredAutoTypes() now returns map<VarDecl*, Type>; we
+// flatten via aniqNomi() so the helper's contract stays the same.
 std::unordered_map<std::string, std::string> inferAutoTypes(const std::string& source) {
     uzpp::Lexer lexer(source);
     const auto tokens = lexer.tokenize();
@@ -51,6 +53,24 @@ std::unordered_map<std::string, std::string> inferAutoTypes(const std::string& s
     uzpp::TypeChecker checker;
     checker.check(program.get());
     std::unordered_map<std::string, std::string> out;
+    for (const auto& [var, type] : checker.getInferredAutoTypes()) {
+        out[var->getName()] = type.aniqNomi();
+    }
+    return out;
+}
+
+// Phase 2.2 helper: collect inferred Types directly (preserves kind info).
+// Returns map keyed on variable name → const Type pointer (lives in
+// checker's internal map for the lifetime of the call). For smoke pins
+// that need to assert kind / structure, not just the flattened string.
+std::unordered_map<std::string, uzpp::Type> inferAutoTypeKinds(const std::string& source) {
+    uzpp::Lexer lexer(source);
+    const auto tokens = lexer.tokenize();
+    uzpp::Parser parser(tokens);
+    const auto program = parser.parse();
+    uzpp::TypeChecker checker;
+    checker.check(program.get());
+    std::unordered_map<std::string, uzpp::Type> out;
     for (const auto& [var, type] : checker.getInferredAutoTypes()) {
         out[var->getName()] = type;
     }
@@ -630,6 +650,49 @@ int main() {
             auto m = inferAutoTypes(
                 "butun asosiy() { butun y = 0; o'zgaruvchan v = ++y; qaytarish 0; }");
             assert(m["v"] == "butun");
+        }
+    }
+
+    {
+        // Phase 2.2: getInferredAutoType exposes structured Type, not just a
+        // string. LSP can now distinguish Aniq vs Polimorf vs Korsatkich/
+        // Havola/Shablon. Pin the surface so a regression that flattens back
+        // to strings surfaces immediately.
+
+        // Aniq("butun") — simple known type.
+        {
+            auto k = inferAutoTypeKinds(
+                "butun asosiy() { o'zgaruvchan x = 5; qaytarish 0; }");
+            assert(k.contains("x"));
+            assert(k["x"].isAniq());
+            assert(k["x"].aniqNomi() == "butun");
+            assert(k["x"].tasvirla() == "butun");
+        }
+        // Korsatkich(Aniq("butun")) — composite, addressable.
+        {
+            auto k = inferAutoTypeKinds(
+                "butun asosiy() { butun y = 5; o'zgaruvchan p = &y; qaytarish 0; }");
+            assert(k.contains("p"));
+            assert(k["p"].isAniq());                  // recursive — base is Aniq
+            assert(k["p"].kind == uzpp::Type::Kind::Korsatkich);
+            assert(k["p"].aniqNomi() == "butun*");
+            assert(k["p"].tasvirla() == "butun* (ko'rsatkich)");
+        }
+        // Polimorf("T") — template parameter; stored separately from Aniq.
+        // Body inference inside a template function preserves Polimorf so
+        // LSP hover can annotate it.
+        {
+            auto k = inferAutoTypeKinds(
+                "shablon<tur T> funksiya f(T x) -> T {"
+                "  o'zgaruvchan q = x;"
+                "  qaytarish q;"
+                "}"
+                "butun asosiy() { qaytarish 0; }");
+            assert(k.contains("q"));
+            assert(k["q"].isPolimorf());
+            assert(!k["q"].isAniq());
+            assert(k["q"].aniqNomi() == "T");
+            assert(k["q"].tasvirla() == "T (shablon parametri)");
         }
     }
 

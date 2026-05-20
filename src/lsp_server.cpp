@@ -715,12 +715,15 @@ std::string LspServer::getInferredTypeAtPosition(const std::string& uri, int tar
         TypeChecker checker;
         checker.check(program.get());
 
-        // Iterate all inferred auto types, find the one at cursor position
+        // Iterate all inferred auto types, find the one at cursor position.
+        // Phase 2.2: structured Type is stored; use tasvirla() for hover —
+        // it adds kind annotations ("(shablon parametri)", "(ko'rsatkich)") so
+        // the user sees not just the name but the structural category.
         for (const auto& [var, type] : checker.getInferredAutoTypes()) {
             const auto& tok = var->getDeclToken();
             // LSP uses 0-based lines, uzpp tokens use 1-based
             if (tok.line - 1 == targetLine && var->getName() == word) {
-                return type;
+                return type.tasvirla();
             }
         }
         return "";
@@ -1112,8 +1115,13 @@ std::string LspServer::computeInlayHints(const std::string& text) {
     bool first = true;
 
     auto emit = [&](const VariableDeclaration* var) {
-        const std::string* inferred = checker.getInferredAutoType(var);
-        if (inferred == nullptr || inferred->empty() || *inferred == "noma'lum") return;
+        const Type* inferred = checker.getInferredAutoType(var);
+        if (inferred == nullptr || inferred->isNomalum()) return;
+        // For inlay hints we want the bare name (no "(ko'rsatkich)" suffix —
+        // the editor shows hints inline, where annotations would crowd the
+        // line). The structural annotation lives in hover instead.
+        const std::string label = inferred->aniqNomi();
+        if (label.empty() || label == "noma'lum") return;
         const Token& tok = var->getDeclToken();
         if (tok.line <= 0) return;
         const int line = tok.line - 1;
@@ -1122,7 +1130,7 @@ std::string LspServer::computeInlayHints(const std::string& text) {
         if (!first) ss << ",";
         ss << "{\"position\":{\"line\":" << line
            << ",\"character\":" << character
-           << "},\"label\":\": " << *inferred
+           << "},\"label\":\": " << label
            << "\",\"kind\":1,\"paddingLeft\":false}";
         first = false;
     };
