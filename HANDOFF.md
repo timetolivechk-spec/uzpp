@@ -4,7 +4,7 @@
 > for deeper context (file map, hard-won gotchas, architecture).
 > `NEXT_SESSION_PLAN.md` has prioritised work suggestions.
 
-Last updated: end of session ending 2026-05-19 (matematika+sinov ports + hardening).
+Last updated: end of session ending 2026-05-20 (TypeChecker Phase 1 + Phase 2 complete; v2.2.0 cut).
 
 ---
 
@@ -13,39 +13,42 @@ Last updated: end of session ending 2026-05-19 (matematika+sinov ports + hardeni
 | Metric | Value |
 |---|---|
 | **Positive tests** | **74/74** (Windows MSYS2 g++ 15.2) |
-| **Negative tests** | **51/51** caught (0 pending — all four ex-pending tests now caught) |
-| **frontend_smoke** | green |
+| **Negative tests** | **51/51** caught (0 pending) |
+| **frontend_smoke** | **26 pins** (was 5 — TypeChecker rebuild added 21) |
 | **Linux CI** | 72/74 (`test_deducing_this` + `test_coyield` in `.ci_skip_linux` — Ubuntu toolchain gates, not uz++ bugs) |
-| **Stdlib ports** | 5 self-hosted (`matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`) — remaining stdlib still C++ |
-| **Latest pushed tag** | `v2.1.9` (Marketplace + GitHub Release live) |
-| **Local commits ahead of `origin/main`** | **18** (none pushed this session) |
+| **Stdlib ports** | 5 self-hosted (`matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`) |
+| **TypeChecker** | tri-state `Type` + composites (Korsatkich/Havola/Shablon) + Polimorf for template func+class bodies + composite-template detection |
+| **Latest tag** | `v2.2.0` (this session — Marketplace + Release live after push) |
+| **Working tree** | clean |
 
-### Local commits queue (in order, oldest → newest)
+### What landed this session — TypeChecker rebuild (Phase 1 + Phase 2)
+
+Tri-state Type with composite kinds — diagnostics only fire on Aniq × Aniq;
+Nomalum and Polimorf are silently accepted. This eliminated the entire class
+of spurious "Funksiya 'butun' qaytarishi kerak, lekin 'T' qaytarilmoqda"
+warnings inside template bodies.
 
 ```
-5db4656  docs: refresh NEXT_SESSION_PLAN with current state (post v2.1.9)
-0f34978  feat(stdlib): port xatoliklar to uz++
-9915302  feat(lsp): AST-aware definition / references / rename
-f4ca448  feat(lang): namespace aliases + trailing requires on classes (stub — fixed in 848cc20)
-0a0c6e2  docs(plan): mark (A)/(B)/(C) done
-848cc20  fix(lang+lsp): namespace alias actually emits + drop bogus class trailing-requires
-ecfbe02  docs(plan): record (G)/(H)/namespace-alias-fix done
-0f41b92  feat(stdlib): port vaqt to uz++
-2eeb3aa  feat(lang+lsp): module partitions + type-mismatch code actions
-55bc932  feat(formatter): preserve inline comments inside statements
-7d903f3  ci(release): slim MinGW zip from 255 MB to ~150 MB
-51beb10  fix(cli): catch missing asosiy() with a helpful message, not 'ld returned 5'
-b765e16  docs(plan): record stress-test findings + 71/71 + 29/29 negative
-6e1a881  feat(lexer): accept Unicode (UTF-8) identifiers — Cyrillic, CJK, Arabic
-8cf7f45  test(negative): +18 regression-pins (lexer/parser/type/cpp_level)
-01eb21e  docs(plan): mark hardening progress (72/72 + 47/47)
-43789ac  docs: HANDOFF.md — self-handoff brief for the next session
+Phase 1.1  fe7c889  Type {Aniq, Nomalum, Polimorf}
+Phase 1.2  ed07e08  8 diagnostic call sites → .isAniq()
+Phase 1.3  7e5ab4e  7 expression kinds covered (&x, *p, !b, ternary, ...)
+           364ce63  o'zbeklashtirish: Known→Aniq, Unknown→Nomalum, etc.
+Phase 1.4  0ab1d49  Polimorf for template-function bodies
+           3825c79  parser: drop 'satr' from uzbekKeywords
+Phase 2.1  b0dbeee  Type composite kinds (Korsatkich/Havola/Shablon) + stable intern
+           2b3709a  lsp: semantic tokens highlight class/struct members
+Phase 2.2  a542b0c  Type through LSP boundary (getInferredAutoType → const Type*)
+Phase 2.3  61ea1bf  Polimorf for template-class bodies
+Phase 2.4  caa68c1  Composite types containing template params → Polimorf
+```
+
+Earlier session work (matematika+sinov+hardening) preserved:
+
+```
 6792652  feat(stdlib+lang): matematika+sinov ports, compiler hardening, 4 pending → caught
 ```
 
-### Working tree
-
-Clean — no uncommitted changes.
+After this session and the v2.2.0 cut: clean tree, both tags pushed.
 
 ---
 
@@ -209,7 +212,7 @@ cp stdlib/<name>.hpp /c/Users/MSN/uz++/.claude/worktrees/musing-satoshi-e40317/s
 
 ## 4. Don't break these (rules for next agent)
 
-The full memory file has 16 hard-won gotchas. The ones most likely to bite
+The full memory file has 18 hard-won gotchas. The ones most likely to bite
 this session:
 
 1. **Don't push or bump versions without explicit user OK.** User has said
@@ -226,8 +229,8 @@ this session:
 6. **Parser holds `const std::vector<Token>&` — keep tokens alive.**
    `Parser parser(lexer.tokenize())` is use-after-free. Always
    `const auto tokens = lexer.tokenize(); Parser parser(tokens);`.
-7. **Worktree has its own stdlib/.** `C:/Users/MSN/uz++/stdlib/` AND
-   `.../worktrees/musing-satoshi-e40317/stdlib/`. Sync when regenerating.
+7. **Worktree has its own stdlib/.** `C:/Users/MSN/uz++/stdlib/` AND each
+   `.claude/worktrees/<name>/stdlib/`. Sync when regenerating.
 8. **Disk-full → silent linker fail** (>95% on `C:`). `ld returned 1 exit
    status` with no real error text? Check `df -h /c` first.
 9. **Include guards in generated .hpp**: use `UZPP_GEN_<NAME>_HPP_`, NOT
@@ -242,11 +245,35 @@ this session:
     high bytes (>= 0x80) pass through verbatim as identifier characters
     (Unicode identifier support — `tests/test_unicode_identifiers.uzpp`).
 13. **`parseVariableDeclaration` rejects keyword-as-varname** but with an
-    allowlist `{asosiy, main, yangi, bosh, bekor}`. `yangi`/`bosh`/`bekor`
-    are alias keywords that the parser/codegen handle via lookahead or
-    `localScopes_`. If you extend `isUzbekKeyword`, check whether any new
-    entry should be added to the allowlist (`tests/frontend_smoke.cpp:493`
-    pins `butun yangi = 5` as valid).
+    allowlist `{asosiy, main, yangi, bosh, bekor}` (+ `satr` is dropped from
+    `isUzbekKeyword` in 3825c79). `yangi`/`bosh`/`bekor` are alias keywords
+    that the parser/codegen handle via lookahead or `localScopes_`. If you
+    extend `isUzbekKeyword`, check whether any new entry should be added
+    to the allowlist (`tests/frontend_smoke.cpp` pins `butun yangi = 5`).
+14. **Type's tri-state contract: never emit diagnostics on Nomalum / Polimorf
+    operands.** This is the whole point of Phase 1. If you add a new
+    diagnostic that compares types, gate it on `.isAniq()` for BOTH sides.
+    A regression here is invisible (false-silent or false-noisy) until a
+    user complains — frontend_smoke has pins to catch the obvious cases.
+15. **Type::intern uses `unordered_map<string, Type>`** (NOT `std::vector`).
+    The original draft used a vector and was use-after-free across
+    reallocations. Don't "optimise" back to vector — the structural key
+    (`<kind-char>:<aniqNomi()>`) keeps the map size proportional to unique
+    type count, not call count.
+16. **`looksLikeTemplateParam` + `typeMentionsTemplateParam` heuristics
+    define what counts as a template type parameter.** They look at: starts
+    with uppercase, all alnum/underscore, not in `classes_`/`typeAliases_`/
+    `wellKnownTypes`. If you add a new stdlib type that starts with a single
+    uppercase letter (e.g. `T`, `K`), add it to `wellKnownTypes` in
+    `looksLikeTemplateParam` to prevent false-positive Polimorf.
+17. **`inferredAutoTypes_` stores `Type` (not `std::string`).** Phase 2.2
+    changed the storage type and the public API. If you write code that
+    expects `getInferredAutoType(var)` to return `const std::string*`,
+    you're on the old code path — update to `const Type*` and call
+    `.aniqNomi()` (bare name) or `.tasvirla()` (annotated for hover).
+18. **VSCode extension version policy** — only bump when user explicitly says.
+    Marketplace v2.2.0 (this session) supersedes v2.1.9. Don't republish
+    .vsix manually unless the workflow `publish-extension` failed.
 
 ---
 
@@ -254,17 +281,17 @@ this session:
 
 In rough priority order. The user picks; don't preempt.
 
-### 🟢 Tiny wins (each: half-session or less)
+### 🟢 Done this session — won't bite again
 
-- **`asosiy()` return-type check** — done in 6792652 (parsing-time error).
-- **Compile-time div-by-zero** — done in 6792652 (`10 / 0` flagged in TypeChecker).
-- **Empty `moslash { }`** — done in 6792652 (parse error).
-- **Keyword-as-varname guard** — done in 6792652 with allowlist (gotcha #13).
-- **`mantiq`/`mantiqiy` warning cleanup** — already done in 848cc20.
-- **Module partitions** — already done in 2eeb3aa.
-- **LSP hover with inferred types** — done in 6792652.
+- **Phase 1.1–1.4** — tri-state Type, diagnostic gates, expression coverage,
+  Polimorf for template functions (5 commits).
+- **Phase 2.1–2.4** — composite Type with stable intern, Type at LSP
+  boundary, Polimorf for template classes, composite-template detection
+  (4 commits).
+- **LSP semantic tokens for class members** — 2b3709a.
+- **Parser: drop `satr` from uzbekKeywords** — 3825c79.
 
-### 🟡 Stdlib ports — repeat the matn/xatoliklar/vaqt pattern
+### 🟡 Stdlib ports — repeat the matn/xatoliklar/vaqt/matematika/sinov pattern
 
 Order of difficulty (LOC of original .hpp):
 
@@ -287,25 +314,37 @@ Order of difficulty (LOC of original .hpp):
 - **Type-mismatch quick-fix smarter** (currently in 2eeb3aa it offers
   `statik_otkazish<T>(...)` — make it actually parse the expression and
   emit a clean wrap).
-- ~~**Hover with inferred types** for `o'zgaruvchan` vars.~~ Done in 6792652.
-- **Semantic-tokens for class members** (currently only top-level names).
+- **Semantic-tokens for inherited members** — currently only direct class
+  members (own fields + methods); ancestor classes' members aren't
+  highlighted yet.
+- **Hover for non-auto variables** — currently only `o'zgaruvchan x = ...`
+  triggers inferred-type hover. Hovering over a parameter or a regular
+  declared variable doesn't show the structural Type yet.
 
-### 🔴 Multi-session work (don't pick without runway)
+### 🔴 Multi-session work (the next big architectural levers)
 
-- **TypeChecker honesty** — templates body types, partial spec, SFINAE,
-  `if constexpr` dead-branch. Architectural. 3+ sessions.
+- **Phase 3 — Overload resolution.** `functionReturns_` is currently a
+  flat `map<string, string>` (last declaration wins). Convert to
+  `map<string, vector<Overload>>`, add ranking (exact > promotion >
+  standard conversion > user-defined > variadic), diagnose ambiguous
+  and no-viable. 2–3 sessions. Most visible user-facing improvement
+  after Phase 2.
+- **Phase 4 — Lazy template instantiation.** Store template bodies as
+  AST; at the first call site with concrete args, substitute and
+  type-check the instantiated body. This is what gives real
+  template-body checking without unification/SFINAE machinery. 3
+  sessions.
+- **Phase 5 — Constant evaluation.** Constexpr expression evaluator;
+  `agar sobit_ifoda` actually eliminates dead branches; honest
+  `statik_tasdiqlash`. 2–3 sessions.
 - **Variadic templates with `std::format_string<Args...>`** — small parser
   change, big test surface. Defer until someone needs it.
 
-### Push & release (only on user request)
+### Push & release
 
-- 18 local commits accumulated. A push + tag `v2.2.0` would ship:
-  - 5 self-hosted stdlib modules (`matn`, `xatoliklar`, `vaqt`, `matematika`,
-    `sinov`), AST-aware LSP, namespace aliases (working), module partitions,
-    inline-comments formatter, Unicode identifiers, code actions expansion,
-    asosiy() check, keyword-as-varname guard, compile-time div-by-zero,
-    LSP hover with inferred types, MinGW slim-down.
-- See section 3b for the exact procedure.
+- Already shipped this session: tag `v2.2.0`, Marketplace `uzpp.uzpp@2.2.0`,
+  GitHub Release with installer + MinGW bundle + Linux/macOS tarballs.
+- Next release procedure unchanged — see section 3b.
 
 ---
 

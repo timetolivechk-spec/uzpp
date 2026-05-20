@@ -2,7 +2,7 @@
 
 > Контекстный документ для передачи состояния проекта между сессиями AI.
 > Обновлять после каждой завершённой крупной задачи.
-> Последнее обновление: май 2026
+> Последнее обновление: 2026-05-20 (release v2.2.0).
 
 ---
 
@@ -14,7 +14,9 @@
 
 **Репозиторий:** https://github.com/timetolivechk-spec/uzpp
 
-**VSCode Marketplace:** `uzpp.uzpp` v2.1.3 — опубликовано (2026-05-12, vsce 2.32.0).
+**VSCode Marketplace:** `uzpp.uzpp` v2.2.0 — опубликовано (2026-05-20).
+
+**Текущее состояние:** 74/74 положительных тестов + 51/51 негативных + 26 frontend smoke пинов. 5 self-hosted stdlib модулей (`matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`). TypeChecker полностью переработан — Phase 1+2 (Aniq/Nomalum/Polimorf, композитные типы Korsatkich/Havola/Shablon, Polimorf для шаблонных функций и классов, composite-template detection).
 
 ---
 

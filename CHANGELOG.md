@@ -2,6 +2,66 @@
 
 Barcha muhim o'zgarishlar shu yerda hujjatlashtiriladi.
 
+## [2.2.0] — 2026-05-20
+
+### Til (uz++ kompilyatori) — hardening pass
+- **`asosiy()` qaytaruvchi turi `butun` bo'lishi shart.** Boshqacha yozilsa
+  (masalan `matn asosiy()`) parsing bosqichida xatolik beriladi. Avval g++
+  jim drop qilardi.
+- **Kalit so'zlar o'zgaruvchi nomi sifatida taqiqlandi.** `butun agar = 5`
+  endi xatolik. Allowlist (`asosiy`, `main`, `yangi`, `bosh`, `bekor`, `satr`) —
+  bular alias keywords bo'lib parser lookahead yoki codegen `localScopes_`
+  orqali soyalanishi mumkin.
+- **Bo'sh `moslash { }`** (case'siz match) — parsing xatolik.
+- **`10 / 0`** kompilyatsiya vaqtida aniqlanadi.
+
+### Type checker — to'liq qayta qurilish
+
+Phase 1: uch-holatli tur tasviri (Aniq / Nomalum / Polimorf).
+- Diagnostika faqat `Aniq × Aniq` solishtirishda chiqariladi — `Nomalum × _`
+  va `Polimorf × _` jim qabul qilinadi. Bu shablon tanasidagi noto'g'ri
+  ogohlantirishlarni butunlay yo'q qildi.
+- Shablon funksiyalari (`shablon<tur T> funksiya f(T x) -> butun { qaytarish x; }`)
+  endi noto'g'ri return-type ogohlantirishini bermaydi.
+- Ifoda turlari to'liq qoplandi: `&x`, `*p`, `!b`, `-x`, `++y`, ternar (`?:`),
+  assignment-as-expression, await/throw/lambda/pipeline.
+
+Phase 2: strukturali Type — `Korsatkich(base)`, `Havola(base, konst)`,
+`Shablon(nomi, args)` endi to'g'ridan-to'g'ri tasvirlanadi (avval string edi).
+- Rekursiv `isAniq()`: `Korsatkich(Polimorf("T"))` → yolg'on, ya'ni
+  `butun**` yoki `vektor<T>*` ham diagnostikada to'g'ri jim qoladi.
+- Strukturali interning: bir xil tur har gal bir xil ko'rsatkichga ega bo'ladi.
+- LSP `getInferredAutoType` endi strukturali `Type*` qaytaradi. Hover
+  natijasida tip turi (`butun* (ko'rsatkich)`, `T (shablon parametri)`)
+  qo'shilgan.
+- Shablon sinflari ham qamrab olindi (Phase 2.3) — metodlardagi T-li
+  ifodalar Polimorf sifatida xulosalanadi.
+- Kompozit shablon argumentlari (`vektor<T>`, `Foo<T>*`) ham to'g'ri
+  Polimorf belgilanadi (Phase 2.4).
+
+### Stdlib — yangi self-hosted modullar
+- **`stdlib/matematika.uzpp`** (~500 LOC) — trigonometriya, statistika,
+  vektor (2D/3D), matritsa amallari, tasodifiy sonlar.
+- **`stdlib/sinov.uzpp`** (~130 LOC) — test freymvorki: `TestTo'plami`,
+  `tasdiqlash()`, `tasdiqlash_teng()`.
+- Endi 5 ta self-hosted modul: `matn`, `xatoliklar`, `vaqt`, `matematika`,
+  `sinov`.
+
+### LSP yaxshilanishi
+- **Sinf a'zolari uchun semantic tokens** — sinf maydonlari va metodlari
+  endi editorda alohida rangda ajratiladi.
+- **Hover endi xulosalangan turni ko'rsatadi** `o'zgaruvchan x = ...` uchun,
+  shu jumladan kompozit turlar (`butun*`, `vektor<butun>`).
+
+### Imlo / standartlashtirish
+- `OqimPool` → `OqimHovuz`, `OqimPooliPrivate` → `OqimHovuzIchki`.
+- `bolish` → `bo'lish`, `fibonacci` → `fibonachchi`, `togri` → `to'g'ri`.
+
+### Testlar
+- Ijobiy: 72 → **74** (matematika + sinov include testlari).
+- Salbiy: 47 → **51** (4 ta pending → caught).
+- Frontend smoke: 5 → **26** pinlari (Type kind, kompozit, Polimorf, ...).
+
 ## [2.1.8] — 2026-05-18
 
 ### Til (uz++ kompilyatori)

@@ -1,5 +1,66 @@
 # Changelog
 
+## [2.2.0] — 2026-05-20
+
+### Til imkoniyatlari (uz++ kompilyatori)
+- **Yangi self-hosted stdlib modullari:** `matematika` (~500 LOC,
+  trigonometriya, statistika, vektor, matritsa) va `sinov` (~130 LOC,
+  test freymvorki). Endi 5 ta self-hosted modul: `matn`, `xatoliklar`,
+  `vaqt`, `matematika`, `sinov`.
+- **Asosiy hardening:**
+  - `asosiy()` qaytaruvchi turi `butun` bo'lishi shart — `matn asosiy()` parsing
+    bosqichida xatolik beradi (avval g++ jim drop qilardi).
+  - Kalit so'z o'zgaruvchi nomi sifatida ishlatish taqiqlandi (`butun agar = 5`
+    xatolik). Allowlist: `asosiy`, `main`, `yangi`, `bosh`, `bekor`, `satr` —
+    bular alias keywords, lookahead/codegen orqali soyalanadi.
+  - Bo'sh `moslash { }` (match without cases) parsing xatolik.
+  - Kompilyatsiya vaqtida nolga bo'lish aniqlanadi (`10 / 0`).
+
+### Type checker — to'liq qayta qurilish (Phase 1 + Phase 2)
+- **Uch-holatli tur tasviri** — strukturali Type:
+  - `Aniq(nomi)` — aniq belgilangan tur
+  - `Nomalum` — biz xulosa qila olmadik (diagnostikada jim qabul qilinadi)
+  - `Polimorf(param)` — shablon parametri (T, U), instansiyalashda aniq bo'ladi
+- **Kompozit turlar** (Phase 2.1): `Korsatkich`, `Havola`, `Shablon` — endi
+  `butun*`, `const matn&`, `vektor<T>` to'g'ridan-to'g'ri tasvirlanadi (avval
+  shunchaki string edi).
+- **Honestlik:** diagnostika faqat `Aniq × Aniq` solishtirishda chiqariladi.
+  Nomalum yoki Polimorf operandlar — jim qabul qilinadi. Bu shablon tanasidagi
+  noto'g'ri ogohlantirishlarni butunlay yo'q qildi.
+- **Shablon tanasi to'g'ri tekshiriladi:**
+  - Funksiyalar (Phase 1.4): `shablon<tur T> funksiya f(T x) -> butun { qaytarish x; }`
+    endi noto'g'ri "Funksiya 'butun' qaytarishi kerak, lekin 'T' qaytarilmoqda"
+    ogohlantirishini bermaydi.
+  - Sinflar (Phase 2.3): bir xil narsa shablon sinflarning metodlari uchun.
+  - Kompozit shablon argumentlari (Phase 2.4): `vektor<T>`, `Foo<T>*` — to'g'ri
+    Polimorf sifatida belgilanadi.
+- **Kompozit Type LSP orqali ko'rinadi** (Phase 2.2): `getInferredAutoType`
+  endi strukturali `Type*` qaytaradi. Hover ifoda turi bilan birga uning
+  tabiatini ham ko'rsatadi: `butun* (ko'rsatkich)`, `T (shablon parametri)`.
+- **Ifoda turlari kengaytirildi** (Phase 1.3): `&x`, `*p`, `!b`, `-x`, `++y`,
+  ternar (`?:`) promotion bilan, assignment-as-expression, await/throw/lambda/
+  pipeline endi mos ravishda xulosalanadi yoki halol Nomalum sifatida
+  belgilanadi.
+
+### LSP yaxshilanishi
+- **Sinf a'zolari uchun semantic tokens** — sinf maydonlari va metodlari endi
+  editorda alohida rangda ajratiladi (avval oddiy matn edi).
+- **Hover endi xulosalangan turni ko'rsatadi** `o'zgaruvchan x = ...` uchun.
+- **F5 PowerShell launchda** — har doim `&` prefiks bilan komanda chaqirildi.
+
+### Standartlashtirish va imlo
+- `OqimPool` → `OqimHovuz` (5 ta `.uzpp` test + runtime + type_checker).
+- `OqimPooliPrivate` → `OqimHovuzIchki`.
+- `bolish` → `bo'lish`, `fibonacci` → `fibonachchi`, `togri` → `to'g'ri`,
+  `ozgaruvchan` → `o'zgaruvchan`.
+
+### Testlar
+| Avval | Hozir |
+|---|---|
+| 72 ijobiy, 47 salbiy, 4 pending | **74 ijobiy, 51 salbiy, 0 pending** |
+| 3 self-hosted stdlib | **5 self-hosted** (`matn`, `xatoliklar`, `vaqt`, `matematika`, `sinov`) |
+| 5 frontend smoke pinlari | **26 frontend smoke pinlari** |
+
 ## [2.1.9] — 2026-05-18
 
 ### Welcome ekrani / o'rnatish
