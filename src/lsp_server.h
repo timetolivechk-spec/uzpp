@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace uzpp {
@@ -39,6 +40,8 @@ private:
     std::string getWordAtPosition(const std::string& text, int line, int character);
     // Returns inferred type for an o'zgaruvchan/o'zgarmas variable at the given position
     std::string getInferredTypeAtPosition(const std::string& uri, int line, int character, const std::string& word);
+    // Walk AST to collect class/struct member names for semantic tokens
+    void collectClassMembers(const ASTNode* node, std::unordered_set<std::string>& members);
     std::string buildDocumentSymbols(const Program* program);
     std::string findDefinition(const std::string& uri, const std::string& word);
     // AST-based definition lookup — walks the full AST (not just top-level)

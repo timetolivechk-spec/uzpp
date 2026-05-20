@@ -728,6 +728,78 @@ std::string LspServer::getInferredTypeAtPosition(const std::string& uri, int tar
 }
 
 // Implementation of missing LSP methods
+// Walk the AST and collect all class/struct member names (fields and methods)
+// for semantic-token highlighting.
+void LspServer::collectClassMembers(const ASTNode* node, std::unordered_set<std::string>& members) {
+    if (!node) return;
+
+    if (node->getType() == ASTNodeType::ClassDeclaration) {
+        auto cls = static_cast<const ClassDeclaration*>(node);
+        // Collect field names
+        for (const auto& member : cls->getMembers()) {
+            members.insert(member.name);
+        }
+        // Collect method names and recurse into method bodies
+        for (const auto& method : cls->getMethods()) {
+            members.insert(method->name);
+            if (method->body) {
+                collectClassMembers(method->body.get(), members);
+            }
+        }
+        return;
+    }
+
+    // Recurse: Program, Block
+    if (node->getType() == ASTNodeType::Program) {
+        const auto& children = static_cast<const Program*>(node)->getChildren();
+        for (const auto& child : children) {
+            collectClassMembers(child.get(), members);
+        }
+        return;
+    }
+    if (node->getType() == ASTNodeType::Block) {
+        const auto& stmts = static_cast<const Block*>(node)->getStatements();
+        for (const auto& stmt : stmts) {
+            collectClassMembers(stmt.get(), members);
+        }
+        return;
+    }
+
+    // Function body
+    if (auto* fn = dynamic_cast<const FunctionDeclaration*>(node)) {
+        if (fn->getBody()) collectClassMembers(fn->getBody(), members);
+        return;
+    }
+
+    // If statement
+    if (auto* ifs = dynamic_cast<const IfStatement*>(node)) {
+        if (ifs->getThenBranch()) collectClassMembers(ifs->getThenBranch(), members);
+        if (ifs->getElseBranch()) collectClassMembers(ifs->getElseBranch(), members);
+        return;
+    }
+
+    // While loop
+    if (auto* ws = dynamic_cast<const WhileStatement*>(node)) {
+        if (ws->getBody()) collectClassMembers(ws->getBody(), members);
+        return;
+    }
+
+    // For loop
+    if (auto* fs = dynamic_cast<const ForStatement*>(node)) {
+        if (fs->getBody()) collectClassMembers(fs->getBody(), members);
+        return;
+    }
+
+    // Try-catch
+    if (auto* ts = dynamic_cast<const TryStatement*>(node)) {
+        if (ts->getTryBlock()) collectClassMembers(ts->getTryBlock(), members);
+        for (const auto& c : ts->getCatchClauses()) {
+            if (c->block) collectClassMembers(c->block.get(), members);
+        }
+        return;
+    }
+}
+
 // Encode the document as LSP semantic tokens: array of 5-tuples
 // [deltaLine, deltaStartChar, length, tokenType, tokenModifier].
 // We classify every identifier-like word against three sets:
@@ -773,6 +845,16 @@ std::string LspServer::buildSemanticTokens(const std::string& text) {
         {"map",2},{"filter",2},{"filtr",2},{"xaritalash",2},{"yigish",2},
         {"yangi_yagona",2},{"yangi_umumiy",2},
     };
+
+    // Pre-scan: collect class/struct member names for semantic highlighting
+    std::unordered_set<std::string> classMembers;
+    try {
+        Lexer lexer(text);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto program = parser.parse();
+        collectClassMembers(program.get(), classMembers);
+    } catch (...) {}
 
     std::ostringstream out;
     int prevLine = 0, prevStart = 0;
@@ -838,6 +920,15 @@ std::string LspServer::buildSemanticTokens(const std::string& text) {
                     int dStart = (dLine == 0) ? col - prevStart : col;
                     if (!first) out << ",";
                     out << dLine << "," << dStart << "," << len << "," << it->second << ",0";
+                    first = false;
+                    prevLine = lineNum; prevStart = col;
+                } else if (classMembers.contains(word)) {
+                    int col = static_cast<int>(s - lineStart);
+                    int len = static_cast<int>(i - s);
+                    int dLine = lineNum - prevLine;
+                    int dStart = (dLine == 0) ? col - prevStart : col;
+                    if (!first) out << ",";
+                    out << dLine << "," << dStart << "," << len << ",3,0";
                     first = false;
                     prevLine = lineNum; prevStart = col;
                 }
