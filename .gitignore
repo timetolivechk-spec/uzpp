@@ -53,3 +53,9 @@ Testing/                            # CTest artifacts
 # Claude AI настройки
 .claude/
 build_release/
+
+# AI session-continuity context (local-only mirror of ~/.claude/.../memory/project_uzpp.md).
+# Don't commit — public repo doesn't need internal handoff docs.
+/HANDOFF.md
+/NEXT_SESSION_PLAN.md
+/UZPP_CONTEXT.md
