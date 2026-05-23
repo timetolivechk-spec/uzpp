@@ -59,3 +59,6 @@ build_release/
 /HANDOFF.md
 /NEXT_SESSION_PLAN.md
 /UZPP_CONTEXT.md
+
+# Git Credential Manager local cache
+gcm.cache/

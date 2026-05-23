@@ -2,6 +2,44 @@
 
 Barcha muhim o'zgarishlar shu yerda hujjatlashtiriladi.
 
+## [v2.3.0] — 2026-05-22
+
+### Phase 2.5 — Sinonim tozalash ✅
+- `mantiq` → faqat `mantiqiy` (bool)
+- `ikkilangan` → faqat `haqiqiy` (double)
+- `ozgaruvchan` → faqat `o'zgaruvchan` (auto)
+- `ozgarmas` → faqat `o'zgarmas` (const)
+- Prinsip: **bitta C++ tushunchasi = bitta uz++ so'zi**
+
+### Phase 3 — Overload Resolution ✅
+- `functionReturns_`/`functionParams_`/`functionMinArgs_` (map<string,X>)
+  o'rniga `functionOverloads_: map<string, vector<FunctionOverload>>`
+- `resolveOverload()`: aniq moslik (0), promotion (1), konversiya (2),
+  Nomalum jarimasi (5)
+- Diagnostika: "chaqiruv noaniq" va "argument soni mos emas"
+- Backward-compatible `getFunctionReturns()`/`getFunctionParams()` API
+
+### Stage 1 — LSP yaxshilanishlari ✅
+- **Hover**: `butun y = 5` kabi aniq turlar uchun ham ishlaydi
+  (avval faqat `o'zgaruvchan x = ...` uchun ishlardi)
+- **Semantic tokens**: meros qilib olingan klass a'zolari ham ajratib
+  ko'rsatiladi (`collectClassMembers` → `collectClassWithInheritance`)
+
+### Phase 4 — Lazy Template Instantiation ✅
+- Shablon funksiyalari chaqirilganda, konkret argument turlari bilan
+  qayta tekshiriladi (Polimorf rejim o'chiriladi)
+- `currentTemplateSubsts_` — shablon parametrlarini konkret turlarga
+  almashtirish xaritasi
+- Variadic shablonlar (`Args...`) to'g'ri ishlaydi
+- `instantiatedTemplates_` — takroriy tekshirishni oldini oladi
+
+### Phase 5 — Constant Evaluation ✅
+- `ConstValue` va `evaluateConstExpr()` — kompilyatsiya vaqtidagi
+  ifodalarni hisoblash (integer, float, boolean, string, unary, binary)
+- `agar sobit_ifoda` — shartni hisoblab, o'lik tarmoqni o'chiradi
+- `statik_tasdiqlash` — compile-time shart tekshiruvi (baholay olmasa,
+  g++ ga o'tkazib yuboradi)
+
 ## [2.2.1] — 2026-05-20
 
 ### Loyiha tuzilmasi va hujjatlar tartibi
