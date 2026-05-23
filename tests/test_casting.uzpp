@@ -26,7 +26,7 @@ butun asosiy() {
     yozish << "7 / 2.0 = " << f << qator_oxiri;  // 3.5
 
     // dinamik_otkazish: pastga yo'naltirilgan (downcast)
-    aqlli_korsatkich<Hayvon> h = yangi_umumiy<Mushuk>();
+    umumiy_korsatkich<Hayvon> h = yangi_umumiy<Mushuk>();
     Mushuk* m = dinamik_otkazish<Mushuk*>(h.get());
     agar (m != nullptr) {
         m->sakra();

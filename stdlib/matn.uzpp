@@ -254,7 +254,7 @@ funksiya qatorlarga_ajratish(o'zgarmas matn& s) -> vektor<matn> {
             }
             natija.push_back(joriy);
             joriy.clear();
-        } aks {
+        } aks_holda {
             joriy = joriy + matn(1, c);
         }
     }

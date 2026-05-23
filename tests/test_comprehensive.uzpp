@@ -5,7 +5,7 @@ ulash "uzpp_runtime.hpp"
 // === 1. Lambda va yopiq o'zgaruvchilar ===
 butun lambdaTesti() {
     butun boshlangich = 10;
-    ozgaruvchan qoshuvchi = [boshlangich](butun x) -> butun {
+    o'zgaruvchan qoshuvchi = [boshlangich](butun x) -> butun {
         qaytarish x + boshlangich;
     };
     qaytarish qoshuvchi(5);  // 15

@@ -15,7 +15,7 @@ uzpp::Natija<haqiqiy> xavfsiz_bo'lish(haqiqiy a, haqiqiy b) {
 
 uzpp::Natija<haqiqiy> xavfsiz_ildiz(haqiqiy x) {
     agar (x < 0.0) {
-        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz olish mumkin emas!");
+        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz kiritish mumkin emas!");
     }
     qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(uzpp::Matematika::ildiz(x));
 }
@@ -66,7 +66,7 @@ butun asosiy() {
     yozish << qator_oxiri << "=== Matndan songa o'tkazish ===" << qator_oxiri;
     vektor<matn> testlar = {"42", "3.14", "abc", "100", ""};
     uchun (matn s : testlar) {
-        ozgaruvchan r = xavfsiz_yashirin(s);
+        o'zgaruvchan r = xavfsiz_yashirin(s);
         yozish << "\"" << s << "\": ";
         agar (r.yaroqliMi()) {
             yozish << r.qiymat() << qator_oxiri;
@@ -80,7 +80,7 @@ butun asosiy() {
     vektor<butun> izlash = {10, 7, 20, 3};
 
     uchun (butun q : izlash) {
-        ozgaruvchan t = topish(sonlar, q);
+        o'zgaruvchan t = topish(sonlar, q);
         yozish << "topish(" << q << "): ";
         agar (t.borMi()) {
             yozish << "topildi — " << t.qiymat() << qator_oxiri;

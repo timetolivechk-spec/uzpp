@@ -3,15 +3,15 @@
 ulash "vaqt.uzpp"
 
 butun asosiy() {
-    // hozir() — joriy vaqtni olish
-    ozgaruvchan hoz = uzpp::Vaqt::hozir();
+    // hozir() — joriy vaqtni kiritish
+    o'zgaruvchan hoz = uzpp::Vaqt::hozir();
     yozish << "Yil: " << hoz.yil << qator_oxiri;
     yozish << "Oy: " << hoz.oy << qator_oxiri;
     yozish << "Kun: " << hoz.kun << qator_oxiri;
     yozish << "Soat: " << hoz.soat << qator_oxiri;
     yozish << "Mintaqa: " << hoz.mintaqa << qator_oxiri;
 
-    // formatlash — vaqtni matn ko'rinishida chiqarish
+    // formatlash — vaqtni matn ko'rinishida yozish
     matn formatlangan = hoz.formatlash("%Y-%m-%d %H:%M:%S");
     yozish << "Formatlangan: " << formatlangan << qator_oxiri;
 

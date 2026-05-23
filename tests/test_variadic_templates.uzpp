@@ -2,7 +2,7 @@
 
 ulash "uzpp_runtime.hpp"
 
-// Argumentlar sonini olish — sizeof...(args)
+// Argumentlar sonini kiritish — sizeof...(args)
 shablon <tur... Args>
 butun argumentlar_soni(Args... args) {
     qaytarish sizeof...(args);

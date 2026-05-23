@@ -4,11 +4,11 @@ ulash "uzpp_runtime.hpp"
 ulash "matematika.hpp"
 
 butun ogir_hisoblash(butun boshlanish, butun oxir) {
-    butun yigindi = 0;
+    butun yig'indi = 0;
     uchun (butun i = boshlanish; i <= oxir; i++) {
-        yigindi = yigindi + (i * i);
+        yig'indi = yig'indi + (i * i);
     }
-    qaytarish yigindi;
+    qaytarish yig'indi;
 }
 
 butun asosiy() {

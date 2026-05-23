@@ -40,8 +40,8 @@ tuzilma SanaVaVaqt {
 };
 
 funksiya hozir() -> SanaVaVaqt {
-    ozgaruvchan t = std::time(nullptr);
-    ozgaruvchan local_tm = *std::localtime(&t);
+    o'zgaruvchan t = std::time(nullptr);
+    o'zgaruvchan local_tm = *std::localtime(&t);
 
     SanaVaVaqt natija;
     natija.yil = local_tm.tm_year + 1900;
@@ -59,8 +59,8 @@ funksiya mintaqaVaqti(o'zgarmas matn& mintaqa_nomi) -> SanaVaVaqt {
     putenv(const_cast<belgi*>(envStr.c_str()));
     tzset();
 
-    ozgaruvchan t = std::time(nullptr);
-    ozgaruvchan local_tm = *std::localtime(&t);
+    o'zgaruvchan t = std::time(nullptr);
+    o'zgaruvchan local_tm = *std::localtime(&t);
     SanaVaVaqt natija;
     natija.yil = local_tm.tm_year + 1900;
     natija.oy = local_tm.tm_mon + 1;

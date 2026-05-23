@@ -4,7 +4,7 @@ ulash "uzpp_runtime.hpp"
 
 // === 1) TUR ALIASI ===
 tur Raqam = butun;
-tur Kasr64 = ikkilangan;
+tur Kasr64 = haqiqiy;
 
 // === 2) PIPELINE OPERATORI |> ===
 butun ikkilashtir(butun n) { qaytarish n * 2; }

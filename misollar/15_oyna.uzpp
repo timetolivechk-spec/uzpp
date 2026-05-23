@@ -1,5 +1,8 @@
 // CopperSpice GUI misoli — uz++ da
-// Kompilyatsiya: uzpp qurish 08_oyna.uzpp --bare -I C:/CopperSpice/include -I C:/CopperSpice/include/QtCore -I C:/CopperSpice/include/QtGui -l C:/CopperSpice/lib/libCsCore2.1.dll.a -l C:/CopperSpice/lib/libCsGui2.1.dll.a
+// Muhim: CopperSpice MINGW64 bilan qurilgan, PATH da C:/msys64/mingw64/bin bo'lishi kerak!
+// Qurish va ishga tushirish:
+//   $env:PATH = "C:/msys64/mingw64/bin;C:/CopperSpice/bin;$env:PATH"
+//   uzpp ishga-tushirish misollar/15_oyna.uzpp --bare -I C:/CopperSpice/include -I C:/CopperSpice/include/QtCore -I C:/CopperSpice/include/QtGui -l C:/CopperSpice/lib/libCsCore2.1.dll.a -l C:/CopperSpice/lib/libCsGui2.1.dll.a
 
 ulash <QtGui/QApplication>
 ulash <QtGui/QWidget>

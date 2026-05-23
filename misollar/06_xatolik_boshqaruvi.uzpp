@@ -12,7 +12,7 @@ uzpp::Natija<haqiqiy> xavfsiz_bo'lish(haqiqiy a, haqiqiy b) {
 
 uzpp::Natija<haqiqiy> xavfsiz_ildiz(haqiqiy x) {
     agar (x < 0.0) {
-        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz olish mumkin emas!");
+        qaytarish uzpp::Natija<haqiqiy>::xato("Manfiy sondan ildiz kiritish mumkin emas!");
     }
     qaytarish uzpp::Natija<haqiqiy>::muvaffaqiyat(uzpp::Matematika::ildiz(x));
 }

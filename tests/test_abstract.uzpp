@@ -60,8 +60,8 @@ butun asosiy() {
     shaklChiqar(t);
 
     // Aqlli ko'rsatkich orqali polimorfizm
-    aqlli_korsatkich<Shakl> s1 = yangi_umumiy<Doira>(3.0);
-    aqlli_korsatkich<Shakl> s2 = yangi_umumiy<Turtburchak>(2.0, 5.0);
+    umumiy_korsatkich<Shakl> s1 = yangi_umumiy<Doira>(3.0);
+    umumiy_korsatkich<Shakl> s2 = yangi_umumiy<Turtburchak>(2.0, 5.0);
 
     s1->chiqar();
     s2->chiqar();

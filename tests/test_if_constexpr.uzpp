@@ -4,7 +4,7 @@ shablon <tur T>
 butun hajmiOlish() {
     agar sobit_ifoda (sizeof(T) > 4) {
         qaytarish 1;
-    } aks {
+    } aks_holda {
         qaytarish 0;
     }
 }

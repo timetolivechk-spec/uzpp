@@ -56,7 +56,7 @@ matn bahola(butun ball) {
 butun asosiy() {
     yozish << "=== Hafta kunlari ===" << qator_oxiri;
     uchun (butun k = 1; k <= 7; k++) {
-        matn dam = dam_kuni(k) ? " [dam olish]" : "";
+        matn dam = dam_kuni(k) ? " [dam kiritish]" : "";
         yozish << k << ". " << kun_nomi(k) << dam << qator_oxiri;
     }
 
