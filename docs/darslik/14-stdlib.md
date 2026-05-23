@@ -1,0 +1,370 @@
+# 14 · Standart kutubxona {#14-stdlib}
+
+## uz++ standart kutubxonasi haqida
+
+uz++ — bu C++23 ustida qurilgan. Demak, sizning ixtiyoringizda C++
+ning **butun** standart kutubxonasi bor. Bundan tashqari, uz++ o'zining
+o'zbek tilidagi modullarini taqdim etadi.
+
+Bu bobda biz uz++ standart kutubxonasini va shu bilan birga foydali
+C++ modullarini umumiy ko'rib chiqamiz. Bu — ma'lumot bobi. Har bir
+moduldan amalda foydalanganingiz sayin chuqurroq tushunasiz.
+
+### uz++ standart modullari
+
+Hozirda o'zbeklashtirilgan modullar:
+
+| Modul | Tavsif |
+|-------|--------|
+| `matn` | Matn (string) bilan ishlash |
+| `xatoliklar` | Xatolik turlari va istisnolar |
+| `vaqt` | Vaqt va sana bilan ishlash |
+| `matematika` | Matematik funksiyalar |
+| `sinov` | Test framework |
+| `jurnal` | Logging (jurnallash) |
+
+---
+
+## `matematika` moduli
+
+Matematik funksiyalar va konstantalar.
+
+```cpp
+#include <matematika>
+
+// Konstantalar
+yozish << matematika::PI                // 3.14159...
+yozish << matematika::E                 // 2.71828...
+
+// Asosiy funksiyalar
+yozish << matematika::ildiz(16)         // 4 (kvadrat ildiz)
+yozish << matematika::quvvat(2, 10)     // 1024 (2^10)
+yozish << matematika::log(100)          // 4.605... (tabiiy logarifm)
+yozish << matematika::log10(1000)       // 3 (o'nlik logarifm)
+
+// Trigonometriya
+yozish << matematika::sinus(matematika::PI / 2)   // 1.0
+yozish << matematika::kosinus(0)        // 1.0
+yozish << matematika::tangens(matematika::PI / 4) // 1.0
+
+// Yaxlitlash
+yozish << matematika::yaxlitla(3.7)     // 4
+yozish << matematika::pastga(3.7)       // 3
+yozish << matematika::yuqoriga(3.2)     // 4
+
+// Min/max/abs
+yozish << matematika::min(3, 7)         // 3
+yozish << matematika::maks(3, 7)        // 7
+yozish << matematika::absolyut(-5)      // 5
+```
+
+---
+
+## `vaqt` moduli
+
+Vaqt va sana bilan ishlash.
+
+```cpp
+#include <vaqt>
+
+// Joriy vaqt
+avto hozir = vaqt::hozir()
+yozish << "Hozir: " << hozir.formatla("%Y-%m-%d %H:%M:%S")
+
+// Vaqt elementlari
+yozish << "Yil: " << hozir.yil()
+yozish << "Oy: " << hozir.oy()
+yozish << "Kun: " << hozir.kun()
+yozish << "Soat: " << hozir.soat()
+
+// Sana yaratish
+avto sana = vaqt::Sana(2026, 5, 21)
+
+// Farq
+avto kelajak = sana.qoshish_kun(30)
+yozish << kelajak.formatla("%Y-%m-%d")
+
+// Vaqt o'lchash
+avto bosh = vaqt::hozir()
+// ... biron ish ...
+avto oxir = vaqt::hozir()
+yozish << "O'tdi: " << (oxir - bosh).millisekund() << " ms"
+```
+
+---
+
+## `sinov` moduli — Test framework
+
+uz++ da test yozish uchun sodda framework.
+
+```cpp
+#include <sinov>
+
+@sinov("yigindi to'g'ri ishlashi kerak") {
+    sinov::tekshirish(yigindi(2, 3) == 5)
+    sinov::tekshirish(yigindi(0, 0) == 0)
+    sinov::tekshirish(yigindi(-1, 1) == 0)
+}
+
+@sinov("matn uzunligini olish") {
+    sinov::tenglik(matn("salom").length(), 5)
+    sinov::tenglik(matn("").length(), 0)
+}
+```
+
+Testlarni ishga tushirish:
+
+```bash
+uzpp sinov
+```
+
+Natija:
+```
+[OK] yigindi to'g'ri ishlashi kerak
+[OK] matn uzunligini olish
+2/2 muvaffaqiyatli
+```
+
+---
+
+## `jurnal` moduli — Logging
+
+Dasturning ishini kuzatish uchun:
+
+```cpp
+#include <jurnal>
+
+butun asosiy() {
+    jurnal::malumot("Dastur boshlandi")
+    jurnal::ogohlantirish("Bu — ogohlantirish")
+    jurnal::xato("Xato yuz berdi")
+
+    butun yosh = 25
+    jurnal::malumot("Foydalanuvchi yoshi: ", yosh)
+}
+```
+
+**Natija:**
+
+```
+[2026-05-21 14:30:00] [MA'LUMOT] Dastur boshlandi
+[2026-05-21 14:30:00] [OGOHLANTIRISH] Bu — ogohlantirish
+[2026-05-21 14:30:00] [XATO] Xato yuz berdi
+[2026-05-21 14:30:00] [MA'LUMOT] Foydalanuvchi yoshi: 25
+```
+
+Faylga yozish ham mumkin:
+
+```cpp
+jurnal::fayl("app.log")
+jurnal::malumot("Bu fayl ga yoziladi")
+```
+
+---
+
+## `kripto` moduli — Kriptografiya
+
+Hash, shifrlash, parol himoyasi:
+
+```cpp
+#include <kripto>
+
+// MD5 / SHA-256 hash
+matn s = "Salom, dunyo!"
+yozish << kripto::md5(s)
+yozish << kripto::sha256(s)
+
+// Parolni xavfsiz saqlash
+matn parol = "qiyin_parol_123"
+matn hash = kripto::parol_hash(parol)
+
+// Tekshirish
+mantiq togri = kripto::parol_tekshirish("qiyin_parol_123", hash)
+```
+
+---
+
+## `tarmoq` moduli — Tarmoq aloqalari
+
+HTTP so'rovlari, socket'lar:
+
+```cpp
+#include <tarmoq>
+
+// HTTP GET so'rov
+avto javob = tarmoq::http_oluvchi("https://api.example.com/data")
+
+agar (javob.holat == 200) {
+    yozish << javob.matn
+}
+
+// POST so'rov
+tarmoq::http_yuborish("https://api.example.com/post", json_data)
+```
+
+---
+
+## `suniy_intellekt` moduli — AI integratsiyasi
+
+LLM va AI bilan ishlash:
+
+```cpp
+#include <suniy_intellekt>
+
+avto suxbat = suniy_intellekt::Suhbat()
+suxbat.tizim("Sen foydali yordamchisan")
+
+matn savol = "C++ da const ko'rsatkich qanday yaratiladi?"
+matn javob = suxbat.sorash(savol)
+yozish << javob
+```
+
+---
+
+## C++ standart kutubxonasidan foydalanish
+
+Eng ko'p ishlatiladigan modullar:
+
+### `<algorithm>` — Algoritmlar
+
+```cpp
+#include <algorithm>
+vektor<butun> v = {3, 1, 4, 1, 5, 9, 2, 6}
+
+std::sort(v.begin(), v.end())
+std::reverse(v.begin(), v.end())
+butun joy = std::count(v.begin(), v.end(), 1)
+avto max_el = std::max_element(v.begin(), v.end())
+
+// Filtering
+vektor<butun> juft_lar
+std::copy_if(v.begin(), v.end(), std::back_inserter(juft_lar),
+    [](butun x) { qaytarish x % 2 == 0 })
+
+// Map (transform)
+vektor<butun> kvadratlar
+std::transform(v.begin(), v.end(), std::back_inserter(kvadratlar),
+    [](butun x) { qaytarish x * x })
+```
+
+### `<random>` — Tasodifiy sonlar
+
+```cpp
+#include <random>
+
+std::random_device rd
+std::mt19937 gen(rd())
+std::uniform_int_distribution<> dist(1, 100)
+
+butun tasodif = dist(gen)              // 1 dan 100 gacha
+```
+
+### `<chrono>` — Vaqt o'lchovi
+
+```cpp
+#include <chrono>
+
+avto bosh = std::chrono::high_resolution_clock::now()
+// ... ish ...
+avto oxir = std::chrono::high_resolution_clock::now()
+
+avto millisekund = std::chrono::duration_cast<std::chrono::milliseconds>(oxir - bosh)
+yozish << millisekund.count() << " ms"
+```
+
+### `<regex>` — Regular expressions
+
+```cpp
+#include <regex>
+
+matn s = "Telefon: +998901234567, email: aziza@example.com"
+std::regex telefon(R"(\+\d{12})")
+std::smatch m
+
+agar (std::regex_search(s, m, telefon)) {
+    yozish << "Telefon topildi: " << m[0]
+}
+```
+
+### `<thread>`, `<mutex>`, `<future>` — Ko'p oqimlilik
+
+13-bobda ko'rdik.
+
+### `<filesystem>` — Fayl tizimi
+
+12-bobda ko'rdik.
+
+---
+
+## Amaliy misol: Vaqt hisoblagichi bilan testlash
+
+```cpp
+#include <vaqt>
+#include <jurnal>
+#include <vector>
+#include <algorithm>
+
+butun asosiy() {
+    jurnal::malumot("Test boshlandi")
+
+    avto bosh = vaqt::hozir()
+
+    // Vazifa: 1 million tasodifiy son yaratib, tartiblash
+    vektor<butun> v(1000000)
+    std::generate(v.begin(), v.end(), []() { qaytarish std::rand() })
+
+    std::sort(v.begin(), v.end())
+
+    avto oxir = vaqt::hozir()
+    avto ms = (oxir - bosh).millisekund()
+
+    jurnal::malumot("Tartiblash vaqti: ", ms, " ms")
+
+    qaytarish 0
+}
+```
+
+Bu dasturning chiqishi:
+
+```
+[2026-05-21 14:30:00] [MA'LUMOT] Test boshlandi
+[2026-05-21 14:30:01] [MA'LUMOT] Tartiblash vaqti: 234 ms
+```
+
+---
+
+## Bob bo'yicha mashqlar
+
+### Mashq 1: Tasodifiy son (oson)
+
+`<random>` orqali 1 dan 100 gacha tasodifiy 10 ta son chiqaring.
+
+### Mashq 2: Vaqt o'lchash (oson)
+
+`<chrono>` orqali Fibonachchi 30-elementni hisoblash vaqtini o'lchang.
+
+### Mashq 3: Regex (o'rta)
+
+Berilgan matnda barcha email manzillarni toping.
+
+### Mashq 4: Log fayl tahlili (o'rtacha)
+
+Log fayldan barcha xato satrlarini boshqa faylga yozing.
+
+### Mashq 5: Test framework (qiyinroq)
+
+O'zingizning matematik funksiyalaringiz uchun testlar yozing.
+
+---
+
+## Xulosa
+
+- uz++ standart kutubxonasi (`matn`, `vaqt`, `matematika`, `sinov`,
+  `jurnal`, `kripto`, `tarmoq`, `suniy_intellekt`) — o'zbek tilida.
+- C++ standart kutubxonasi (`<algorithm>`, `<random>`, `<regex>`,
+  `<chrono>`, `<thread>`, `<filesystem>`) — to'liq mavjud.
+- Har bir modul aniq vazifa uchun mo'ljallangan.
+- Yangi modullar doim qo'shilmoqda.
+
+Keyingi bobda biz **GUI dasturlash** ni o'rganamiz — grafik
+interfeysli dasturlar yaratish.

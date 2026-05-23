@@ -1,0 +1,15 @@
+---
+title: "UZ++ Dasturlash Tili"
+subtitle: "To'liq o'quv qo'llanma"
+author: "Shaxriyor Malikov"
+date: "2026-yil, may"
+lang: uz
+toc: true
+toc-depth: 2
+numbersections: true
+papersize: a4
+fontsize: 11pt
+documentclass: book
+colorlinks: true
+linkcolor: blue
+urlcolor: blue

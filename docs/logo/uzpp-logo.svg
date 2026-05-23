@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" width="720" height="200" role="img" aria-label="uz++ — o'zbek tilida zamonaviy dasturlash">
+  <title>uz++ logo</title>
+  <desc>uz++ programming language — horizontal wordmark with Uzbek girih star</desc>
+
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F4B83E"/>
+      <stop offset="55%"  stop-color="#E8A917"/>
+      <stop offset="100%" stop-color="#B8780C"/>
+    </linearGradient>
+    <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#FFCE5A"/>
+      <stop offset="100%" stop-color="#D89510"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 8-pointed Uzbek girih star (two overlapping squares) -->
+  <g transform="translate(100 100)">
+    <!-- Outer rotated square (45°) — back layer -->
+    <rect x="-58" y="-58" width="116" height="116" fill="url(#goldGrad)" transform="rotate(45)"/>
+    <!-- Inner straight square — front layer (slightly brighter to give dimension) -->
+    <rect x="-58" y="-58" width="116" height="116" fill="url(#goldGrad2)" opacity="0.92"/>
+    <!-- Central inset — subtle inner star for depth -->
+    <g opacity="0.18">
+      <rect x="-28" y="-28" width="56" height="56" fill="#2c3e50" transform="rotate(22.5)"/>
+    </g>
+    <!-- Outline -->
+    <rect x="-58" y="-58" width="116" height="116" fill="none" stroke="#8B5A05" stroke-width="1.5" transform="rotate(45)" opacity="0.4"/>
+  </g>
+
+  <!-- Wordmark "uz++" -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="900">
+    <text x="210" y="138" font-size="118" fill="#2c3e50" letter-spacing="-3">uz</text>
+    <text x="338" y="100" font-size="78"  fill="#3498db" letter-spacing="-2">++</text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="212" y="172" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="#7f8c8d" font-style="italic" letter-spacing="0.4">
+    o'zbek tilida zamonaviy dasturlash
+  </text>
+</svg>

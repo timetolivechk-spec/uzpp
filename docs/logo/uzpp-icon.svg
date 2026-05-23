@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="uz++ icon">
+  <title>uz++ icon</title>
+  <desc>uz++ programming language — square app icon</desc>
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#34495e"/>
+      <stop offset="100%" stop-color="#1f2c38"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#FFCE5A"/>
+      <stop offset="55%"  stop-color="#E8A917"/>
+      <stop offset="100%" stop-color="#B8780C"/>
+    </linearGradient>
+    <linearGradient id="goldGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#FFE08A"/>
+      <stop offset="100%" stop-color="#D89510"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="256" height="256" rx="52" ry="52" fill="url(#bgGrad)"/>
+
+  <!-- Subtle inner border for premium feel -->
+  <rect x="3" y="3" width="250" height="250" rx="49" ry="49" fill="none" stroke="#3498db" stroke-width="1" opacity="0.25"/>
+
+  <!-- 8-pointed girih star -->
+  <g transform="translate(128 100)">
+    <rect x="-44" y="-44" width="88" height="88" fill="url(#goldGrad)" transform="rotate(45)"/>
+    <rect x="-44" y="-44" width="88" height="88" fill="url(#goldGrad2)" opacity="0.92"/>
+    <g opacity="0.20">
+      <rect x="-22" y="-22" width="44" height="44" fill="#1f2c38" transform="rotate(22.5)"/>
+    </g>
+    <rect x="-44" y="-44" width="88" height="88" fill="none" stroke="#8B5A05" stroke-width="1.2" transform="rotate(45)" opacity="0.5"/>
+  </g>
+
+  <!-- "uz++" wordmark -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-weight="900">
+    <text x="128" y="218" text-anchor="middle" font-size="64" fill="#ffffff" letter-spacing="-1.5">
+      uz<tspan font-size="44" fill="#3498db" dy="-6">++</tspan>
+    </text>
+  </g>
+</svg>

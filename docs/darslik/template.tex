@@ -1,0 +1,244 @@
+% UZ++ darslik — XeLaTeX shabloni (Unicode-aware)
+\documentclass[a4paper,11pt,twoside,openright]{book}
+
+% === Unicode fontspec (XeLaTeX/LuaLaTeX talab qiladi) ===
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX}
+% TeX Gyre — MiKTeX bilan birga keladi, Lotin yangilangan kengligi to'liq
+\setmainfont{TeX Gyre Pagella}
+\setsansfont{TeX Gyre Heros}
+% Monoshrift — TeX Gyre Cursor (TeX'ning standart Courier-ga o'xshashi)
+\setmonofont{TeX Gyre Cursor}[Scale=0.88]
+
+% Fallback shriftlar: Segoe UI Symbol (matematik belgilar, ko'rsatkichlar)
+% va Segoe UI Emoji (galochkalar, etc.) — TeX Gyre'da yo'q belgilar uchun
+\newfontfamily{\symbolfont}{Segoe UI Symbol}
+\newfontfamily{\emojifont}{Segoe UI Emoji}
+
+\usepackage{newunicodechar}
+% Yuqori indekslar (TeX Gyre Pagella'da yo'q)
+\newunicodechar{⁰}{{\symbolfont ⁰}}
+\newunicodechar{¹}{{\symbolfont ¹}}
+\newunicodechar{²}{{\symbolfont ²}}
+\newunicodechar{³}{{\symbolfont ³}}
+\newunicodechar{⁴}{{\symbolfont ⁴}}
+\newunicodechar{⁵}{{\symbolfont ⁵}}
+\newunicodechar{⁶}{{\symbolfont ⁶}}
+\newunicodechar{⁷}{{\symbolfont ⁷}}
+\newunicodechar{⁸}{{\symbolfont ⁸}}
+\newunicodechar{⁹}{{\symbolfont ⁹}}
+% Pastki indekslar (TeX Gyre Cursor'da ham yo'q)
+\newunicodechar{₀}{{\symbolfont ₀}}
+\newunicodechar{₁}{{\symbolfont ₁}}
+\newunicodechar{₂}{{\symbolfont ₂}}
+\newunicodechar{₃}{{\symbolfont ₃}}
+\newunicodechar{₄}{{\symbolfont ₄}}
+\newunicodechar{₅}{{\symbolfont ₅}}
+\newunicodechar{₆}{{\symbolfont ₆}}
+\newunicodechar{₇}{{\symbolfont ₇}}
+\newunicodechar{₈}{{\symbolfont ₈}}
+\newunicodechar{₉}{{\symbolfont ₉}}
+% Emoji
+\newunicodechar{✅}{{\emojifont ✅}}
+\newunicodechar{❌}{{\emojifont ❌}}
+\newunicodechar{✔}{{\emojifont ✔}}
+\newunicodechar{✗}{{\emojifont ✗}}
+\newunicodechar{⚠}{{\emojifont ⚠}}
+% Box-drawing belgilari (ASCII-diagrammalar uchun)
+\newunicodechar{─}{{\symbolfont ─}}
+\newunicodechar{│}{{\symbolfont │}}
+\newunicodechar{┌}{{\symbolfont ┌}}
+\newunicodechar{┐}{{\symbolfont ┐}}
+\newunicodechar{└}{{\symbolfont └}}
+\newunicodechar{┘}{{\symbolfont ┘}}
+\newunicodechar{├}{{\symbolfont ├}}
+\newunicodechar{┤}{{\symbolfont ┤}}
+\newunicodechar{┬}{{\symbolfont ┬}}
+\newunicodechar{┴}{{\symbolfont ┴}}
+\newunicodechar{┼}{{\symbolfont ┼}}
+\newunicodechar{═}{{\symbolfont ═}}
+\newunicodechar{║}{{\symbolfont ║}}
+\newunicodechar{╔}{{\symbolfont ╔}}
+\newunicodechar{╗}{{\symbolfont ╗}}
+\newunicodechar{╚}{{\symbolfont ╚}}
+\newunicodechar{╝}{{\symbolfont ╝}}
+\newunicodechar{▼}{{\symbolfont ▼}}
+\newunicodechar{▲}{{\symbolfont ▲}}
+\newunicodechar{◄}{{\symbolfont ◄}}
+\newunicodechar{►}{{\symbolfont ►}}
+
+% === Geometriya ===
+\usepackage[lmargin=2.4cm,rmargin=2.4cm,tmargin=2.6cm,bmargin=2.6cm]{geometry}
+
+% Microtype o'chirildi — u newunicodechar bilan birga ishlamaydi
+% (\MT@is@char extra brace xatosi). Yo'qotish minimal.
+
+% === Sarlavha va kolontitullar ===
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\itshape\nouppercase{\leftmark}}
+\fancyhead[RO]{\small\itshape\nouppercase{\rightmark}}
+\fancyfoot[LE,RO]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[LE,RO]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+% === Ranglar ===
+\usepackage{xcolor}
+\definecolor{linkcolor}{RGB}{0,70,140}
+\definecolor{titlecolor}{RGB}{44,62,80}
+\definecolor{rulecolor}{RGB}{52,152,219}
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{52,152,219}
+
+% === Giperhavolalar ===
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
+    citecolor=linkcolor,
+    pdftitle={UZ++ Dasturlash Tili — To'liq o'quv qo'llanma},
+    pdfauthor={Shaxriyor Malikov},
+    pdflang={uz}
+}
+
+% === Kod bloklari (Pandoc fancyvrb) ===
+\usepackage{fancyvrb}
+\usepackage{fvextra}
+\fvset{
+  breaklines=true,
+  breakanywhere=true,
+  fontsize=\small,
+  frame=leftline,
+  framerule=2pt,
+  rulecolor=\color{codeframe},
+  framesep=8pt,
+  numbersep=8pt,
+  baselinestretch=1.1
+}
+
+% Pandoc highlighting (--highlight-style=tango bilan birga ishlaydi)
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+
+% Inline kod uchun fon
+\usepackage{soul}
+\sethlcolor{codebg}
+% Pandoc'ning \passthrough buyrug'i inline kodni o'rab oladi
+\providecommand{\passthrough}[1]{\texttt{#1}}
+
+% === Jadvallar ===
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{calc}
+
+% Pandoc kod bloklarini jadval ichida ishlatishi uchun
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% === Ro'yxatlar ===
+\usepackage{enumitem}
+\setlist{itemsep=2pt, parsep=2pt}
+
+% === Sarlavhalar (chapter/section) ===
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\sffamily\huge\bfseries\color{titlecolor}}
+  {\filright\Large\color{rulecolor}\MakeUppercase{\chaptertitlename}\ \thechapter}
+  {1ex}
+  {\vspace{0.5ex}\titlerule[1pt]\vspace{1ex}\filright}
+  [\vspace{0.5ex}{\color{rulecolor}\titlerule[0.5pt]}]
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{titlecolor}}
+  {\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\sffamily\large\bfseries\color{titlecolor}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\sffamily\normalsize\bfseries\color{titlecolor}}
+  {\thesubsubsection}{1em}{}
+
+\renewcommand{\chaptername}{Bob}
+\renewcommand{\contentsname}{Mundarija}
+\renewcommand{\listfigurename}{Rasmlar ro'yxati}
+\renewcommand{\listtablename}{Jadvallar ro'yxati}
+\renewcommand{\appendixname}{Ilova}
+\renewcommand{\indexname}{Indeks}
+\renewcommand{\figurename}{Rasm}
+\renewcommand{\tablename}{Jadval}
+\renewcommand{\partname}{Qism}
+
+% === Iqtibos (blockquote) — eslatma uchun ===
+\usepackage[most]{tcolorbox}
+\newtcolorbox{quotebox}{
+  enhanced, breakable, sharp corners,
+  colback=blue!4, colframe=rulecolor,
+  boxrule=0pt, leftrule=3pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  before skip=8pt, after skip=8pt
+}
+% Pandoc'ning quote uchun standart muhitini almashtirish
+\renewenvironment{quote}{\begin{quotebox}\itshape}{\end{quotebox}}
+
+% === Paragraf oraliqlari ===
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+% === Mundarija oraliqlari ===
+\usepackage{tocloft}
+\setlength{\cftbeforechapskip}{0.5em}
+\renewcommand{\cftchapfont}{\normalfont\bfseries\sffamily}
+\renewcommand{\cftchappagefont}{\normalfont\bfseries}
+
+\begin{document}
+
+\frontmatter
+
+% === Sarlavha sahifasi ===
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+
+{\fontsize{96pt}{96pt}\selectfont\bfseries\sffamily\color{titlecolor}UZ\raisebox{-0.15em}{++}\par}
+
+\vspace{1cm}
+
+{\Huge\bfseries\sffamily\color{titlecolor}DASTURLASH TILI\par}
+
+\vspace{0.5cm}
+{\color{rulecolor}\rule{0.5\textwidth}{1pt}\par}
+\vspace{1.5cm}
+
+{\LARGE\itshape To'liq o'quv qo'llanma\par}
+
+\vspace{4cm}
+
+{\Large\sffamily Shaxriyor Malikov\par}
+\vspace{0.5cm}
+{\large 2026-yil, may\par}
+
+\vfill
+
+{\small\itshape v2.2.1 versiyasi asosida tayyorlangan\par}
+{\small MIT litsenziyasi}
+\end{titlepage}
+
+% === Mundarija ===
+\setcounter{tocdepth}{1}
+\tableofcontents
+\cleardoublepage
+
+\mainmatter
+
+$body$
+
+\end{document}
