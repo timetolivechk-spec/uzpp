@@ -1,0 +1,16 @@
+ulash "uzpp_runtime.hpp"
+
+tuzilma Nuqta {
+    butun x;
+    butun y;
+};
+
+butun asosiy() {
+    Nuqta n;
+    n.x = 10;
+    n.y = 20;
+    Nuqta* p = &n;
+    yozish << "(*p).x = " << (*p).x << qator_oxiri;
+    yozish << "(*p).y = " << (*p).y << qator_oxiri;
+    qaytarish 0;
+}

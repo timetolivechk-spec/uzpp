@@ -406,11 +406,11 @@ std::string LspServer::buildCompletions() {
         {"ushlash",     14, "Xatolik holati (catch)"},
         {"irgitish",    14, "Istisno yaratish (throw)"},
         {"belgi",       14, "Belgi turi (char)"},
-        {"bekor",       14, "Qaytish turi yo'q (void)"},
+        {"bosh",        14, "Qaytish turi yo'q (void)"},
         {"agar",        14, "Shartli operator (if)"},
-        {"aks",         14, "Aks holat (else)"},
+        {"aks_holda",   14, "Aks holat (else)"},
         {"uchun",       14, "Takrorlash (for)"},
-        {"gacha",       14, "Gacha takrorlash (while)"},
+        {"toki",        14, "Takrorlash sharti (while)"},
         {"qaytarish",   14, "Qaytarish (return)"},
         {"ko'chirish",  3,  "Xotira egaligini ko'chirish (std::move)"},
         {"moslash",     14, "Andozaga moslash (match)"},
@@ -715,51 +715,105 @@ std::string LspServer::getInferredTypeAtPosition(const std::string& uri, int tar
         TypeChecker checker;
         checker.check(program.get());
 
-        // Iterate all inferred auto types, find the one at cursor position.
-        // Phase 2.2: structured Type is stored; use tasvirla() for hover —
-        // it adds kind annotations ("(shablon parametri)", "(ko'rsatkich)") so
-        // the user sees not just the name but the structural category.
+        // 1. Auto-tur xulosalari: `o'zgaruvchan x = ...`
         for (const auto& [var, type] : checker.getInferredAutoTypes()) {
             const auto& tok = var->getDeclToken();
-            // LSP uses 0-based lines, uzpp tokens use 1-based
             if (tok.line - 1 == targetLine && var->getName() == word) {
                 return type.tasvirla();
             }
         }
+
+        // 2. Qamrovlardan e'lon qilingan tur: `butun y = 5`, parametrlar,
+        //    va boshqa aniq turdagi o'zgaruvchilar.
+        //    Auto-turlar allaqachon yuqorida qamrab olingan — bu yerga
+        //    faqat aniq e'lon qilingan turlar tushadi.
+        std::string declaredType = checker.getDeclaredType(word);
+        if (!declaredType.empty() && declaredType != "funktsiya" &&
+            declaredType != "o'zgaruvchan" && declaredType != "ozgaruvchan" &&
+            declaredType != "noma'lum") {
+            // Tokenni qayta topish: AST bo'ylab yurib, shu nomli va
+            // shu qatordagi deklaratsiyani tekshiramiz — chunki TypeChecker
+            // skoplar bo'yicha qidiradi, lekin aynan shu pozitsiyadagi
+            // emas (boshqa qamrovdagi bir xil nomli o'zgaruvchi bo'lishi mumkin).
+            // Ammo LSP hover uchun bu yetarli — foydalanuvchi nom ustiga
+            // bossa, TypeChecker'dagi eng yaqin qamrovdagi turni ko'rsatamiz.
+            return declaredType;
+        }
+
         return "";
     } catch (...) { return ""; }
 }
 
 // Implementation of missing LSP methods
 // Walk the AST and collect all class/struct member names (fields and methods)
-// for semantic-token highlighting.
+// for semantic-token highlighting. Now also follows base classes recursively
+// so inherited members (fields + methods) are highlighted too.
+
+namespace {
+
+// Build a class registry from the AST: className → ClassDeclaration*
+void buildClassRegistry(const ASTNode* node,
+                        std::unordered_map<std::string, const ClassDeclaration*>& registry) {
+    if (!node) return;
+    if (node->getType() == ASTNodeType::ClassDeclaration) {
+        auto cls = static_cast<const ClassDeclaration*>(node);
+        registry[cls->getName()] = cls;
+    }
+    if (node->getType() == ASTNodeType::Program) {
+        for (const auto& child : static_cast<const Program*>(node)->getChildren())
+            buildClassRegistry(child.get(), registry);
+    }
+    if (node->getType() == ASTNodeType::Block) {
+        for (const auto& stmt : static_cast<const Block*>(node)->getStatements())
+            buildClassRegistry(stmt.get(), registry);
+    }
+}
+
+// Collect members from a single class and then recursively from its
+// base class (if declared in the same translation unit).
+void collectClassWithInheritance(const ClassDeclaration* cls,
+                                const std::unordered_map<std::string, const ClassDeclaration*>& registry,
+                                std::unordered_set<std::string>& members,
+                                std::unordered_set<const ClassDeclaration*>& visited) {
+    if (!cls || visited.contains(cls)) return;
+    visited.insert(cls);
+
+    for (const auto& member : cls->getMembers())
+        members.insert(member.name);
+    for (const auto& method : cls->getMethods())
+        members.insert(method->name);
+
+    // Recurse into base class if it's in our registry
+    const auto& baseName = cls->getBaseClass();
+    if (!baseName.empty()) {
+        auto it = registry.find(baseName);
+        if (it != registry.end())
+            collectClassWithInheritance(it->second, registry, members, visited);
+    }
+}
+
+} // anonymous namespace
+
 void LspServer::collectClassMembers(const ASTNode* node, std::unordered_set<std::string>& members) {
     if (!node) return;
 
-    if (node->getType() == ASTNodeType::ClassDeclaration) {
-        auto cls = static_cast<const ClassDeclaration*>(node);
-        // Collect field names
-        for (const auto& member : cls->getMembers()) {
-            members.insert(member.name);
-        }
-        // Collect method names and recurse into method bodies
-        for (const auto& method : cls->getMethods()) {
-            members.insert(method->name);
-            if (method->body) {
-                collectClassMembers(method->body.get(), members);
-            }
-        }
+    if (node->getType() == ASTNodeType::Program) {
+        // Build registry first, then walk each class with inheritance
+        std::unordered_map<std::string, const ClassDeclaration*> registry;
+        buildClassRegistry(node, registry);
+
+        std::unordered_set<const ClassDeclaration*> visited;
+        for (const auto& [name, cls] : registry)
+            collectClassWithInheritance(cls, registry, members, visited);
+
+        // Recurse into children (functions, etc.)
+        const auto& children = static_cast<const Program*>(node)->getChildren();
+        for (const auto& child : children)
+            collectClassMembers(child.get(), members);
         return;
     }
 
-    // Recurse: Program, Block
-    if (node->getType() == ASTNodeType::Program) {
-        const auto& children = static_cast<const Program*>(node)->getChildren();
-        for (const auto& child : children) {
-            collectClassMembers(child.get(), members);
-        }
-        return;
-    }
+    // For non-Program nodes, just recurse — class handling is done at Program level
     if (node->getType() == ASTNodeType::Block) {
         const auto& stmts = static_cast<const Block*>(node)->getStatements();
         for (const auto& stmt : stmts) {

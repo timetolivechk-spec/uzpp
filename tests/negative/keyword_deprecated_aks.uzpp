@@ -1,0 +1,10 @@
+// XATOLIK_KUTILMOQDA: 'aks' eskirgan sinonim — 'aks_holda' ishlating
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    agar (rost) {
+        qaytarish 1;
+    } aks {
+        qaytarish 0;
+    }
+}

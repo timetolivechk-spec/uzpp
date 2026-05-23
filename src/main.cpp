@@ -90,6 +90,7 @@ struct CliOptions {
     bool debug = false;
     bool showCpp = false;
     bool bare = false;
+    bool headerMode = false;  // library/header mode — skips main(), emits #pragma once
     std::vector<fs::path> extraIncludeDirs;
     std::vector<fs::path> extraLinkLibs;
 };
@@ -181,6 +182,11 @@ public:
         std::unique_ptr<Program> program;
         try {
             program = parser.parse();
+            if (parser.hasErrors()) {
+                // Phase 12: Parser xatoliklarni yig'di, lekin AST ham qaytardi.
+                // LSP uchun qisman AST foydali bo'lishi mumkin.
+                std::cerr << "[Parser " << parser.getErrors().size() << " ta xatolik to'pladi]\n";
+            }
         } catch (const std::exception& e) {
             std::cerr << "XATO: bog'liqlikni tahlil qilib bo'lmadi (" << entryFile.string()
                       << "): " << e.what() << '\n';
@@ -260,7 +266,7 @@ public:
         return true;
     }
 
-    bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false, bool bare = false) const {
+    bool transpile(const fs::path& inputFile, const fs::path& outputFile, bool isTestMode = false, bool isBenchMode = false, bool bare = false, bool headerMode = false) const {
         std::ifstream input(inputFile, std::ios::binary);
         if (!input.is_open()) {
             std::cerr << "XATO: Fayl topilmadi -> " << inputFile.string() << '\n';
@@ -276,6 +282,14 @@ public:
 
             Parser parser(tokens);
             const auto program = parser.parse();
+
+            // Phase 12: Agar parser xatolik to'plagan bo'lsa, AST qisman
+            // bo'lishi mumkin — davom etish xavfli, to'xtatamiz.
+            if (parser.hasErrors()) {
+                for (const auto& err : parser.getErrors())
+                    std::cerr << "XATO: " << err << "\n";
+                return false;
+            }
 
             // Empty / asosiy()-less programs used to fall through and link
             // with no entry point — producing a cryptic "ld returned 5 exit
@@ -296,6 +310,18 @@ public:
                     }
                 }
                 if (!hasAsosiy) {
+                    // Phase 17: Modul fayllari yoki header mode uchun
+                    // asosiy() talab qilinmaydi.
+                    bool skipMainCheck = headerMode;
+                    if (!skipMainCheck) {
+                        for (const auto& node : program->getChildren()) {
+                            if (node->getType() == ASTNodeType::ExportModuleStatement) {
+                                skipMainCheck = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!skipMainCheck) {
                     std::cerr << "\033[1m" << inputFile.filename().string() << ":\033[0m "
                               << "\033[1;31mxato\033[0m: `butun asosiy()` funksiyasi topilmadi. "
                               << "Har bir uz++ dasturi `asosiy` funksiyasidan boshlanadi.\n"
@@ -305,6 +331,7 @@ public:
                               << "        qaytarish 0;\n"
                               << "    }\n";
                     return false;
+                    }
                 }
                 // asosiy() faqat `butun` qaytarishi kerak (C++ standarti)
                 if (!asosiyRetType.empty() && asosiyRetType != "butun") {
@@ -365,6 +392,7 @@ public:
 
             CodeGen codegen;
             codegen.setBare(bare);
+            codegen.setHeaderMode(headerMode);
             const std::string cppCode = codegen.generate(program.get(), inputFile.string(), isTestMode, isBenchMode);
 
             if (outputFile.has_parent_path()) {
@@ -886,7 +914,12 @@ private:
     }
 
     std::string translateErrors(std::string compilerOutput) const {
-        const std::vector<std::pair<std::string, std::string>> replacements = {
+        // Phase 8: Overhaul — so'z chegaralari bilan almashtirish.
+        // Regex yordamida faqat butun so'zlarni almashtiramiz,
+        // fayl nomlari yoki identifikator ichidagi qismlarga tegmaymiz.
+
+        // 1. Aniq satr almashtirishlar (xato formatlari, qo'shtirnoqli tiplar)
+        const std::vector<std::pair<std::string, std::string>> exactReplacements = {
             {"error:", "XATO:"},
             {"warning:", "OGOHLANTIRISH:"},
             {"was not declared in this scope", "ushbu qamrovda e'lon qilinmagan"},
@@ -901,32 +934,85 @@ private:
             {"note:", "eslatma:"},
             {"expected", "Kutilgan"},
             {"before", "shundan oldin"},
-            // NB: bare "from" / "to" / "int" / "char" / "bool" / "void"
-            // are too short — they collide with substrings inside identifiers
-            // and filenames ("test_virtual_dtor" → "test_virtual_dgar" if
-            // "to"→"ga"). Restrict type names to ones bracketed by safe
-            // characters by using ' '+name+' ' or "'name'" patterns where
-            // GCC actually emits them.
-            {"std::unordered_map", "lug'at"},
-            {"std::shared_ptr", "umumiy_korsatkich"},
-            {"std::unique_ptr", "yagona_korsatkich"},
-            {"std::string", "matn"},
-            {"std::vector", "vektor"},
-            {"std::optional", "ixtiyoriy"},
-            {"std::pair", "juftlik"},
-            {"'int'", "'butun'"},
-            {"'double'", "'haqiqiy'"},
-            {"'float'", "'kasr'"},
-            {"'char'", "'belgi'"},
-            {"'bool'", "'mantiqiy'"},
-            {"'void'", "'bosh'"}
+            {"does not name a type", "tur nomi emas"},
+            {"unqualified-id", "identifikator"},
+            {"string constant", "matn konstantasi"},
+            {"invalid conversion", "noto'g'ri konvertatsiya"},
+            {"in argument", "argumentda"},
+            {"initializing argument", "argumentni initsializatsiya qilishda"},
+            {"has no member named", "da quyidagi a'zo mavjud emas"},
+            {"is not a member of", "a'zosi emas"},
+            {"incomplete type", "to'liq bo'lmagan tur"},
+            {"first use in this function", "bu funksiyada birinchi ishlatilishi"},
+            {"each undeclared identifier is reported only once",
+             "har bir e'lon qilinmagan identifikator faqat bir marta xabar qilinadi"},
+        };
+        for (const auto& [from, to] : exactReplacements) {
+            std::size_t pos = 0;
+            while ((pos = compilerOutput.find(from, pos)) != std::string::npos) {
+                compilerOutput.replace(pos, from.size(), to);
+                pos += to.size();
+            }
+        }
+
+        // 2. Regex bilan chegaralangan so'z almashtirishlar
+        // (faqat \\b bilan o'ralgan so'zlarni almashtiramiz —
+        //  fayl nomlari yoki identifikator ichiga kirmaydi)
+        const std::vector<std::pair<std::string, std::string>> wordReplacements = {
+            {"int", "butun"},
+            {"double", "haqiqiy"},
+            {"float", "kasr"},
+            {"char", "belgi"},
+            {"bool", "mantiqiy"},
+            {"void", "bosh"},
+            {"long", "uzun"},
+            {"short", "qisqa"},
+            {"unsigned", "musbat"},
+            {"signed", "manfiy"},
+            {"auto", "o'zgaruvchan"},
+            {"const", "o'zgarmas"},
+            {"constexpr", "sobit_ifoda"},
+            {"static", "statik"},
+            {"virtual", "mavhum"},
+            {"override", "ustidan_yozish"},
+            {"class", "sinf"},
+            {"struct", "tuzilma"},
+            {"enum", "sanab_olish"},
+            {"template", "shablon"},
+            {"typename", "tur"},
+            {"namespace", "nomlar_fazosi"},
+            {"return", "qaytarish"},
+            {"throw", "irgitish"},
+            {"catch", "ushlash"},
+            {"try", "urinish"},
+            {"nullptr", "null"},
+            {"true", "rost"},
+            {"false", "yolg'on"},
         };
 
-        for (const auto& [from, to] : replacements) {
-            std::size_t position = 0;
-            while ((position = compilerOutput.find(from, position)) != std::string::npos) {
-                compilerOutput.replace(position, from.size(), to);
-                position += to.size();
+        for (const auto& [from, to] : wordReplacements) {
+            // \\b so'z chegarasini bildiradi — faqat mustaqil so'zlarni almashtiramiz
+            std::regex wordRegex("\\b" + from + "\\b");
+            compilerOutput = std::regex_replace(compilerOutput, wordRegex, to);
+        }
+
+        // 3. STD tiplarni almashtirish (prefiksli)
+        const std::vector<std::pair<std::string, std::string>> stdReplacements = {
+            {"std::string", "matn"},
+            {"std::vector", "vektor"},
+            {"std::unordered_map", "lug'at"},
+            {"std::map", "tartiblangan_xarita"},
+            {"std::shared_ptr", "umumiy_korsatkich"},
+            {"std::unique_ptr", "yagona_korsatkich"},
+            {"std::optional", "ixtiyoriy"},
+            {"std::pair", "juftlik"},
+            {"std::size_t", "hajm_turi"},
+        };
+        for (const auto& [from, to] : stdReplacements) {
+            std::size_t pos = 0;
+            while ((pos = compilerOutput.find(from, pos)) != std::string::npos) {
+                compilerOutput.replace(pos, from.size(), to);
+                pos += to.size();
             }
         }
 
@@ -1123,6 +1209,8 @@ CliOptions parseArguments(int argc, char* argv[]) {
                 options.showCpp = true;
             } else if (argument == "--bare") {
                 options.bare = true;
+            } else if (argument == "--header") {
+                options.headerMode = true;
             } else if (argument == "-I" && index + 1 < argc) {
                 options.extraIncludeDirs.push_back(fs::path(argv[++index]));
             } else if (startsWith(argument, "-I") && argument.size() > 2) {
@@ -1142,7 +1230,11 @@ CliOptions parseArguments(int argc, char* argv[]) {
         options.mode = first == "--qurish" ? CommandMode::Build : CommandMode::Run;
         for (int index = 2; index < argc; ++index) {
             std::string argument = argv[index];
-            if (!argument.empty() && argument[0] != '-') {
+            if (argument == "--bare") {
+                options.bare = true;
+            } else if (argument == "--header") {
+                options.headerMode = true;
+            } else if (!argument.empty() && argument[0] != '-') {
                 options.inputFile = argument;
             }
         }
@@ -1482,7 +1574,7 @@ int main(int argc, char* argv[]) {
                     
                     fs::create_directories(outPath.parent_path());
                     std::cout << " -> " << rel.string() << "\n";
-                    if (!compiler.transpile(entry.path(), outPath, options.mode == CommandMode::Test, options.mode == CommandMode::Bench)) {
+                    if (!compiler.transpile(entry.path(), outPath, options.mode == CommandMode::Test, options.mode == CommandMode::Bench, false, options.headerMode)) {
                         buildSuccess = false;
                     }
                 }
@@ -1507,7 +1599,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            if (!compiler.transpile(layout.inputFile, layout.cppFile, options.mode == CommandMode::Test, options.mode == CommandMode::Bench, options.bare)) {
+            if (!compiler.transpile(layout.inputFile, layout.cppFile, options.mode == CommandMode::Test, options.mode == CommandMode::Bench, options.bare, options.headerMode)) {
                 return 1;
             }
         }
@@ -1534,10 +1626,36 @@ int main(int argc, char* argv[]) {
         const std::optional<fs::path> dependencyBridge = writeDependencyBridge(layout);
 
         std::cout << ">>> C++ kompilyatsiyasi boshlandi...\n" << std::endl;
+
+        // Phase 17: Modul fayllarini aniqlash — agar .cpp da `export module`
+        // bo'lsa, faqat kompilyatsiya qilamiz (linkersiz).
+        bool isModule = false;
+        {
+            std::ifstream cppIn(layout.cppFile);
+            std::string firstLine;
+            if (std::getline(cppIn, firstLine)) {
+                isModule = firstLine.find("export module") != std::string::npos;
+            }
+        }
+
+        if (isModule) {
+            // Modul fayli — faqat kompilyatsiya, linkersiz
+            std::string cmd = "g++ -std=c++23 -fmodules-ts -c " + layout.cppFile.string() +
+                              " -I" + (layout.stdlibRoot ? layout.stdlibRoot->string() : "stdlib") +
+                              " -o " + (layout.cppFile.parent_path() / layout.cppFile.stem()).string() + ".o 2>&1";
+            int ret = system(cmd.c_str());
+            if (ret == 0) {
+                std::cout << "MUVAFFAQIYAT: Modul kompilyatsiya qilindi -> " << layout.cppFile.filename().string() << '\n';
+            } else {
+                std::cerr << "XATO: Modul kompilyatsiyasi muvaffaqiyatsiz.\n";
+                return 1;
+            }
+        } else {
         if (!compiler.compileToBinary(
                 layout.cppFile, layout.binaryFile, options.target, includeDirs, dependencyBridge, options.debug,
                 options.extraLinkLibs)) {
             return 1;
+        }
         }
 
         if (options.mode == CommandMode::Run || options.mode == CommandMode::Test || options.mode == CommandMode::Bench) {

@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cctype>
+#include <optional>
+#include <variant>
+#include <cstdint>
 
 namespace uzpp {
 
@@ -156,6 +159,40 @@ private:
     }
 };
 
+// Phase 5: Compile-time constant qiymat — constexpr evaluator uchun.
+struct ConstValue {
+    enum Tag { Int, Float, Str, Bool, None } tag = None;
+    int64_t  iVal = 0;
+    double   fVal = 0.0;
+    std::string sVal;
+    bool     bVal = false;
+
+    static ConstValue integer(int64_t v)   { ConstValue c; c.tag = Int;   c.iVal = v; return c; }
+    static ConstValue floating(double v)    { ConstValue c; c.tag = Float; c.fVal = v; return c; }
+    static ConstValue stringVal(std::string v) { ConstValue c; c.tag = Str; c.sVal = std::move(v); return c; }
+    static ConstValue boolean(bool v)      { ConstValue c; c.tag = Bool;  c.bVal = v; return c; }
+
+    bool isTruthy() const {
+        switch (tag) {
+        case Int:  return iVal != 0;
+        case Float:return fVal != 0.0;
+        case Str:  return !sVal.empty();
+        case Bool: return bVal;
+        default:   return false;
+        }
+    }
+
+    std::string toString() const {
+        switch (tag) {
+        case Int:  return std::to_string(iVal);
+        case Float:return std::to_string(fVal);
+        case Str:  return sVal;
+        case Bool: return bVal ? "true" : "false";
+        default:   return "<none>";
+        }
+    }
+};
+
 class TypeChecker {
 private:
     struct ClassInfo {
@@ -172,13 +209,70 @@ private:
         bool used;
     };
 
+    // Phase 3: Overload resolution — har bir funksiya nomi uchun bir nechta
+    // imzo (signature) saqlash. Eskicha `functionReturns_`/`functionParams_`/
+    // `functionMinArgs_` uchligini almashtiradi. Keyingi funksiya avvalgisini
+    // ezib tashlamaydi — barcha imzolar `overloads` vektorida saqlanadi.
+    struct FunctionOverload {
+        std::string returnType;
+        std::vector<std::string> paramTypes;
+        std::size_t minArgs; // standart qiymatsiz parametrlar soni
+
+        // Parametr turlari bo'yicha moslik darajasi. Qancha kichik bo'lsa,
+        // shuncha yaqin moslik. 0 = aniq moslik, 1 = promotion (butun→haqiqiy),
+        // 2+ = konversiya, -1 = mos emas.
+        int matchScore(const std::vector<Type>& argTypes) const {
+            // Variadic shablonlar uchun: agar oxirgi parametrda "..." bo'lsa,
+            // qo'shimcha argumentlar qabul qilinadi.
+            bool isVariadic = !paramTypes.empty() &&
+                paramTypes.back().find("...") != std::string::npos;
+
+            if (!isVariadic) {
+                if (argTypes.size() < minArgs || argTypes.size() > paramTypes.size())
+                    return -1;
+            } else {
+                // Variadic: non-pack parametrlardan kam bo'lmasligi kerak
+                size_t nonPackParams = paramTypes.size() - 1; // oxirgisi pack
+                if (argTypes.size() < nonPackParams) return -1;
+            }
+            int score = 0;
+            auto stripRef = [](const std::string& t) -> std::string {
+                std::string r = t;
+                while (!r.empty() && (r.back() == '&' || r.back() == '*')) r.pop_back();
+                return r;
+            };
+            for (size_t i = 0; i < argTypes.size(); ++i) {
+                if (!argTypes[i].isAniq()) {
+                    score += 5;
+                    continue;
+                }
+                // Variadic parametrlar: agar i >= paramTypes.size() bo'lsa,
+                // oxirgi (pack) parametr turidan foydalanamiz.
+                const std::string& expRaw = i < paramTypes.size()
+                    ? paramTypes[i]
+                    : paramTypes.back();
+                std::string exp = stripRef(expRaw);
+                const std::string& arg = argTypes[i].aniqNomi();
+                if (arg == exp || exp == "ozgaruvchan") {
+                    // aniq moslik
+                } else if ((exp == "haqiqiy" || exp == "ikkilangan") && arg == "butun") {
+                    score += 1;
+                } else if (arg == expRaw) {
+                    // havola/ko'rsatkich bilan mos
+                } else {
+                    score += 2;
+                }
+            }
+            return score;
+        }
+    };
+
     std::vector<std::unordered_map<std::string, VarInfo>> scopes_;
     std::vector<SemanticError> errors_;
     std::vector<SemanticError> warnings_;
-    std::unordered_map<std::string, std::string> functionReturns_;
-    std::unordered_map<std::string, std::vector<std::string>> functionParams_;
-    // Standart qiymatli parametrlarni inobatga olib, minimal argument soni
-    std::unordered_map<std::string, std::size_t> functionMinArgs_;
+    // Phase 3: functionReturns_/functionParams_/functionMinArgs_ o'rniga
+    // functionOverloads_ — overload resolution uchun.
+    std::unordered_map<std::string, std::vector<FunctionOverload>> functionOverloads_;
     std::unordered_map<std::string, ClassInfo> classes_;
     std::unordered_map<std::string, std::string> typeAliases_; // tur X = Y
     std::unordered_set<std::string> templateFunctions_;
@@ -190,6 +284,29 @@ private:
     // (`shablon<tur T, tur U>` dan T, U). Tan ichida T turidagi identifikator
     // Aniq("T") emas, Polimorf("T") sifatida xulosalanadi — diagnostika jim qoladi.
     std::unordered_set<std::string> currentTemplateParams_;
+    // Phase 4: Lazy template instantiation. Agar bo'sh bo'lmasa, shablon
+    // parametr nomlarini (T, U, ...) ularning konkret turlariga (butun, matn, ...)
+    // moslaydi. inferTypeT va getDeclaredType ushbu xaritani tekshiradi.
+    std::unordered_map<std::string, std::string> currentTemplateSubsts_;
+    // Phase 4: Shablon funksiya deklaratsiyalarini saqlaydi (key = funksiya nomi).
+    // Chaqiruv joyida lazy instantiation uchun ishlatiladi.
+    std::unordered_map<std::string, const FunctionDeclaration*> templateFuncDecls_;
+    // Phase 4: Har bir shablon funksiyasi uchun uning tur parametrlari nomlari
+    // (T, U, ...). Chaqiruv joyida konkret turlarni aniqlash uchun.
+    std::unordered_map<std::string, std::vector<std::string>> templateFuncParamNames_;
+    // Phase 4: Qaysi konkret turdagi shablon instansiyalari allaqachon
+    // tekshirilgan. Key: "funcName:butun,matn" — takroriy tekshirishni oldini oladi.
+    std::unordered_set<std::string> instantiatedTemplates_;
+    // Phase 7: Class template lazy instantiation.
+    // Shablon sinf deklaratsiyalari (key = sinf nomi).
+    std::unordered_map<std::string, const ClassDeclaration*> templateClassDecls_;
+    // Shablon sinf tur parametrlari nomlari (T, U, ...)
+    std::unordered_map<std::string, std::vector<std::string>> templateClassParamNames_;
+    // Qaysi klass shablon instansiyalari tekshirilgan: "SinfNomi:butun,matn"
+    std::unordered_set<std::string> instantiatedClassTemplates_;
+    // Phase 11: const/constexpr o'zgaruvchilarning kompilyatsiya vaqtidagi
+    // qiymatlari. evaluateConstExpr da identifikator nomi bo'yicha qidiriladi.
+    std::unordered_map<std::string, ConstValue> constValues_;
     // LSP inlay hints / hover uchun: `o'zgaruvchan x = ...` deklaratsiyalarini
     // ifoda turi bilan bog'laydi. Phase 2.2 dan beri butun strukturali Type
     // saqlanadi (oddiy string emas) — bu LSP ga kompozit turlarni (vektor<T>,
@@ -319,11 +436,25 @@ private:
             case ASTNodeType::IdentifierExpression: {
                 auto id = static_cast<const IdentifierExpression*>(expr);
                 std::string name = id->getName();
+                // Phase 4: agar nom shablon parametri bo'lib, hozirda
+                // konkret turga almashtirilayotgan bo'lsa — Aniq tur qaytaramiz.
+                if (!currentTemplateSubsts_.empty()) {
+                    auto subst = currentTemplateSubsts_.find(name);
+                    if (subst != currentTemplateSubsts_.end())
+                        return Type::aniq(subst->second);
+                }
                 for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
                     if (it->contains(name)) {
                         (*it)[name].used = true;
                         const std::string& t = (*it)[name].type;
                         if (t.empty() || t == "noma'lum") return Type::nomalum();
+                        // Phase 4: agar tur shablon parametri bo'lib,
+                        // almashtirilayotgan bo'lsa — Aniq tur qaytaramiz.
+                        if (!currentTemplateSubsts_.empty()) {
+                            auto subst = currentTemplateSubsts_.find(t);
+                            if (subst != currentTemplateSubsts_.end())
+                                return Type::aniq(subst->second);
+                        }
                         // Joriy shablon parametriga teng bo'lsa — Polimorf,
                         // aks holda Aniq. Polimorf diagnostikada jim qabul qilinadi.
                         if (currentTemplateParams_.contains(t)) return Type::polimorf(t);
@@ -392,9 +523,20 @@ private:
                     if (name == "__uzpp_dict") {
                         return Type::aniq("lug'at<matn, noma'lum>");
                     }
-                    if (functionReturns_.contains(name)) {
-                        const std::string& r = functionReturns_[name];
-                        return r.empty() || r == "noma'lum" ? Type::nomalum() : Type::aniq(r);
+                    if (functionOverloads_.contains(name)) {
+                        // Phase 3: eng so'nggi imzoning return turini olish
+                        const auto& overloads = functionOverloads_[name];
+                        if (!overloads.empty()) {
+                            const std::string& r = overloads.back().returnType;
+                            // Phase 4: agar return turi shablon parametri bo'lib,
+                            // hozirda konkret turga almashtirilayotgan bo'lsa.
+                            if (!currentTemplateSubsts_.empty()) {
+                                auto subst = currentTemplateSubsts_.find(r);
+                                if (subst != currentTemplateSubsts_.end())
+                                    return Type::aniq(subst->second);
+                            }
+                            return r.empty() || r == "noma'lum" ? Type::nomalum() : Type::aniq(r);
+                        }
                     }
                     if (classes_.contains(name)) return Type::aniq(name);
                 } else if (call->getCallee()->getType() == ASTNodeType::MemberAccess) {
@@ -663,8 +805,74 @@ public:
     const std::vector<SemanticError>& getErrors() const { return errors_; }
     const std::vector<SemanticError>& getWarnings() const { return warnings_; }
 
-    const std::unordered_map<std::string, std::vector<std::string>>& getFunctionParams() const { return functionParams_; }
-    const std::unordered_map<std::string, std::string>& getFunctionReturns() const { return functionReturns_; }
+    // Phase 3: backward-compatible API — eng so'nggi imzoning param/return turini
+    // qaytaradi (LSP completion/signature-help uchun yetarli).
+    std::unordered_map<std::string, std::vector<std::string>> getFunctionParams() const {
+        std::unordered_map<std::string, std::vector<std::string>> result;
+        for (const auto& [name, overloads] : functionOverloads_) {
+            if (!overloads.empty()) result[name] = overloads.back().paramTypes;
+        }
+        return result;
+    }
+    std::unordered_map<std::string, std::string> getFunctionReturns() const {
+        std::unordered_map<std::string, std::string> result;
+        for (const auto& [name, overloads] : functionOverloads_) {
+            if (!overloads.empty()) result[name] = overloads.back().returnType;
+        }
+        return result;
+    }
+    const std::unordered_map<std::string, std::vector<FunctionOverload>>& getFunctionOverloads() const {
+        return functionOverloads_;
+    }
+
+    // LSP hover uchun: qamrovlardan o'zgaruvchi nomi bo'yicha e'lon qilingan
+    // turni qaytaradi. Bo'sh string — topilmadi.
+    std::string getDeclaredType(const std::string& varName) const {
+        for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
+            auto found = it->find(varName);
+            if (found != it->end()) return found->second.type;
+        }
+        return "";
+    }
+
+    // Phase 3: Overload resolution — berilgan argument turlari bo'yicha eng
+    // yaxshi mos keladigan imzoni topadi. nullptr — mos imzo yo'q.
+    // Ikkinchi qaytish qiymati: true = ambiguous (bir nechta teng darajali moslik).
+    struct OverloadResult {
+        const FunctionOverload* overload = nullptr;
+        bool ambiguous = false;
+    };
+    OverloadResult resolveOverload(const std::string& funcName,
+                                   const std::vector<const Expression*>& args) {
+        OverloadResult result;
+        auto it = functionOverloads_.find(funcName);
+        if (it == functionOverloads_.end() || it->second.empty()) return result;
+
+        // Argument turlarini to'plash
+        std::vector<Type> argTypes;
+        argTypes.reserve(args.size());
+        for (const auto* a : args) argTypes.push_back(inferTypeT(a));
+
+        int bestScore = -1;
+        for (const auto& ol : it->second) {
+            int score = ol.matchScore(argTypes);
+            if (score < 0) continue; // arg soni mos emas
+            if (bestScore < 0 || score < bestScore) {
+                bestScore = score;
+                result.overload = &ol;
+                result.ambiguous = false;
+            } else if (score == bestScore) {
+                result.ambiguous = true; // teng darajali moslik
+            }
+        }
+        // Agar barcha argumentlar Nomalum bo'lsa, ambiguous hisobot bermaymiz.
+        // Bu std::move()/std::forward() kabi return turi aniq bo'lmagan
+        // chaqiruvlar uchun — birinchi mos imzoni tanlaymiz.
+        if (result.ambiguous && bestScore >= 5 && result.overload) {
+            result.ambiguous = false;
+        }
+        return result;
+    }
 
     // `o'zgaruvchan`/`o'zgarmas` (auto) deklaratsiyasi uchun xulosalangan Type
     // ni qaytaradi (check() vaqtida yozilgan). nullptr — auto-tur emas yoki
@@ -734,6 +942,19 @@ private:
                         }
                     }
                 }
+                // Phase 7: Agar e'lon qilingan tur klass shablon instansiyasi
+                // bo'lsa (masalan, "vektor<butun>"), klass tanasini konkret
+                // turlar bilan qayta tekshiramiz (lazy instantiation).
+                maybeInstantiateClassTemplate(declaredType);
+
+                // Phase 11: const/constexpr o'zgaruvchining qiymatini
+                // kompilyatsiya vaqtida saqlash — keyinroq constexpr
+                // ifodalarda ishlatish uchun.
+                if (var->isConst() && var->getInitializer()) {
+                    auto cv = evaluateConstExpr(var->getInitializer());
+                    if (cv) constValues_[var->getName()] = *cv;
+                }
+
                 if (var->isConst() && !var->getInitializer()) {
                     reportError("O'zgarmas (const) o'zgaruvchi '" + var->getName() + "' e'lon qilinganda qiymatga ega bo'lishi shart.", var->getDeclToken());
                 }
@@ -767,9 +988,8 @@ private:
                     pTypes.push_back(p.type);
                     if (p.defaultValue.empty()) minArgs++;
                 }
-                functionParams_[func->getName()] = pTypes;
-                functionMinArgs_[func->getName()] = minArgs;
-                functionReturns_[func->getName()] = func->getReturnType();
+                functionOverloads_[func->getName()].push_back(
+                    {func->getReturnType(), pTypes, minArgs});
 
                 std::string prevRet = currentReturnType_;
                 currentReturnType_ = func->getReturnType();
@@ -789,14 +1009,23 @@ private:
                 auto savedTemplateParams = currentTemplateParams_;
                 bool isTemplate = templateFunctions_.contains(func->getName());
                 if (isTemplate) {
+                    std::vector<std::string> tParamNames;
                     for (const auto& p : func->getParameters()) {
                         if (looksLikeTemplateParam(p.type)) {
                             currentTemplateParams_.insert(p.type);
+                            tParamNames.push_back(p.type);
                         }
                     }
                     if (looksLikeTemplateParam(func->getReturnType())) {
                         currentTemplateParams_.insert(func->getReturnType());
+                        // Return turidagi shablon parametr — parametrlar orqali
+                        // aniqlab bo'lmasa ham saqlaymiz
+                        if (std::find(tParamNames.begin(), tParamNames.end(),
+                                       func->getReturnType()) == tParamNames.end()) {
+                            tParamNames.push_back(func->getReturnType());
+                        }
                     }
+                    templateFuncParamNames_[func->getName()] = tParamNames;
                 }
 
                 enterScope();
@@ -807,6 +1036,12 @@ private:
                     for (const auto& s : func->getBody()->getStatements()) checkNode(s.get());
                 }
                 exitScope();
+
+                // Phase 4: Shablon funksiya deklaratsiyasini saqlaymiz —
+                // chaqiruv joyida lazy instantiation uchun kerak bo'ladi.
+                if (isTemplate) {
+                    templateFuncDecls_[func->getName()] = func;
+                }
 
                 currentTemplateParams_ = savedTemplateParams;
                 reachable_ = savedReachable;
@@ -834,8 +1069,8 @@ private:
                     info.methodReturns[method->name] = method->returnType.empty() ? cls->getName() : method->returnType;
 
                     if (method->name == cls->getName()) {
-                        functionParams_[cls->getName()] = pTypes;
-                        functionReturns_[cls->getName()] = cls->getName();
+                        functionOverloads_[cls->getName()].push_back(
+                            {cls->getName(), pTypes, pTypes.size()});
                     }
                 }
                 classes_[cls->getName()] = info;
@@ -922,6 +1157,71 @@ private:
                 }
                 // Phase 2.3: sinf shablon parametrlarini olib tashlash
                 currentTemplateParams_ = savedClassTemplateParams;
+
+                // Phase 9: ustidan_yozish (override) tekshiruvi.
+                // Faqat bazaviy sinfga ega bo'lgan sinflar uchun tekshiramiz —
+                // ildiz sinfdagi mavhum metodlar override emas, virtual deklaratsiya.
+                if (!cls->getBaseClass().empty()) {
+                for (const auto& method : cls->getMethods()) {
+                    if (!method->isVirtual) continue;
+                    // Destruktorlar uchun maxsus ishlov: ~Mushuk bazada ~Hayvon
+                    // bo'lishi kerak. Nomlarni solishtirish o'rniga,
+                    // bazada mos destruktor borligini tekshiramiz.
+                    bool isDtor = !method->name.empty() && method->name[0] == '~';
+                    std::string lookupName = isDtor ? "~" : method->name;
+
+                    std::string base = cls->getBaseClass();
+                    bool found = false;
+                    while (!base.empty() && classes_.contains(base)) {
+                        const auto& baseInfo = classes_.at(base);
+                        // Destruktor uchun bazada ~BaseName formatida qidiramiz
+                        std::string baseMethodName = isDtor ? ("~" + base) : method->name;
+                        auto bpIt = baseInfo.methodParams.find(baseMethodName);
+                        if (bpIt != baseInfo.methodParams.end()) {
+                            // Parametr turlari mosligini tekshiramiz
+                            const auto& baseParams = bpIt->second;
+                            bool paramsMatch = baseParams.size() == method->params.size();
+                            if (paramsMatch) {
+                                for (size_t pi = 0; pi < baseParams.size(); ++pi) {
+                                    if (baseParams[pi] != method->params[pi].type &&
+                                        !typesEquivalent(baseParams[pi], method->params[pi].type)) {
+                                        paramsMatch = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (paramsMatch) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        base = baseInfo.baseClass;
+                    }
+                    if (!found) {
+                        reportError("'" + method->name + "' 'ustidan_yozish' deb belgilangan, lekin bazaviy sinfda mos metod topilmadi.", method->token);
+                    }
+                }
+                } // if (!baseClass.empty())
+
+                // Phase 7: Class template lazy instantiation — deklaratsiyani
+                // va parametr nomlarini saqlaymiz.
+                if (isClassTemplate) {
+                    templateClassDecls_[cls->getName()] = cls;
+                    std::vector<std::string> ctParamNames;
+                    for (const auto& member : cls->getMembers()) {
+                        if (looksLikeTemplateParam(member.type) &&
+                            std::find(ctParamNames.begin(), ctParamNames.end(), member.type) == ctParamNames.end())
+                            ctParamNames.push_back(member.type);
+                    }
+                    for (const auto& method : cls->getMethods()) {
+                        for (const auto& p : method->params) {
+                            if (looksLikeTemplateParam(p.type) &&
+                                std::find(ctParamNames.begin(), ctParamNames.end(), p.type) == ctParamNames.end())
+                                ctParamNames.push_back(p.type);
+                        }
+                    }
+                    templateClassParamNames_[cls->getName()] = ctParamNames;
+                }
                 break;
             }
             case ASTNodeType::StatementList: {
@@ -939,6 +1239,42 @@ private:
             case ASTNodeType::IfStatement: {
                 auto ifs = static_cast<const IfStatement*>(node);
                 checkExpr(ifs->getCondition());
+
+                // Phase 5: agar sobit_ifoda — compile-time shart tekshiruvi.
+                // Agar shartni hisoblay olsak, o'lik tarmoqni (dead branch)
+                // butunlay o'chiramiz — unreachable code xatosi chiqmaydi.
+                if (ifs->isConstExpr()) {
+                    auto cv = evaluateConstExpr(ifs->getCondition());
+                    if (cv) {
+                        if (cv->isTruthy()) {
+                            // then-branch ishlaydi, else — o'lik
+                            checkNode(ifs->getThenBranch());
+                            if (ifs->getElseBranch()) {
+                                bool savedReach = reachable_;
+                                bool savedRpt = reportedUnreachable_;
+                                reachable_ = false;
+                                reportedUnreachable_ = true; // unreachable xatosi chiqmasin
+                                checkNode(ifs->getElseBranch());
+                                reachable_ = savedReach;
+                                reportedUnreachable_ = savedRpt;
+                            }
+                        } else {
+                            // else-branch ishlaydi, then — o'lik
+                            {
+                                bool savedReach = reachable_;
+                                bool savedRpt = reportedUnreachable_;
+                                reachable_ = false;
+                                reportedUnreachable_ = true;
+                                checkNode(ifs->getThenBranch());
+                                reachable_ = savedReach;
+                                reportedUnreachable_ = savedRpt;
+                            }
+                            if (ifs->getElseBranch()) checkNode(ifs->getElseBranch());
+                        }
+                        break;
+                    }
+                    // Hisoblab bo'lmadi — oddiy if kabi ishlaymiz
+                }
 
                 // Detect __uzpp_catch and declare catch variable in then-branch scope
                 bool isCatchBlock = false;
@@ -1098,8 +1434,8 @@ private:
                     info.fields[v.name] = en->getName();
                 }
                 // Helper function registered as built-in so TypeChecker doesn't complain
-                functionParams_[en->getName() + "_nomi"] = {en->getName()};
-                functionReturns_[en->getName() + "_nomi"] = "matn";
+                functionOverloads_[en->getName() + "_nomi"].push_back(
+                    {"matn", {en->getName()}, 1});
                 classes_[en->getName()] = info;
                 break;
             }
@@ -1130,6 +1466,249 @@ private:
             i++;
         }
         return vars;
+    }
+
+    // Phase 5: Kompilyatsiya vaqtidagi ifodani hisoblash (constexpr evaluator).
+    // Literallar, binary/unary amallar, va const/constexpr o'zgaruvchilarni
+    // taniydi. Qaytaradi: std::nullopt — hisoblab bo'lmadi (runtime ifoda).
+    std::optional<ConstValue> evaluateConstExpr(const Expression* expr) {
+        if (!expr) return std::nullopt;
+
+        switch (expr->getType()) {
+        case ASTNodeType::LiteralExpression: {
+            auto lit = static_cast<const LiteralExpression*>(expr);
+            switch (lit->getLiteralType()) {
+            case LiteralExpression::LiteralType::Integer:
+                try { return ConstValue::integer(std::stoll(lit->getValue())); }
+                catch (...) { return std::nullopt; }
+            case LiteralExpression::LiteralType::Float:
+                try { return ConstValue::floating(std::stod(lit->getValue())); }
+                catch (...) { return std::nullopt; }
+            case LiteralExpression::LiteralType::String:
+            case LiteralExpression::LiteralType::FormatString:
+                return ConstValue::stringVal(lit->getValue());
+            case LiteralExpression::LiteralType::Boolean:
+                return ConstValue::boolean(lit->getValue() == "true" || lit->getValue() == "rost");
+            default: return std::nullopt;
+            }
+        }
+        case ASTNodeType::IdentifierExpression: {
+            auto id = static_cast<const IdentifierExpression*>(expr);
+            // rost/yolg'on — boolean literallar
+            if (id->getName() == "rost" || id->getName() == "true")
+                return ConstValue::boolean(true);
+            if (id->getName() == "yolg'on" || id->getName() == "false")
+                return ConstValue::boolean(false);
+            // Phase 11: const o'zgaruvchining saqlangan qiymati
+            auto cvIt = constValues_.find(id->getName());
+            if (cvIt != constValues_.end()) return cvIt->second;
+            // Boshqa identifikatorlar — constexpr emas
+            return std::nullopt;
+        }
+        case ASTNodeType::FunctionCall: {
+            auto call = static_cast<const FunctionCall*>(expr);
+            if (call->getCallee()->getType() != ASTNodeType::IdentifierExpression)
+                return std::nullopt;
+            std::string fname = static_cast<const IdentifierExpression*>(
+                call->getCallee())->getName();
+
+            // Phase 6: sizeof(tur) — kompilyatsiya vaqtidagi tur o'lchami.
+            // Argument sifatida tur nomi (identifikator) beriladi.
+            if (fname == "sizeof" && !call->getArguments().empty()) {
+                auto* arg = call->getArguments()[0].get();
+                if (arg->getType() == ASTNodeType::IdentifierExpression) {
+                    std::string typeName = static_cast<const IdentifierExpression*>(arg)->getName();
+                    // Asosiy turlarning o'lchamlari (LP64 modeli: Windows/Linux/macOS 64-bit)
+                    static const std::unordered_map<std::string, int64_t> typeSizes = {
+                        {"belgi", 1}, {"char", 1},
+                        {"mantiqiy", 1}, {"bool", 1},
+                        {"butun", 4}, {"int", 4},
+                        {"kasr", 4}, {"float", 4},
+                        {"haqiqiy", 8}, {"double", 8},
+                        {"uzun", 8}, {"long", 8},
+                        {"belgi16", 2}, {"char16_t", 2},
+                        {"belgi32", 4}, {"char32_t", 4},
+                        {"musbat_butun8", 1}, {"musbat_butun16", 2},
+                        {"musbat_butun32", 4}, {"musbat_butun64", 8},
+                        {"hajm_turi", 8}, {"size_t", 8},
+                    };
+                    auto it = typeSizes.find(typeName);
+                    if (it != typeSizes.end())
+                        return ConstValue::integer(it->second);
+                }
+            }
+            // Phase 13: alignof(tur) — alignof ham sizeof bilan bir xil jadvaldan foydalanadi
+            if (fname == "alignof" && !call->getArguments().empty()) {
+                auto* arg = call->getArguments()[0].get();
+                if (arg->getType() == ASTNodeType::IdentifierExpression) {
+                    std::string typeName = static_cast<const IdentifierExpression*>(arg)->getName();
+                    static const std::unordered_map<std::string, int64_t> alignSizes = {
+                        {"belgi", 1}, {"mantiqiy", 1}, {"butun", 4},
+                        {"kasr", 4}, {"haqiqiy", 8}, {"uzun", 8},
+                        {"hajm_turi", 8},
+                    };
+                    auto it = alignSizes.find(typeName);
+                    if (it != alignSizes.end())
+                        return ConstValue::integer(it->second);
+                }
+            }
+            return std::nullopt;
+        }
+        // Phase 13: TernaryExpression — shartni hisoblab, mos tarmoqni qaytarish
+        case ASTNodeType::TernaryExpression: {
+            auto tern = static_cast<const TernaryExpression*>(expr);
+            auto cond = evaluateConstExpr(tern->getCondition());
+            if (!cond) return std::nullopt;
+            if (cond->isTruthy())
+                return evaluateConstExpr(tern->getThenExpr());
+            else
+                return evaluateConstExpr(tern->getElseExpr());
+        }
+        case ASTNodeType::UnaryExpression: {
+            auto un = static_cast<const UnaryExpression*>(expr);
+            auto inner = evaluateConstExpr(un->getExpression());
+            if (!inner) return std::nullopt;
+            switch (un->getOperator()) {
+            case UnaryExpression::UnaryOp::Minus:
+                if (inner->tag == ConstValue::Int) return ConstValue::integer(-inner->iVal);
+                if (inner->tag == ConstValue::Float) return ConstValue::floating(-inner->fVal);
+                return std::nullopt;
+            case UnaryExpression::UnaryOp::LogicalNot:
+                return ConstValue::boolean(!inner->isTruthy());
+            case UnaryExpression::UnaryOp::BitwiseNot:
+                if (inner->tag == ConstValue::Int) return ConstValue::integer(~inner->iVal);
+                return std::nullopt;
+            default: return std::nullopt;
+            }
+        }
+        case ASTNodeType::BinaryExpression: {
+            auto bin = static_cast<const BinaryExpression*>(expr);
+            auto left = evaluateConstExpr(bin->getLeft());
+            auto right = evaluateConstExpr(bin->getRight());
+            if (!left || !right) return std::nullopt;
+            std::string op = bin->getOperator();
+
+            // Mantiqiy amallar — truthy bo'yicha
+            if (op == "va" || op == "&&")
+                return ConstValue::boolean(left->isTruthy() && right->isTruthy());
+            if (op == "yoki" || op == "||")
+                return ConstValue::boolean(left->isTruthy() || right->isTruthy());
+
+            // Taqqoslash amallari
+            if (op == "==") return ConstValue::boolean(left->iVal == right->iVal && left->tag == right->tag);
+            if (op == "!=") return ConstValue::boolean(left->iVal != right->iVal || left->tag != right->tag);
+
+            // Sonli amallar — ikkala tomon ham son bo'lishi kerak
+            if (left->tag == ConstValue::Int && right->tag == ConstValue::Int) {
+                if (op == "+")  return ConstValue::integer(left->iVal + right->iVal);
+                if (op == "-")  return ConstValue::integer(left->iVal - right->iVal);
+                if (op == "*")  return ConstValue::integer(left->iVal * right->iVal);
+                if (op == "/") {
+                    if (right->iVal == 0) return std::nullopt;
+                    return ConstValue::integer(left->iVal / right->iVal);
+                }
+                if (op == "%") {
+                    if (right->iVal == 0) return std::nullopt;
+                    return ConstValue::integer(left->iVal % right->iVal);
+                }
+                if (op == "<")  return ConstValue::boolean(left->iVal < right->iVal);
+                if (op == ">")  return ConstValue::boolean(left->iVal > right->iVal);
+                if (op == "<=") return ConstValue::boolean(left->iVal <= right->iVal);
+                if (op == ">=") return ConstValue::boolean(left->iVal >= right->iVal);
+            }
+            return std::nullopt;
+        }
+        default: return std::nullopt;
+        }
+    }
+
+    // Phase 7: Klass shablonini konkret turlar bilan tekshirish (lazy).
+    // typeName — masalan "vektor<butun>" yoki "lug'at<matn, butun>".
+    // Agar bu klass shablon instansiyasi bo'lsa va hali tekshirilmagan
+    // bo'lsa, klass tanasini konkret turlar bilan qayta tekshiramiz.
+    void maybeInstantiateClassTemplate(const std::string& typeName) {
+        // Shablon argumentlarini ajratib olish: "vektor<butun>" → base="vektor", args=["butun"]
+        auto lt = typeName.find('<');
+        if (lt == std::string::npos) return;
+        std::string baseName = typeName.substr(0, lt);
+        if (!templateClasses_.contains(baseName)) return;
+        if (!templateClassDecls_.contains(baseName)) return;
+
+        // Argumentlarni ajratish: "butun, matn" → ["butun", "matn"]
+        auto gt = typeName.rfind('>');
+        if (gt == std::string::npos) return;
+        std::string argsStr = typeName.substr(lt + 1, gt - lt - 1);
+        std::vector<std::string> concreteArgs;
+        {
+            std::string cur;
+            for (char c : argsStr) {
+                if (c == ',') {
+                    while (!cur.empty() && cur.front() == ' ') cur.erase(0, 1);
+                    while (!cur.empty() && cur.back() == ' ') cur.pop_back();
+                    if (!cur.empty()) concreteArgs.push_back(cur);
+                    cur.clear();
+                } else {
+                    cur += c;
+                }
+            }
+            while (!cur.empty() && cur.front() == ' ') cur.erase(0, 1);
+            while (!cur.empty() && cur.back() == ' ') cur.pop_back();
+            if (!cur.empty()) concreteArgs.push_back(cur);
+        }
+        if (concreteArgs.empty()) return;
+
+        // Instansiya kaliti
+        std::string instKey = baseName + ":";
+        for (size_t i = 0; i < concreteArgs.size(); ++i) {
+            if (i) instKey += ",";
+            instKey += concreteArgs[i];
+        }
+        if (instantiatedClassTemplates_.contains(instKey)) return;
+        instantiatedClassTemplates_.insert(instKey);
+
+        // Substitution xaritasi: shablon parametr → konkret tur
+        const auto& tParamNames = templateClassParamNames_[baseName];
+        std::unordered_map<std::string, std::string> subst;
+        for (size_t i = 0; i < tParamNames.size() && i < concreteArgs.size(); ++i)
+            subst[tParamNames[i]] = concreteArgs[i];
+
+        if (subst.empty()) return;
+
+        // Holatni saqlash
+        auto savedSubsts = currentTemplateSubsts_;
+        auto savedTParams = currentTemplateParams_;
+        currentTemplateSubsts_ = subst;
+        currentTemplateParams_.clear();
+
+        const auto* cls = templateClassDecls_[baseName];
+
+        // Klass metodlarini konkret turlar bilan qayta tekshirish
+        for (const auto& method : cls->getMethods()) {
+            std::string prevRet = currentReturnType_;
+            currentReturnType_ = method->returnType;
+            auto rs = subst.find(method->returnType);
+            if (rs != subst.end()) currentReturnType_ = rs->second;
+
+            enterScope();
+            declareVar("joriy", baseName + "*", method->token);
+            scopes_.back()["joriy"].used = true;
+            for (const auto& p : method->params) {
+                std::string concreteParamType = p.type;
+                auto s = subst.find(p.type);
+                if (s != subst.end()) concreteParamType = s->second;
+                declareVar(p.name, concreteParamType, p.token);
+            }
+            if (method->body) {
+                for (const auto& s : method->body->getStatements())
+                    checkNode(s.get());
+            }
+            exitScope();
+            currentReturnType_ = prevRet;
+        }
+
+        // Holatni tiklash
+        currentTemplateSubsts_ = savedSubsts;
+        currentTemplateParams_ = savedTParams;
     }
 
     void checkExpr(const Expression* expr) {
@@ -1250,16 +1829,48 @@ private:
                 
                 if (call->getCallee()->getType() == ASTNodeType::IdentifierExpression) {
                     std::string name = static_cast<const IdentifierExpression*>(call->getCallee())->getName();
-                    if (functionParams_.contains(name) && !templateFunctions_.contains(name)) {
-                        const auto& expectedParams = functionParams_[name];
-                        std::size_t minArgs = functionMinArgs_.contains(name) ? functionMinArgs_[name] : expectedParams.size();
-                        std::size_t gotArgs = call->getArguments().size();
-                        if (gotArgs < minArgs || gotArgs > expectedParams.size()) {
-                            std::string expected = minArgs == expectedParams.size()
-                                ? std::to_string(expectedParams.size())
-                                : std::to_string(minArgs) + ".." + std::to_string(expectedParams.size());
-                            reportError("Funksiya '" + name + "' " + expected + " ta argument kutadi, lekin " + std::to_string(gotArgs) + " ta berildi.", call->getCallToken());
-                        } else {
+                    
+                    // Phase 5: statik_tasdiqlash — compile-time tekshirish.
+                    // Agar shartni hisoblay olsak va u yolg'on bo'lsa, xato.
+                    if (name == "statik_tasdiqlash" && !call->getArguments().empty()) {
+                        auto cv = evaluateConstExpr(call->getArguments()[0].get());
+                        if (cv && !cv->isTruthy()) {
+                            std::string msg = "statik_tasdiqlash muvaffaqiyatsiz";
+                            if (call->getArguments().size() > 1) {
+                                auto lit = dynamic_cast<const LiteralExpression*>(call->getArguments()[1].get());
+                                if (lit) msg = lit->getValue();
+                            }
+                            reportError(msg, call->getCallToken());
+                        }
+                    }
+                    
+                    bool isTemplateCall = templateFunctions_.contains(name);
+                    
+                    // Phase 3: argument turlarini yig'ib, eng yaxshi imzoni topish
+                    // (shablonlar uchun ham — parametr soni mosligini tekshiramiz)
+                    if (functionOverloads_.contains(name)) {
+                        std::vector<const Expression*> rawArgs;
+                        rawArgs.reserve(call->getArguments().size());
+                        for (const auto& a : call->getArguments()) rawArgs.push_back(a.get());
+                        auto result = resolveOverload(name, rawArgs);
+                        if (result.ambiguous) {
+                            reportError("Funksiya '" + name + "' chaqiruvi noaniq: bir nechta imzo teng darajada mos keladi.", call->getCallToken());
+                        } else if (!result.overload) {
+                            std::size_t gotArgs = call->getArguments().size();
+                            std::string ranges;
+                            for (const auto& ol : functionOverloads_[name]) {
+                                if (!ranges.empty()) ranges += " yoki ";
+                                if (ol.minArgs == ol.paramTypes.size())
+                                    ranges += std::to_string(ol.paramTypes.size());
+                                else
+                                    ranges += std::to_string(ol.minArgs) + ".." + std::to_string(ol.paramTypes.size());
+                                ranges += " ta";
+                            }
+                            reportError("Funksiya '" + name + "' " + ranges + " argument kutadi, lekin " + std::to_string(gotArgs) + " ta berildi.", call->getCallToken());
+                        } else if (!isTemplateCall) {
+                            // Oddiy (shablon bo'lmagan) funksiya — argument turlarini tekshirish
+                            const auto& expectedParams = result.overload->paramTypes;
+                            std::size_t gotArgs = call->getArguments().size();
                             auto stripRef = [](std::string t) {
                                 while (!t.empty() && (t.back() == '&' || t.back() == '*')) t.pop_back();
                                 return t;
@@ -1267,7 +1878,7 @@ private:
                             for (size_t i = 0; i < gotArgs; ++i) {
                                 Type arg = inferTypeT(call->getArguments()[i].get());
                                 std::string expBase = stripRef(expectedParams[i]);
-                                if (arg.isAniq() && expectedParams[i] != "ozgaruvchan" &&
+                                if (arg.isAniq() && expectedParams[i] != "o'zgaruvchan" &&
                                     !typesEquivalent(arg.name, expectedParams[i]) && !typesEquivalent(arg.name, expBase)) {
                                     if (!((expBase == "haqiqiy" || expBase == "ikkilangan") && arg.name == "butun")) {
                                         if (!classIsSubtype(arg.name, expBase)) {
@@ -1275,6 +1886,107 @@ private:
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                    
+                    // Phase 4: Lazy template instantiation — agar bu shablon
+                    // funksiyasi bo'lsa va hali bu konkret turlar bilan
+                    // tekshirilmagan bo'lsa, tanani qayta tekshiramiz.
+                    if (isTemplateCall && templateFuncDecls_.contains(name)) {
+                        // Argument turlarini yig'amiz
+                        std::vector<Type> argTypes;
+                        argTypes.reserve(call->getArguments().size());
+                        for (const auto& a : call->getArguments())
+                            argTypes.push_back(inferTypeT(a.get()));
+                        
+                        // Instansiya kalitini yaratamiz: "funkNom:butun,matn"
+                        std::string instKey = name + ":";
+                        for (size_t i = 0; i < argTypes.size(); ++i) {
+                            if (i) instKey += ",";
+                            instKey += argTypes[i].aniqNomi();
+                        }
+                        
+                        if (!instantiatedTemplates_.contains(instKey)) {
+                            instantiatedTemplates_.insert(instKey);
+                            
+                            // Shablon parametrlari nomlarini olamiz
+                            const auto& tParamNames = templateFuncParamNames_[name];
+                            const auto* tDecl = templateFuncDecls_[name];
+                            
+                            // Konkret arg turlarini shablon parametrlariga
+                            // moslab substitution xaritasini quramiz.
+                            // Oddiy strategiya: N ta shablon parametr, N ta
+                            // argument — mos ravishda almashtiramiz.
+                            std::unordered_map<std::string, std::string> subst;
+                            auto& funcParams = tDecl->getParameters();
+                            size_t argIdx = 0;
+                            for (const auto& p : funcParams) {
+                                if (p.isExplicitObject) continue;
+                                if (looksLikeTemplateParam(p.type) &&
+                                    argIdx < argTypes.size() &&
+                                    argTypes[argIdx].isAniq()) {
+                                    subst[p.type] = argTypes[argIdx].aniqNomi();
+                                }
+                                ++argIdx;
+                            }
+                            // Return turidagi shablon parametrlari uchun:
+                            // agar return turi argumentlarda uchramagan
+                            // shablon parametr bo'lsa, argument turlaridan
+                            // birinchi aniqlanganini olamiz.
+                            if (looksLikeTemplateParam(tDecl->getReturnType()) &&
+                                !subst.contains(tDecl->getReturnType())) {
+                                for (const auto& at : argTypes) {
+                                    if (at.isAniq()) {
+                                        subst[tDecl->getReturnType()] = at.aniqNomi();
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (!subst.empty()) {
+                                // Holatni saqlaymiz
+                                auto savedSubsts = currentTemplateSubsts_;
+                                auto savedTParams = currentTemplateParams_;
+                                auto savedReturnType = currentReturnType_;
+                                auto savedErrors = errors_.size();
+                                
+                                // Polimorf rejimni o'chiramiz — haqiqiy
+                                // diagnostika uchun
+                                currentTemplateSubsts_ = subst;
+                                currentTemplateParams_.clear();
+                                
+                                // Return turini almashtiramiz (agar shablon
+                                // parametri bo'lsa, konkret turga)
+                                currentReturnType_ = tDecl->getReturnType();
+                                auto retSubst = subst.find(currentReturnType_);
+                                if (retSubst != subst.end())
+                                    currentReturnType_ = retSubst->second;
+                                
+                                // Yangi qamrov: parametrlarni konkret turlar
+                                // bilan e'lon qilamiz
+                                enterScope();
+                                for (const auto& p : funcParams) {
+                                    if (p.isExplicitObject) continue;
+                                    std::string concreteType = p.type;
+                                    auto s = subst.find(p.type);
+                                    if (s != subst.end()) concreteType = s->second;
+                                    declareVar(p.name, concreteType, p.token);
+                                }
+                                
+                                // Shablon tanasini konkret turlar bilan
+                                // qayta tekshiramiz
+                                if (tDecl->getBody()) {
+                                    for (const auto& s : tDecl->getBody()->getStatements())
+                                        checkNode(s.get());
+                                }
+                                exitScope();
+                                
+                                // Holatni tiklaymiz
+                                currentTemplateSubsts_ = savedSubsts;
+                                currentTemplateParams_ = savedTParams;
+                                currentReturnType_ = savedReturnType;
+                                currentTemplateParams_ = savedTParams;
                             }
                         }
                     }

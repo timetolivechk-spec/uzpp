@@ -1,5 +1,7 @@
 #include "parser.h"
 
+#include <iostream>
+#include <map>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -59,8 +61,26 @@ Parser::Parser(const std::vector<Token>& tokens)
 
 std::unique_ptr<Program> Parser::parse() {
     std::vector<std::unique_ptr<ASTNode>> globals;
+    std::size_t lastPos = current_;
     while (!isAtEnd()) {
-        globals.push_back(parseGlobalDeclaration());
+        try {
+            globals.push_back(parseGlobalDeclaration());
+            lastPos = current_;
+        } catch (const ParseError& e) {
+            // Phase 12: Xatolikni yig'amiz va sinxronizatsiya qilamiz
+            recordError(e.what(), peek());
+            synchronize();
+            // Agar sinxronizatsiya oldinga siljimagan bo'lsa, qo'lda
+            // bitta token o'tkazamiz — cheksiz sikldan qochish uchun
+            if (current_ <= lastPos && !isAtEnd()) {
+                advance();
+            }
+            lastPos = current_;
+            if (isAtEnd()) break;
+        }
+    }
+    if (!errors_.empty()) {
+        // Xatoliklar to'plandi — chaqiruvchi (main.cpp) ularni ko'rsatadi.
     }
     return std::make_unique<Program>(std::move(globals));
 }
@@ -115,7 +135,15 @@ std::string Parser::formatLocation(const Token& token) const {
 
 // ===== TYPE STRING PARSING =====
 
+// Phase 2.5: Eskirgan tur sinonimi — `parseTypeString` ichida tekshiriladi.
+// Bu funksiya `checkDeprecatedSynonym()` ga delegatsiya qiladi.
+
 std::string Parser::parseTypeString() {
+    // Phase 2.5: Eskirgan sinonim ishlatilgan bo'lsa, yordamchi xato.
+    // Tur kontekstida: tur sinonimlari + kalit so'z sinonimlari (`mantiq`,
+    // `ikkilangan` va boshq.).
+    checkDeprecatedTypeSynonym();
+
     // C++11 decltype(expr) — type deduction. Uzbek alias: tur_baholash(expr).
     // Collect everything inside (...) as raw text, emit as `decltype(...)`.
     if (!isAtEnd() && peek().type == TokenType::Identifier &&
@@ -253,11 +281,11 @@ std::unique_ptr<GroupNode> Parser::parseGroup() {
 
 bool Parser::isUzbekKeyword(const std::string& text) const {
     static const std::vector<std::string> uzbekKeywords{
-        // Asosiy boshqarish oqimi
-        "agar", "aks", "aks_holda", "uchun", "toki", "qaytarish", "qaytish",
+        // Asosiy boshqarish oqimi — har C++ tushunchasi uchun bitta uz++ so'z
+        "agar", "aks_holda", "uchun", "toki", "qaytarish",
         "to'xtatish", "davom_etish",
-        // O'zgaruvchilar (kanonlari va qisqartmalar)
-        "o'zgaruvchan", "o'zgarmas", "ozgaruvchan", "ozgarmas",
+        // O'zgaruvchilar (faqat kanonik apostrofli shakllar)
+        "o'zgaruvchan", "o'zgarmas",
         // Sinf va funksiyalar
         "sinf", "tuzilma", "funksiya", "mavhum", "meros", "amalga_oshirish",
         "shartnoma", "shablon", "statik",
@@ -267,8 +295,9 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         "urinish", "ushlash", "irgitish",
         // Asinxron
         "asinxron", "kutish",
-        // Turlar
-        "bosh", "yangi", "bekor",
+        // Turlar — `bekor` ilgari `bosh` (void) sinonimi sifatida edi,
+        // Phase 2.5 da olib tashlandi (bitta C++ tushunchasi = bitta uz++ so'z).
+        "bosh", "yangi",
         // Mantiq — har bir C++ tushunchasi uchun bitta uz++ so'z:
         // `rost` = true (yagona), `yolg'on` = false (yagona).
         // `to'g'ri`/`noto'g'ri`/`yolgon` ilgari sinonim sifatida ishlatilardi —
@@ -285,7 +314,8 @@ bool Parser::isUzbekKeyword(const std::string& text) const {
         // `nomlari`/`vazifi`/`yayin` — kompilyatorda hech qaerda ishlatilmagan
         // o'lik reservatsiyalar. Foydalanuvchi kodida oddiy nom sifatida ishlatilishi mumkin.
         "sanab_olish", "tushuncha", "shart", "makro", "ulash_kutubxona",
-        "asosiy", "ustidan_yozish", "sikldan", "null",
+        // `sikldan` o'chirildi (Phase 2.5) — kompilyatorda ishlatilmagan o'lik reservatsiya.
+        "asosiy", "ustidan_yozish", "null",
         // Casting
         "statik_otkazish", "dinamik_otkazish", "o'zgarmas_otkazish", "qayta_otkazish",
         // Type deduction (C++11+)
@@ -577,7 +607,7 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
     // accept only when followed by something that could be an expression
     // (identifier, `*`, `(`).
     if (!isAtEnd() && peek().type == TokenType::Identifier &&
-        (peek().value == "o'chirish" || peek().value == "ochirish") &&
+        peek().value == "o'chirish" &&
         current_ + 1 < tokens_.size()) {
         const Token& nxt = tokens_[current_ + 1];
         const bool looksLikeDelete =
@@ -695,6 +725,11 @@ std::unique_ptr<Expression> Parser::parsePrimaryExpression() {
     if (isAtEnd()) {
         throw ParseError("Kutilgan ifoda, ammo faylning oxiri keldi");
     }
+
+    // Phase 2.5: Faqat kalit so'z sinonimlari (`chiqarish`, `olish` va boshq.).
+    // Tur sinonimlari (`umumiy`, `to'plam`) bu yerda tekshirilmaydi — chunki
+    // ular foydalanuvchi o'zgaruvchi nomi sifatida ishlatilishi mumkin.
+    checkDeprecatedSynonym();
 
     const Token& current = peek();
 
@@ -1193,17 +1228,34 @@ std::unique_ptr<Expression> Parser::parseIdentifierOrCall() {
         if (isTemplate) {
             token.value += advance().value; // '<'
             int tDepth = 1;
+            // Phase 18: Shablon argumentlari orasidagi bo'shliqlarni saqlash.
+            // `static_cast<unsigned char>` → `static_cast<unsigned char>`
+            // bo'lishi kerak — `unsignedchar` emas.
+            bool prevWasIdent = false;
             while (!isAtEnd() && tDepth > 0) {
                 const std::string& tv = peek().value;
-                if (tv == "<") { tDepth++; token.value += advance().value; }
-                else if (tv == ">") { tDepth--; token.value += advance().value; }
+                if (tv == "<") { tDepth++; token.value += advance().value; prevWasIdent = false; }
+                else if (tv == ">") { tDepth--; token.value += advance().value; prevWasIdent = false; }
                 else if (tv == ">>") {
                     advance();
                     tDepth -= 2;
                     if (tDepth >= 0) { token.value += ">>"; }
                     else { token.value += ">"; tDepth = 0; }
+                    prevWasIdent = false;
                 }
-                else { token.value += advance().value; }
+                else if (tv == ",") {
+                    token.value += advance().value; // ','
+                    token.value += ' ';              // argument ajratuvchi bo'shliq
+                    prevWasIdent = false;
+                }
+                else {
+                    // Identifikatorlar orasiga bo'shliq qo'shamiz (unsigned char holati)
+                    bool isIdent = (peek().type == TokenType::Identifier);
+                    if (prevWasIdent && isIdent)
+                        token.value += ' ';
+                    token.value += advance().value;
+                    prevWasIdent = isIdent;
+                }
             }
 
             // After template params, handle any trailing ::Segment chains
@@ -1312,7 +1364,7 @@ std::unique_ptr<Statement> Parser::parseStatement() {
         return parseForStatement();
     }
     
-    if (checkKeyword("qaytish") || checkKeyword("qaytarish")) {
+    if (checkKeyword("qaytarish")) {
         return parseReturnStatement();
     }
     
@@ -1492,8 +1544,8 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     // after an if's then-branch) it can only be `else`. We accept it here so
     // users writing `agar (...) { ... } yoki { ... }` get the natural meaning
     // instead of an `else; { ... }` (empty-then-orphan-block) emit.
-    if (matchKeyword("aks") || matchKeyword("aks_holda") || matchKeyword("yoki")) {
-        // else-if: aks agar (...) or aks_holda agar (...)
+    if (matchKeyword("aks_holda") || matchKeyword("yoki")) {
+        // else-if: aks_holda agar (...)
         parseBranchHint(elseLikely, elseUnlikely);
         if (checkKeyword("agar")) {
             elseBranch = parseIfStatement();
@@ -1678,6 +1730,9 @@ std::unique_ptr<ContinueStatement> Parser::parseContinueStatement() {
 }
 
 std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
+    // Phase 2.5: Eskirgan sinonim ishlatilgan bo'lsa, yordamchi xato.
+    checkDeprecatedSynonym();
+
     bool isConstExpr = false;
     bool isConstEval = false;
     bool isConstInit = false;
@@ -1719,7 +1774,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
     if (isConstEval) throw ParseError("sobit_baholash faqat funksiyalarga qo'llaniladi");
 
     // Destructuring: ozgaruvchan [x, y] = ...
-    if ((peek().value == "ozgaruvchan" || peek().value == "o'zgaruvchan" || peek().value == "ozgarmas" || peek().value == "o'zgarmas")
+    if ((peek().value == "o'zgaruvchan" || peek().value == "o'zgarmas")
         && current_ + 1 < tokens_.size() && tokens_[current_ + 1].value == "[") {
         std::string typeName = advance().value; // ozgaruvchan / ozgarmas
         advance(); // '['
@@ -1735,7 +1790,7 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 
     // Ifoda sifatida boshlana oladigan kalit so'zlarni tur deb qabul qilmaslik
     static const std::unordered_set<std::string> exprOnlyKeywords = {
-        "kutish", "irgitish", "yangi", "o'chirish", "ochirish", "chiqar_qadam"
+        "kutish", "irgitish", "yangi", "o'chirish", "chiqar_qadam"
     };
     if (peek().type == TokenType::Identifier && exprOnlyKeywords.contains(peek().value)) {
         auto expr = parseExpression();
@@ -1743,9 +1798,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
     }
 
     if (looksLikeDeclHelper(tokens_, current_)) {
-        // o'zgarmas/ozgarmas TYPE NAME -> const TYPE NAME
+        // o'zgarmas TYPE NAME -> const TYPE NAME
         bool isConst = false;
-        if (peek().value == "o'zgarmas" || peek().value == "ozgarmas") {
+        if (peek().value == "o'zgarmas") {
             isConst = true;
             advance(); // consume o'zgarmas
         }
@@ -1794,6 +1849,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
 // ===== SEMANTIC DECLARATION PARSING =====
 
 std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
+    // Phase 2.5: Eskirgan sinonim ishlatilgan bo'lsa, yordamchi xato.
+    checkDeprecatedSynonym();
+
     // extern "C" { ... } — FFI linkage block.
     // We emit it as raw C++ wrapping the parsed declarations.
     if (checkKeyword("tashqi") || checkKeyword("extern")) {
@@ -2146,9 +2204,9 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         return func;
     }
     
-    // o'zgarmas/ozgarmas TYPE NAME → const TYPE NAME (mirror of local parser)
+    // o'zgarmas TYPE NAME → const TYPE NAME (mirror of local parser)
     bool isGlobalConst = false;
-    if (!isAtEnd() && (peek().value == "o'zgarmas" || peek().value == "ozgarmas")) {
+    if (!isAtEnd() && peek().value == "o'zgarmas") {
         isGlobalConst = true;
         advance();
     }
@@ -2209,7 +2267,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                                         // Stop if we see function modifiers at top level
                                         if (templateDepth == 0 && parenInType == 0 &&
                                             (tok == "xato_tashlamaydi" || tok == "o'zgarmas" ||
-                                             tok == "ozgarmas" || tok == "ustidan_yozish")) {
+                                             tok == "ustidan_yozish")) {
                                             break;
                                         }
                                         afterParen++;
@@ -2217,7 +2275,6 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                                     continue;
                                 } else if (tokens_[afterParen].value == "xato_tashlamaydi" ||
                                            tokens_[afterParen].value == "o'zgarmas" ||
-                                           tokens_[afterParen].value == "ozgarmas" ||
                                            tokens_[afterParen].value == "ustidan_yozish") {
                                     afterParen++;
                                     continue;
@@ -2407,10 +2464,10 @@ std::unique_ptr<LinkStatement> Parser::parseLinkStatement() {
 
 std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std::string& typeName, const std::string& varName, bool isConstExpr, bool isConstEval, bool isConstInit) {
     // asosiy/main — ruxsat etilgan funksiya nomlari, o'zgaruvchi sifatida emas.
-    // yangi/bosh/bekor — alias kalit so'zlar: parser lookahead (yangi → new) yoki
-    // codegen localScopes_ orqali soyalash (bosh/bekor) qo'llab-quvvatlanadi.
+    // yangi/bosh — alias kalit so'zlar: parser lookahead (yangi → new) yoki
+    // codegen localScopes_ orqali soyalash qo'llab-quvvatlanadi.
     static const std::vector<std::string> shadowableKeywords{
-        "asosiy", "main", "yangi", "bosh", "bekor"
+        "asosiy", "main", "yangi", "bosh"
     };
     bool isShadowable = false;
     for (const auto& kw : shadowableKeywords) {
@@ -2581,7 +2638,7 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
                 }
             }
         } else {
-            if (peek().value == "ozgarmas" || peek().value == "o'zgarmas") {
+            if (peek().value == "o'zgarmas") {
                 param.isConst = true;
                 advance();
             }
@@ -3079,4 +3136,120 @@ std::unique_ptr<InterfaceDeclaration> Parser::parseInterfaceDeclaration() {
     return std::make_unique<InterfaceDeclaration>(name, std::move(methods), interfaceToken);
 }
 
+// Phase 12: Xatolikni yig'ish va sinxronizatsiya.
+void Parser::recordError(const std::string& msg, const Token& token) {
+    std::string fullMsg = msg + " " + formatLocation(token);
+    errors_.push_back(fullMsg);
+}
+
+// Phase 2.5: Eskirgan sinonimlar — har bir C++ tushunchasi uchun bitta
+// kanonik uz++ so'z bor. Bu xarita ikki turli kontekstga bo'lingan:
+//
+//   * `typeContextOnly` — faqat tur kontekstida ishlatiladigan sinonimlar.
+//     Foydalanuvchi `umumiy`, `yagona`, `to'plam` ni o'zgaruvchi nomi sifatida
+//     ishlatishi mumkin — shu sababli, biz faqat `parseTypeString()` da
+//     tekshiramiz, ifoda/operator boshlanishida emas.
+//
+//   * `keywordContext` — kalit so'z sifatida ishlatiladigan, oddiy
+//     o'zgaruvchi nomi bo'la olmaydigan sinonimlar. Bularni har joyda
+//     tekshirsa bo'ladi.
+
+static const std::map<std::string, std::string>& typeOnlyDeprecated() {
+    static const std::map<std::string, std::string> m{
+        {"mantiq",          "mantiqiy"},          // bool
+        {"ikkilangan",      "haqiqiy"},           // double
+        {"to'plam",         "vektor"},            // std::vector
+        {"hesh_jadval",     "lug'at"},            // std::unordered_map
+        {"hesh_xarita",     "lug'at"},            // std::unordered_map
+        {"o'ziga_xos",      "tartib_to'plam"},    // std::set
+        {"o'n",             "ikki_tomonlama_navbat"}, // std::deque
+        {"yagona",          "yagona_korsatkich"}, // std::unique_ptr
+        {"umumiy",          "umumiy_korsatkich"}, // std::shared_ptr
+        {"aqlli_korsatkich","umumiy_korsatkich"}, // std::shared_ptr
+        {"nozik_qulf",      "umumiy_qulf"},       // std::shared_mutex
+        {"filter",          "filtr"},             // std::views::filter
+        {"saralash",        "tartibla"},          // std::sort
+        {"yigish",          "to'plash"},          // std::ranges::to
+    };
+    return m;
+}
+
+static const std::map<std::string, std::string>& keywordContextDeprecated() {
+    static const std::map<std::string, std::string> m{
+        // Apostrofsiz shakllar — yagona kanonik shakl apostrofli
+        {"ozgaruvchan",     "o'zgaruvchan"},      // auto
+        {"ozgarmas",        "o'zgarmas"},         // const
+        {"ochirish",        "o'chirish"},         // delete
+        // Boshqaruv kalit so'zlari
+        {"aks",             "aks_holda"},         // else
+        {"qaytish",         "qaytarish"},         // return
+        // Oqim identifikatorlari (kalit so'z sifatida)
+        {"chiqarish",       "yozish"},            // std::cout
+        {"olish",           "kiritish"},          // std::cin
+        // Tuzilma sinonimi (rus tilidan)
+        {"straktura",       "tuzilma"},           // struct
+    };
+    return m;
+}
+
+void Parser::checkDeprecatedSynonym() const {
+    if (isAtEnd() || peek().type != TokenType::Identifier) return;
+    // Tur kontekstida — faqat parseTypeString chaqirsa, tur sinonimlarini
+    // ham tekshiramiz. Boshqa kontekstda — faqat kalit so'z sinonimlari.
+    const auto& kwMap = keywordContextDeprecated();
+    auto it = kwMap.find(peek().value);
+    if (it != kwMap.end()) {
+        throw ParseError("'" + it->first + "' eskirgan sinonim — "
+                         "uning o'rniga '" + it->second + "' ishlating "
+                         "(Phase 2.5: bitta C++ tushunchasi = bitta uz++ so'z)");
+    }
+}
+
+void Parser::checkDeprecatedTypeSynonym() const {
+    if (isAtEnd() || peek().type != TokenType::Identifier) return;
+    // Tur kontekstida ham kalit so'z, ham tur sinonimlarini tekshiramiz.
+    checkDeprecatedSynonym();
+    const auto& typeMap = typeOnlyDeprecated();
+    auto it = typeMap.find(peek().value);
+    if (it != typeMap.end()) {
+        throw ParseError("'" + it->first + "' eskirgan sinonim — "
+                         "uning o'rniga '" + it->second + "' ishlating "
+                         "(Phase 2.5: bitta C++ tushunchasi = bitta uz++ so'z)");
+    }
+}
+
+void Parser::synchronize() {
+    errorMode_ = false;
+    // Keyingi ifoda yoki deklaratsiya chegarasigacha tokenlarni o'tkazamiz.
+    while (!isAtEnd()) {
+        // Agar oldingi token ';' bo'lsa — biz allaqachon sinxronlashdik
+        if (previous().type == TokenType::Symbol && previous().value == ";")
+            return;
+        // Agar joriy token ';', '}' yoki deklaratsiya kalit so'zi bo'lsa
+        if (peek().type == TokenType::Symbol &&
+            (peek().value == ";" || peek().value == "}"))
+            return;
+        // Deklaratsiya kalit so'zlari
+        if (peek().type == TokenType::Identifier) {
+            const std::string& kw = peek().value;
+            if (kw == "sinf" || kw == "funksiya" || kw == "tuzilma" ||
+                kw == "shablon" || kw == "nomlar_fazosi" || kw == "ulash" ||
+                kw == "butun" || kw == "bosh" || kw == "haqiqiy" ||
+                kw == "mantiqiy" || kw == "matn" || kw == "o'zgaruvchan" ||
+                kw == "o'zgarmas" || kw == "agar" || kw == "uchun" ||
+                kw == "toki" || kw == "moslash" || kw == "qaytarish" ||
+                kw == "urinish" || kw == "statik_tasdiqlash")
+                return;
+        }
+        advance();
+    }
+}
+
 } // namespace uzpp
+
+
+
+
+
+
+

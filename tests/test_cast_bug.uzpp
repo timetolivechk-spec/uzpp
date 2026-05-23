@@ -1,0 +1,9 @@
+ulash <cctype>
+
+butun asosiy() {
+    belgi c = 'A';
+    agar (std::isspace(static_cast<unsigned char>(c))) {
+        qaytarish 1;
+    }
+    qaytarish 0;
+}

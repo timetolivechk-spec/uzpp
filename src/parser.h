@@ -20,9 +20,14 @@ public:
 
     std::unique_ptr<Program> parse();
 
+    // Phase 12: Ko'p xatolik yig'ish — xatoliklarni to'plash va davom etish.
+    const std::vector<std::string>& getErrors() const { return errors_; }
+    bool hasErrors() const { return !errors_.empty(); }
+
 private:
     const std::vector<Token>& tokens_;
     std::size_t current_;
+    std::vector<std::string> errors_; // Phase 12: yig'ilgan xatoliklar
 
     const Token& peek() const;
     const Token& previous() const;
@@ -102,6 +107,20 @@ private:
     // Tur satrini o'qish: "vektor<vektor<butun>>" kabi ichma-ich shablonlarni
     // ham to'g'ri tahlil qiladi (>> belgisini ikki > deb tushunadi).
     std::string parseTypeString();
+
+    // Phase 12: Xatolikdan keyin sinxronizatsiya — keyingi ifoda/operator
+    // chegarasigacha tokenlarni o'tkazib yuborish.
+    void recordError(const std::string& msg, const Token& token);
+    void synchronize();
+    bool errorMode_ = false; // xatolikdan keyin sinxronizatsiya rejimi
+
+    // Phase 2.5: Eskirgan sinonimlar — ikki turdagi xarita.
+    // `checkDeprecatedSynonym` — kalit so'z kontekstida (har joyda chaqirish mumkin).
+    // `checkDeprecatedTypeSynonym` — tur kontekstida (faqat parseTypeString'dan
+    // chaqiriladi, chunki tur sinonimlari oddiy o'zgaruvchi nomi sifatida ham
+    // ishlatilishi mumkin — masalan, `butun umumiy = 5`).
+    void checkDeprecatedSynonym() const;
+    void checkDeprecatedTypeSynonym() const;
 };
 
 } // namespace uzpp

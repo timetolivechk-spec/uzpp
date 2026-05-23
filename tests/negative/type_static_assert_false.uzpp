@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: statik_tasdiqlash yolg'on shart bilan
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    statik_tasdiqlash(sizeof(butun) == 999, "butun 999 bayt bo'lishi kerak emas");
+    qaytarish 0;
+}

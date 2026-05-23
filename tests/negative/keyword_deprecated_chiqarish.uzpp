@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: 'chiqarish' eskirgan sinonim — 'yozish' ishlating
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    chiqarish << "Salom" << qator_oxiri;
+    qaytarish 0;
+}

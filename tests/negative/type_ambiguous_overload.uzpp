@@ -1,0 +1,15 @@
+// XATOLIK_KUTILMOQDA: noaniq chaqiruv — ikkala imzo ham bir xil mos keladi
+ulash "uzpp_runtime.hpp"
+
+bosh chiqar(butun x, haqiqiy y) {
+    yozish << "int+double: " << x << ", " << y << qator_oxiri;
+}
+
+bosh chiqar(haqiqiy x, butun y) {
+    yozish << "double+int: " << x << ", " << y << qator_oxiri;
+}
+
+butun asosiy() {
+    chiqar(1, 2);  // noaniq: ikkala imzo ham 1 ball (promotion)
+    qaytarish 0;
+}

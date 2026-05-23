@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: 'ozgaruvchan' eskirgan — apostrofli 'o'zgaruvchan' ishlating
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    ozgaruvchan x = 5;
+    qaytarish 0;
+}

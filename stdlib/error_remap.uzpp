@@ -1,0 +1,173 @@
+// uz++ — Kompilyator yordamchisi: xatolik pozitsiyalarini qayta xaritalash.
+// Bu fayl `src/error_remap.h` ning uz++ da qayta yozilgan versiyasi.
+// g++ chiqargan `.cpp` faylidagi qator/ustun raqamlarini asl `.uzpp`
+// faylidagi qatorlarga #line direktivalari orqali o'tkazadi.
+//
+// Self-hosting maqsadi: uz++ kompilyatori o'zining yordamchi modulini
+// o'zi kompilyatsiya qila oladi.
+
+ulash <algorithm>
+ulash <cctype>
+ulash <filesystem>
+ulash <sstream>
+ulash <string>
+ulash <vector>
+
+nomlar_fazosi uzpp::ErrorRemap {
+
+    tuzilma QatorXarita {
+        butun cppQatori;      // Ushbu direktiva qamrab oladigan birinchi .cpp qatori
+        matn uzppYol;         // Direktiva ko'rsatayotgan .uzpp fayli
+        butun uzppQatori;     // cppQatori uchun .uzpp dagi qator raqami
+    };
+
+    // g++ chiqargan xatolik matnidagi `.cpp` fayl yo'llarini va qator
+    // raqamlarini asl `.uzpp` fayl ma'lumotlariga almashtiradi.
+    funksiya remapPozitsiyalar(
+        matn chiqish,
+        o'zgarmas matn& cppMazmuni,
+        o'zgarmas matn& generatsiyaQilinganCppNomi
+    ) -> matn {
+
+        // 1. #line direktivalarini cppMazmuni dan yig'amiz
+        vektor<QatorXarita> xaritalar;
+        {
+            std::stringstream ss(cppMazmuni);
+            matn qator;
+            butun cppQatorNo = 0;
+            toki (std::getline(ss, qator)) {
+                ++cppQatorNo;
+                o'zgaruvchan firstNonWs = qator.find_first_not_of(" \t");
+                agar (firstNonWs == matn::npos) davom_etish;
+                agar (qator.compare(firstNonWs, 5, "#line") != 0) davom_etish;
+
+                hajm_turi i = firstNonWs + 5;
+                toki (i < qator.size() && std::isspace(static_cast<int>(qator[i])))
+                    ++i;
+
+                butun raqam = 0;
+                mantiqiy raqamBor = yolg'on;
+                toki (i < qator.size() && std::isdigit(static_cast<int>(qator[i]))) {
+                    raqam = raqam * 10 + (qator[i] - '0');
+                    ++i;
+                    raqamBor = rost;
+                }
+                agar (!raqamBor) davom_etish;
+
+                toki (i < qator.size() && std::isspace(static_cast<int>(qator[i])))
+                    ++i;
+                agar (i >= qator.size() || qator[i] != '"') davom_etish;
+                ++i;
+                o'zgaruvchan end = qator.find('"', i);
+                agar (end == matn::npos) davom_etish;
+
+                matn raw = qator.substr(i, end - i);
+                matn yol;
+                yol.reserve(raw.size());
+                uchun (hajm_turi k = 0; k < raw.size(); ++k) {
+                    agar (raw[k] == '\\' && k + 1 < raw.size() && raw[k + 1] == '\\') {
+                        yol += '\\';
+                        ++k;
+                    } aks_holda {
+                        yol += raw[k];
+                    }
+                }
+                xaritalar.push_back({cppQatorNo + 1, yol, raqam});
+            }
+        }
+        agar (xaritalar.empty()) qaytarish chiqish;
+
+        // 2. Har bir chiqish qatorini tekshiramiz
+        matn natija;
+        natija.reserve(chiqish.size());
+        hajm_turi qatorBoshlanishi = 0;
+        toki (qatorBoshlanishi <= chiqish.size()) {
+            o'zgaruvchan nl = chiqish.find('\n', qatorBoshlanishi);
+            matn chiqishQatori = chiqish.substr(
+                qatorBoshlanishi,
+                nl == matn::npos ? matn::npos : nl - qatorBoshlanishi);
+
+            matn ozgartirilgan;
+            hajm_turi skan = 0;
+            toki (skan < chiqishQatori.size()) {
+                o'zgaruvchan cppPoz = chiqishQatori.find(".cpp", skan);
+                agar (cppPoz == matn::npos) {
+                    ozgartirilgan.append(chiqishQatori, skan, matn::npos);
+                    to'xtatish;
+                }
+
+                hajm_turi nomBoshlanishi = cppPoz;
+                toki (nomBoshlanishi > 0) {
+                    belgi c = chiqishQatori[nomBoshlanishi - 1];
+                    agar (c == ' ' || c == '\t' || c == ':' || c == '(' ||
+                         c == '\'' || c == '"' || c == ',' || c == '<')
+                        to'xtatish;
+                    --nomBoshlanishi;
+                }
+
+                matn faylNomi = chiqishQatori.substr(
+                    nomBoshlanishi, cppPoz + 4 - nomBoshlanishi);
+                std::filesystem::path faylNomiYol(faylNomi);
+
+                agar (faylNomiYol.filename().string() != generatsiyaQilinganCppNomi) {
+                    ozgartirilgan.append(chiqishQatori, skan, cppPoz + 4 - skan);
+                    skan = cppPoz + 4;
+                    davom_etish;
+                }
+
+                hajm_turi keyin = cppPoz + 4;
+                agar (keyin >= chiqishQatori.size() || chiqishQatori[keyin] != ':') {
+                    ozgartirilgan.append(chiqishQatori, skan, keyin - skan);
+                    skan = keyin;
+                    davom_etish;
+                }
+                ++keyin;
+
+                butun cppXatoQatori = 0;
+                mantiqiy qatorTopildi = yolg'on;
+                toki (keyin < chiqishQatori.size() &&
+                      std::isdigit(static_cast<int>(chiqishQatori[keyin]))) {
+                    cppXatoQatori = cppXatoQatori * 10 + (chiqishQatori[keyin] - '0');
+                    ++keyin;
+                    qatorTopildi = rost;
+                }
+                agar (!qatorTopildi) {
+                    ozgartirilgan.append(chiqishQatori, skan, keyin - skan);
+                    skan = keyin;
+                    davom_etish;
+                }
+
+                // Eng yaqin #line direktivasini topamiz (indeks orqali)
+                butun bestIdx = -1;
+                uchun (o'zgaruvchan j = 0; j < static_cast<butun>(xaritalar.size()); ++j) {
+                    agar (xaritalar[j].cppQatori <= cppXatoQatori) {
+                        agar (bestIdx == -1 ||
+                             xaritalar[j].cppQatori > xaritalar[bestIdx].cppQatori)
+                            bestIdx = j;
+                    } aks_holda {
+                        to'xtatish;
+                    }
+                }
+                agar (bestIdx == -1) {
+                    ozgartirilgan.append(chiqishQatori, skan, keyin - skan);
+                    skan = keyin;
+                    davom_etish;
+                }
+
+                butun uzppXatoQatori = xaritalar[bestIdx].uzppQatori +
+                    (cppXatoQatori - xaritalar[bestIdx].cppQatori);
+                ozgartirilgan.append(chiqishQatori, skan, nomBoshlanishi - skan);
+                ozgartirilgan += xaritalar[bestIdx].uzppYol;
+                ozgartirilgan += ':';
+                ozgartirilgan += std::to_string(uzppXatoQatori);
+                skan = keyin;
+            }
+            natija += ozgartirilgan;
+            agar (nl == matn::npos) to'xtatish;
+            natija += '\n';
+            qatorBoshlanishi = nl + 1;
+        }
+        qaytarish natija;
+    }
+
+} // nomlar_fazosi uzpp::ErrorRemap

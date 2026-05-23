@@ -1,0 +1,7 @@
+// XATOLIK_KUTILMOQDA: 'mantiq' eskirgan sinonim — 'mantiqiy' ishlating
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    mantiq b = rost;
+    qaytarish 0;
+}

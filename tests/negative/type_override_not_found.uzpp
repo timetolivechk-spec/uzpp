@@ -1,0 +1,22 @@
+// XATOLIK_KUTILMOQDA: ustidan_yozish bazada mavjud bo'lmagan metod uchun
+ulash "uzpp_runtime.hpp"
+
+sinf Asos {
+ochiq:
+    bosh salomlash() {
+        yozish << "Salom" << qator_oxiri;
+    }
+};
+
+sinf Bola meros Asos {
+ochiq:
+    bosh xayrlashish() ustidan_yozish {
+        yozish << "Xayr" << qator_oxiri;
+    }
+};
+
+butun asosiy() {
+    Bola b;
+    b.xayrlashish();
+    qaytarish 0;
+}

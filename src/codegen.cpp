@@ -68,7 +68,24 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
             }
         }
     } else {
-        writePreamble(sourceName);
+        // Phase 17: C++20 export module birinchi deklaratsiya bo'lishi
+        // kerak — har qanday #include yoki izohdan oldin.
+        bool hasModule = false;
+        for (const auto& child : program->getChildren()) {
+            if (child->getType() == ASTNodeType::ExportModuleStatement) {
+                hasModule = true;
+                emitNode(child.get(), nullptr);
+                moduleEmitted_ = true;
+                output_ << "\n";
+                lineStart_ = true;
+                break;
+            }
+        }
+        // Modullar uchun standart preambula kerak emas —
+        // #include o'rniga import ishlatiladi.
+        if (!hasModule) {
+            writePreamble(sourceName);
+        }
         emitNodes(program->getChildren());
     }
 
@@ -193,6 +210,7 @@ void CodeGen::reset() {
     userMainHasArgs_ = false;
     userMainTakesArgcArgv_ = false;
     uzppDependencies_.clear();
+    moduleEmitted_ = false;
 }
 
 void CodeGen::writePreamble(const std::string& sourceName) {
@@ -391,51 +409,47 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         // Atomic and concurrency types
         {"atomik",         "std::atomic"},
         {"atomik_bayroq",  "std::atomic_flag"},
-        {"chiqarish", "std::cout"},
+        // Phase 2.5: Bitta C++ tushunchasi — bitta uz++ so'z.
+        // `chiqarish`, `olish`, `to'plam` (vector), `o'n`, `filter`,
+        // `hesh_jadval`, `hesh_xarita`, `straktura`, `yigish` — sinonim sifatida
+        // olib tashlandi. Foydalanuvchi eski shaklni yozsa, parser.cpp dagi
+        // `checkDeprecatedSynonym()` yordamchi xato beradi.
         {"filtr", "std::views::filter"},
-        {"filter", "std::views::filter"},
-        {"map", "std::views::transform"},
         {"xaritalash", "std::views::transform"},
-        {"yigish", "std::ranges::to"},
+        {"to'plash", "std::ranges::to"},
         {"enum_class", "enum class"},
         {"fayl_oqish", "std::ifstream"},
         {"fayl_yozish", "std::ofstream"},
-        {"hesh_jadval", "std::unordered_map"},
-        {"hesh_xarita", "std::unordered_map"},
         {"himoyalangan", "protected"},
-        {"ikkilangan", "double"},
         {"haqiqiy", "double"},
         {"irgitish", "throw"},
         {"kasr", "float"},
         {"kiritish", "std::cin"},
         {"ko'chirish", "std::move"},
         {"lug'at", "std::unordered_map"},
-        {"mantiq", "bool"},
         {"mantiqiy", "bool"},
         {"matn", "std::string"},
         {"mavhum", "virtual"},
         {"meros", ": public"},
         {"nomlar_fazosi", "namespace"},
-        {"o'n", "std::deque"},
+        {"ikki_tomonlama_navbat", "std::deque"},
         {"o'zgaruvchan", "auto"},
         {"o'zgarmas", "const"},
         {"ochiq", "public"},
-        {"olish", "std::cin"},
         {"oqim", "uzpp::Oqim"},
         {"oqim_boshla", "std::async"},
         {"kelajak", "std::future"},
-        {"ozgaruvchan", "auto"},
-        {"ozgarmas", "const"},
         {"qator_oxiri", "std::endl"},
         {"qaytarish", "return"},
         {"qulf", "std::mutex"},
         {"qulflangan_guard", "std::lock_guard"},
+        {"umumiy_qulf", "std::shared_mutex"},
         {"rost", "true"},
         {"sanab_olish", "enum"},
         {"sinf", "class"},
-        {"straktura", "struct"},
         {"tartiblangan_xarita", "std::map"},
-        {"to'plam", "std::vector"},
+        {"tartib_to'plam", "std::set"},
+        {"tartibla", "std::sort"},
         {"toki", "while"},
         {"tuzilma", "struct"},
         {"uchun", "for"},
@@ -444,6 +458,8 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         {"ustidan_yozish", "override"},
         {"vektor", "std::vector"},
         {"yagona_korsatkich", "std::unique_ptr"},
+        {"umumiy_korsatkich", "std::shared_ptr"},
+        {"kuchsiz_korsatkich", "std::weak_ptr"},
         {"yoki", "else"},
         {"yolg'on", "false"},
         {"yozish", "std::cout"},
@@ -485,7 +501,6 @@ std::string CodeGen::translateToken(const Token& token, const ASTNode* nextNode)
         // Memory management
         {"yangi",             "new"},
         {"o'chirish",         "delete"},
-        {"ochirish",          "delete"},
         // Compile-time assertion
         {"statik_tasdiqlash", "static_assert"},
         // C++20 source_location (joriy chaqiriq joyi haqida ma'lumot)
@@ -667,7 +682,7 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         }
         return "";
     };
-    for (const char* kw : {"o'zgarmas", "ozgarmas"}) {
+    for (const char* kw : {"o'zgarmas"}) {
         auto result = stripConstPrefix(kw);
         if (!result.empty()) return result;
     }
@@ -759,46 +774,41 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         {"hajm_turi", "std::size_t"},
         {"atomik", "std::atomic"},
         {"atomik_bayroq", "std::atomic_flag"},
-        {"ozgaruvchan", "auto"},
         {"o'zgaruvchan", "auto"},
-        {"ozgarmas", "const auto"},
         {"o'zgarmas", "const auto"},
         {"kasr", "float"},
-        {"ikkilangan", "double"},
         {"haqiqiy", "double"},
         {"belgi", "char"},
-        {"mantiq", "bool"},
         {"mantiqiy", "bool"},
         {"matn", "std::string"},
-        {"to'plam", "std::vector"},
+        // Phase 2.5: Bitta C++ tushunchasi — bitta uz++ so'z.
+        // Konteynerlar
         {"vektor", "std::vector"},
-        {"o'n", "std::deque"},
+        {"ikki_tomonlama_navbat", "std::deque"},   // ilgari `o'n` — noto'g'ri ("ten")
         {"lug'at", "std::unordered_map"},
-        {"hesh_jadval", "std::unordered_map"},
-        {"hesh_xarita", "std::unordered_map"},
-        {"o'ziga_xos", "std::set"},
         {"to'plam_noyob", "std::unordered_set"},
-        {"yigish", "std::ranges::to"},
-        {"to'plash", "std::ranges::to"},
         {"tartiblangan_xarita", "std::map"},
         {"tartib_to'plam", "std::set"},
-        {"yagona", "std::unique_ptr"},
+        // Aqlli ko'rsatkichlar — `_korsatkich` qo'shimchasi bilan
         {"yagona_korsatkich", "std::unique_ptr"},
-        {"umumiy", "std::shared_ptr"},
-        {"aqlli_korsatkich", "std::shared_ptr"},
+        {"umumiy_korsatkich", "std::shared_ptr"},  // ilgari `umumiy`/`aqlli_korsatkich`
         {"kuchsiz_korsatkich", "std::weak_ptr"},
+        // Sinxronizatsiya
         {"oqim", "uzpp::Oqim"},
         {"qulf", "std::mutex"},
         {"qulflangan_guard", "std::lock_guard"},
-        {"nozik_qulf", "std::shared_mutex"},
+        {"umumiy_qulf", "std::shared_mutex"},      // ilgari `nozik_qulf` — semantic noto'g'ri
         {"kelajak", "std::future"},
         {"vada", "std::promise"},
         {"oqim_boshla", "std::async"},
+        // Fayl oqimlari
         {"fayl_oqish", "std::ifstream"},
         {"fayl_yozish", "std::ofstream"},
-        {"filtr", "std::views::filter"},
-        {"filter", "std::views::filter"},
+        // Ranges/views
+        {"filtr", "std::views::filter"},           // `filter` (ingliz) o'chirildi
         {"xaritalash", "std::views::transform"},
+        {"to'plash", "std::ranges::to"},           // `yigish` o'chirildi
+        // Boshqalar
         {"ko'chirish", "std::move"},
         // Yangi turlar
         {"Natija", "uzpp::Natija"},
@@ -812,8 +822,7 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         // Xotira boshqaruv funksiyalari (template argumentli chaqiruvlar uchun)
         {"yangi_yagona", "std::make_unique"},
         {"yangi_umumiy", "std::make_shared"},
-        {"tartibla", "std::sort"},
-        {"saralash", "std::sort"},
+        {"tartibla", "std::sort"},                 // `saralash` o'chirildi
         {"qidirish", "std::find"},
         {"manba_joyi", "std::source_location"},
     };
@@ -1160,7 +1169,20 @@ void CodeGen::visitFunctionCall(const FunctionCall* expr) {
 void CodeGen::visitMemberAccess(const MemberAccess* expr) {
     if (expr == nullptr || expr->getObject() == nullptr) return;
     
+    // Phase 18: Agar ob'ekt ko'rsatkich dereferensi (*ptr) bo'lsa,
+    // qavs ichiga olamiz — *ptr.x o'rniga (*ptr).x chiqishi uchun.
+    // C++ da `.` operatori `*` dan yuqoriroq prioritetga ega.
+    bool needParens = false;
+    auto objType = expr->getObject()->getType();
+    if (objType == ASTNodeType::UnaryExpression) {
+        auto un = static_cast<const UnaryExpression*>(expr->getObject());
+        if (un->getOperator() == UnaryExpression::UnaryOp::Dereference)
+            needParens = true;
+    }
+    
+    if (needParens) emitRawToken("(");
     visitExpression(expr->getObject());
+    if (needParens) emitRawToken(")");
     
     if (expr->getAccessType() == MemberAccess::AccessType::Dot) {
         emitRawToken(".");
@@ -1279,7 +1301,11 @@ void CodeGen::visitStatement(const Statement* stmt) {
             visitLinkStatement(static_cast<const LinkStatement*>(stmt));
             break;
         case ASTNodeType::ExportModuleStatement:
-            visitExportModuleStatement(static_cast<const ExportModuleStatement*>(stmt));
+            // Phase 17: Agar modul allaqachon chiqarilgan bo'lsa,
+            // takrorlamaymiz (birinchi deklaratsiya qoidasi).
+            if (!moduleEmitted_) {
+                visitExportModuleStatement(static_cast<const ExportModuleStatement*>(stmt));
+            }
             break;
         case ASTNodeType::TokenStatement:
             writeIndentIfNeeded();

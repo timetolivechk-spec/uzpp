@@ -1,0 +1,8 @@
+// XATOLIK_KUTILMOQDA: 'aqlli_korsatkich' eskirgan sinonim — 'umumiy_korsatkich'
+// (aqlli_korsatkich semantic noto'g'ri edi — bu shared_ptr emas, balki "kategoriya")
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    aqlli_korsatkich<butun> p = yangi_umumiy<butun>(42);
+    qaytarish 0;
+}

@@ -1,0 +1,12 @@
+// uz++ — C++20 modullar (export module, import) testi
+// `eksport modul` sintaksisi C++20 modullarini yaratadi
+
+eksport modul calculator;
+
+eksport butun qosh(butun a, butun b) {
+    qaytarish a + b;
+}
+
+eksport butun kopaytir(butun a, butun b) {
+    qaytarish a * b;
+}
