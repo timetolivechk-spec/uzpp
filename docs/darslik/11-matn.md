@@ -12,9 +12,9 @@ Bu juda kuchli tur — uzunligi cheksiz, ko'p amallar bilan kelgan, va
 xotirani avtomatik boshqaradi.
 
 ```cpp
-matn ism = "Aziza"
-matn salom = "Salom, " + ism + "!"
-yozish << salom                       // "Salom, Aziza!"
+matn ism = "Aziza";
+matn salom = "Salom, " + ism + "!";
+yozish << salom; // "Salom, Aziza!"
 ```
 
 Bu darsda biz matn bilan ishlashning eng kerakli usullarini ko'rib
@@ -27,42 +27,42 @@ chiqamiz.
 ### Bo'sh matn
 
 ```cpp
-matn s = ""
-matn t                                // ham bo'sh
+matn s = "";
+matn t; // ham bo'sh
 ```
 
 ### Uzunlikni olish
 
 ```cpp
-matn s = "Salom"
-yozish << s.length()                  // 5
-yozish << s.size()                    // 5 (length bilan bir xil)
+matn s = "Salom";
+yozish << s.length(); // 5
+yozish << s.size(); // 5 (length bilan bir xil)
 ```
 
 ### Belgilarga kirish
 
 ```cpp
-matn s = "Salom"
-yozish << s[0]                        // 'S'
-yozish << s[4]                        // 'm'
-yozish << s.at(2)                     // 'l' (xavfsizroq)
+matn s = "Salom";
+yozish << s[0]; // 'S'
+yozish << s[4]; // 'm'
+yozish << s.at(2); // 'l' (xavfsizroq)
 ```
 
 ### Birlashtirish (concatenation)
 
 ```cpp
-matn a = "Salom, "
-matn b = "dunyo!"
-matn c = a + b                        // "Salom, dunyo!"
+matn a = "Salom, ";
+matn b = "dunyo!";
+matn c = a + b; // "Salom, dunyo!"
 
-c += "?"                              // "Salom, dunyo!?"
+c += "?"; // "Salom, dunyo!?"
 ```
 
 ### Solishtirish
 
 ```cpp
-matn a = "alma"
-matn b = "anor"
+matn a = "alma";
+matn b = "anor";
 
 agar (a == b) { ... }                 // tenglik
 agar (a < b)  { ... }                 // alfavit bo'yicha (a < b rost)
@@ -72,10 +72,10 @@ agar (a != b) { ... }                 // teng emas
 ### Ostigi matn (substring)
 
 ```cpp
-matn s = "Salom, dunyo!"
-matn s1 = s.substr(0, 5)              // "Salom"
-matn s2 = s.substr(7)                 // "dunyo!"
-matn s3 = s.substr(7, 5)              // "dunyo"
+matn s = "Salom, dunyo!";
+matn s1 = s.substr(0, 5); // "Salom"
+matn s2 = s.substr(7); // "dunyo!"
+matn s3 = s.substr(7, 5); // "dunyo"
 ```
 
 `substr(boshlanish, uzunlik)` — boshlanish indeksidan uzunlik belgi.
@@ -83,20 +83,20 @@ matn s3 = s.substr(7, 5)              // "dunyo"
 ### Qidirish
 
 ```cpp
-matn s = "Salom, dunyo!"
-butun joy = s.find("dunyo")           // 7
-butun yoq = s.find("yer")             // matn::npos (topilmadi)
+matn s = "Salom, dunyo!";
+butun joy = s.find("dunyo"); // 7
+butun yoq = s.find("yer"); // matn::npos (topilmadi)
 
 agar (joy != matn::npos) {
-    yozish << "Topildi indeks: " << joy
+    yozish << "Topildi indeks: " << joy;
 }
 ```
 
 ### Almashtirish
 
 ```cpp
-matn s = "Salom, dunyo!"
-s.replace(7, 5, "olam")
+matn s = "Salom, dunyo!";
+s.replace(7, 5, "olam");
 // "Salom, olam!"
 ```
 
@@ -109,21 +109,21 @@ s.replace(7, 5, "olam")
 ### Son → matn
 
 ```cpp
-butun yosh = 25
-matn s = std::to_string(yosh)         // "25"
+butun yosh = 25;
+matn s = std::to_string(yosh); // "25"
 
-ikkilangan baho = 3.14
-matn t = std::to_string(baho)         // "3.140000"
+haqiqiy baho = 3.14;
+matn t = std::to_string(baho); // "3.140000"
 ```
 
 ### Matn → son
 
 ```cpp
-matn s = "42"
-butun n = std::stoi(s)                // 42
+matn s = "42";
+butun n = std::stoi(s); // 42
 
-matn t = "3.14"
-ikkilangan d = std::stod(t)           // 3.14
+matn t = "3.14";
+haqiqiy d = std::stod(t); // 3.14
 ```
 
 `std::stoi` (string to int), `std::stod` (string to double).
@@ -131,17 +131,17 @@ ikkilangan d = std::stod(t)           // 3.14
 **Diqqat!** Agar matn raqam emas — istisno tashlanadi:
 
 ```cpp
-butun n = std::stoi("abc")            // ← XATO!
+butun n = std::stoi("abc"); // ← XATO!
 ```
 
 Xavfsiz versiya:
 
 ```cpp
 urinish {
-    butun n = std::stoi(s)
+    butun n = std::stoi(s);
 }
 ushlash (o'zgarmas std::invalid_argument& e) {
-    yozish << "Bu raqam emas"
+    yozish << "Bu raqam emas";
 }
 ```
 
@@ -152,28 +152,28 @@ ushlash (o'zgarmas std::invalid_argument& e) {
 ### Aniq taqqoslash
 
 ```cpp
-matn a = "Salom"
-matn b = "salom"
+matn a = "Salom";
+matn b = "salom";
 
-a == b                                // yolg'on (S va s farqli)
+a == b; // yolg'on (S va s farqli)
 ```
 
 ### Katta-kichik harfsiz taqqoslash
 
 ```cpp
-#include <algorithm>
-#include <cctype>
+ulash <algorithm>
+ulash <cctype>
 
 bosh kichiklash(matn& s) {
     std::transform(s.begin(), s.end(), s.begin(),
-        [](belgi c) { qaytarish std::tolower(c) })
+        [](belgi c) { qaytarish std::tolower(c) });
 }
 
-matn a = "Salom", b = "SALOM"
-kichiklash(a)
-kichiklash(b)
+matn a = "Salom", b = "SALOM";
+kichiklash(a);
+kichiklash(b);
 agar (a == b) {
-    yozish << "Bir xil"
+    yozish << "Bir xil";
 }
 ```
 
@@ -184,36 +184,36 @@ agar (a == b) {
 `std::format` — bu Python ning `f-string` ga o'xshash kuchli vosita.
 
 ```cpp
-#include <format>
+ulash <format>
 
-matn ism = "Aziza"
-butun yosh = 22
+matn ism = "Aziza";
+butun yosh = 22;
 
-matn s = std::format("Salom, {}! Yoshingiz {}", ism, yosh)
+matn s = std::format("Salom, {}! Yoshingiz {}", ism, yosh);
 // "Salom, Aziza! Yoshingiz 22"
 ```
 
 ### Format spetsifikatorlari
 
 ```cpp
-std::format("{:>10}", "abc")          // "       abc" (o'ng tomon)
-std::format("{:<10}", "abc")          // "abc       " (chap)
-std::format("{:^10}", "abc")          // "   abc    " (markaz)
+std::format("{:>10}", "abc"); // "       abc" (o'ng tomon)
+std::format("{:<10}", "abc"); // "abc       " (chap)
+std::format("{:^10}", "abc"); // "   abc    " (markaz)
 
-std::format("{:.2f}", 3.14159)        // "3.14" (2 ta kasr)
-std::format("{:6.2f}", 3.14)          // "  3.14"
-std::format("{:08.3f}", 3.14)         // "0003.140"
+std::format("{:.2f}", 3.14159); // "3.14" (2 ta kasr)
+std::format("{:6.2f}", 3.14); // "  3.14"
+std::format("{:08.3f}", 3.14); // "0003.140"
 
-std::format("{:x}", 255)              // "ff" (heks)
-std::format("{:o}", 8)                // "10" (oktal)
-std::format("{:b}", 5)                // "101" (binar)
+std::format("{:x}", 255); // "ff" (heks)
+std::format("{:o}", 8); // "10" (oktal)
+std::format("{:b}", 5); // "101" (binar)
 ```
 
 ### Real misol
 
 ```cpp
-ikkilangan narx = 15999.50
-matn s = std::format("Mahsulot narxi: {:,.2f} so'm", narx)
+haqiqiy narx = 15999.50;
+matn s = std::format("Mahsulot narxi: {:,.2f} so'm", narx);
 // "Mahsulot narxi: 15,999.50 so'm"
 ```
 
@@ -229,24 +229,24 @@ kuchli va o'qish oson.
 Murakkab amallar uchun:
 
 ```cpp
-#include <sstream>
+ulash <sstream>
 
-std::stringstream ss
-ss << "Yosh: " << 22 << ", baho: " << 4.7
-matn s = ss.str()                     // "Yosh: 22, baho: 4.7"
+std::stringstream ss;
+ss << "Yosh: " << 22 << ", baho: " << 4.7;
+matn s = ss.str(); // "Yosh: 22, baho: 4.7"
 ```
 
 ### Matnlardan qiymat o'qish
 
 ```cpp
-matn satr = "42 3.14 salom"
-std::stringstream ss(satr)
+matn satr = "42 3.14 salom";
+std::stringstream ss(satr);
 
-butun n
-ikkilangan d
-matn s
+butun n;
+haqiqiy d;
+matn s;
 
-ss >> n >> d >> s
+ss >> n >> d >> s;
 // n = 42, d = 3.14, s = "salom"
 ```
 
@@ -257,8 +257,8 @@ ss >> n >> d >> s
 uz++ Unicode (UTF-8) ni qo'llab-quvvatlaydi. Lekin ehtiyot bo'ling:
 
 ```cpp
-matn s = "O'zbekiston"
-yozish << s.length()                  // 12 (BAYT soni, harf emas!)
+matn s = "O'zbekiston";
+yozish << s.length(); // 12 (BAYT soni, harf emas!)
 ```
 
 `length()` — bu **bayt** soni, harf soni emas. O'zbek harflari "O'",
@@ -270,8 +270,8 @@ Murakkab tahlillar uchun maxsus UTF-8 kutubxonalari ishlatiladi. Sodda
 hollarda — `std::wstring` (keng matn):
 
 ```cpp
-#include <string>
-std::wstring s = L"O'zbekiston"        // L — wide
+ulash <string>
+std::wstring s = L"O'zbekiston"; // L — wide
 ```
 
 ---
@@ -282,11 +282,11 @@ std::wstring s = L"O'zbekiston"        // L — wide
 
 ```cpp
 bosh chiqarish(std::string_view sv) {
-    yozish << sv
+    yozish << sv;
 }
 
-chiqarish("Salom")                    // nusxa olmaydi — tez!
-chiqarish(matn("Salom, dunyo!"))      // nusxa olmaydi
+chiqarish("Salom"); // nusxa olmaydi — tez!
+chiqarish(matn("Salom, dunyo!")); // nusxa olmaydi
 ```
 
 Funksiya parametrlari uchun — afzal usul (nusxa olmaslik).
@@ -299,27 +299,27 @@ Foydalanuvchi yozgan jumlada so'zlar, harflar, gaplarini sanaydigan
 dastur:
 
 ```cpp
-matn jumla = "Bugun ob-havo ajoyib. Quyosh charaqlab turadi. Salom!"
+matn jumla = "Bugun ob-havo ajoyib. Quyosh charaqlab turadi. Salom!";
 
-butun harflar = 0
-butun sozlar = 1
-butun gaplar = 0
+butun harflar = 0;
+butun sozlar = 1;
+butun gaplar = 0;
 
 uchun (belgi c : jumla) {
     agar (std::isalpha(c)) {
-        harflar++
+        harflar++;
     }
     agar (c == ' ') {
-        sozlar++
+        sozlar++;
     }
     agar (c == '.' || c == '!' || c == '?') {
-        gaplar++
+        gaplar++;
     }
 }
 
-yozish << "Harflar: " << harflar << qator_oxiri
-yozish << "So'zlar: " << sozlar << qator_oxiri
-yozish << "Gaplar: " << gaplar << qator_oxiri
+yozish << "Harflar: " << harflar << qator_oxiri;
+yozish << "So'zlar: " << sozlar << qator_oxiri;
+yozish << "Gaplar: " << gaplar << qator_oxiri;
 ```
 
 **Natija:**
@@ -337,35 +337,35 @@ Gaplar: 3
 ### 1. Chegaradan tashqari
 
 ```cpp
-matn s = "Salom"
-yozish << s[10]                       // ← XATO yoki kutilmagan natija
+matn s = "Salom";
+yozish << s[10]; // ← XATO yoki kutilmagan natija
 ```
 
 ### 2. UTF-8 da indeks bilan ishlash
 
 ```cpp
-matn s = "O'zbekiston"
-yozish << s[1]                        // ← XATO: harfning bir qismi
+matn s = "O'zbekiston";
+yozish << s[1]; // ← XATO: harfning bir qismi
 ```
 
 ### 3. `std::stoi` xato
 
 ```cpp
-butun n = std::stoi("abc")            // ← XATO: istisno
+butun n = std::stoi("abc"); // ← XATO: istisno
 ```
 
 ### 4. `nullptr` ni matnga aylantirish
 
 ```cpp
-o'zgarmas belgi* p = nullptr
-matn s = p                            // ← XATO: crash
+o'zgarmas belgi* p = nullptr;
+matn s = p; // ← XATO: crash
 ```
 
 ### 5. `c_str()` ni saqlash
 
 ```cpp
-o'zgarmas belgi* p = matn("Salom").c_str()
-yozish << p                           // ← XATO: matn yo'qolgan, p invalid
+o'zgarmas belgi* p = matn("Salom").c_str();
+yozish << p; // ← XATO: matn yo'qolgan, p invalid
 ```
 
 ---

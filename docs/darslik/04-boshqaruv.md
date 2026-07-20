@@ -25,9 +25,9 @@ takrorlashni, kerak bo'lganda to'xtashni buyurishimiz kerak.
 Bu boshqaruvga uchta asosiy mexanizm xizmat qiladi:
 
 1. **Tanlov (shart)** — agar shart bajarilsa, biror kodni bajar (`agar`)
-2. **Takrorlash (sikl)** — kodni bir necha marta bajar (`uchun`, `davr`)
+2. **Takrorlash (sikl)** — kodni bir necha marta bajar (`uchun`, `toki`)
 3. **Tartibni o'zgartirish** — sikldan chiqish, keyingi takrorlashga
-   o'tish (`to'xtatish`, `davom_ettirish`)
+   o'tish (`to'xtatish`, `davom_etish`)
 
 ---
 
@@ -44,10 +44,10 @@ agar (shart) {
 Misol:
 
 ```cpp
-butun yosh = 20
+butun yosh = 20;
 
 agar (yosh >= 18) {
-    yozish << "Siz voyaga yetgansiz" << qator_oxiri
+    yozish << "Siz voyaga yetgansiz" << qator_oxiri;
 }
 ```
 
@@ -62,10 +62,10 @@ Ko'pincha biz "agar bu — buni qil, aks holda — buni" demoqchimiz:
 
 ```cpp
 agar (yosh >= 18) {
-    yozish << "Voyaga yetgan" << qator_oxiri
+    yozish << "Voyaga yetgan" << qator_oxiri;
 }
 aks_holda {
-    yozish << "Voyaga yetmagan" << qator_oxiri
+    yozish << "Voyaga yetmagan" << qator_oxiri;
 }
 ```
 
@@ -77,19 +77,19 @@ qondirmasa" deb tarjima qilish mumkin.
 Ko'p marta biz uchta yoki undan ko'p tanlovga duch kelamiz:
 
 ```cpp
-butun baho = 87
+butun baho = 87;
 
 agar (baho >= 90) {
-    yozish << "A'lo" << qator_oxiri
+    yozish << "A'lo" << qator_oxiri;
 }
 aks_holda agar (baho >= 80) {
-    yozish << "Yaxshi" << qator_oxiri
+    yozish << "Yaxshi" << qator_oxiri;
 }
 aks_holda agar (baho >= 60) {
-    yozish << "Qoniqarli" << qator_oxiri
+    yozish << "Qoniqarli" << qator_oxiri;
 }
 aks_holda {
-    yozish << "Qoniqarsiz" << qator_oxiri
+    yozish << "Qoniqarsiz" << qator_oxiri;
 }
 ```
 
@@ -108,14 +108,14 @@ Shart ichida yana shart bo'lishi mumkin:
 ```cpp
 agar (yosh >= 18) {
     agar (haydovchilik_guvohnomasi) {
-        yozish << "Avtomobil haydashga ruxsat" << qator_oxiri
+        yozish << "Avtomobil haydashga ruxsat" << qator_oxiri;
     }
     aks_holda {
-        yozish << "Avval guvohnoma olishingiz kerak" << qator_oxiri
+        yozish << "Avval guvohnoma olishingiz kerak" << qator_oxiri;
     }
 }
 aks_holda {
-    yozish << "Voyaga yetmaganlar avtomobil haydolmaydi" << qator_oxiri
+    yozish << "Voyaga yetmaganlar avtomobil haydolmaydi" << qator_oxiri;
 }
 ```
 
@@ -123,13 +123,13 @@ Buni `&&` bilan ham yozish mumkin:
 
 ```cpp
 agar (yosh >= 18 && haydovchilik_guvohnomasi) {
-    yozish << "Avtomobil haydashga ruxsat" << qator_oxiri
+    yozish << "Avtomobil haydashga ruxsat" << qator_oxiri;
 }
 aks_holda agar (yosh >= 18) {
-    yozish << "Avval guvohnoma olishingiz kerak" << qator_oxiri
+    yozish << "Avval guvohnoma olishingiz kerak" << qator_oxiri;
 }
 aks_holda {
-    yozish << "Voyaga yetmaganlar avtomobil haydolmaydi" << qator_oxiri
+    yozish << "Voyaga yetmaganlar avtomobil haydolmaydi" << qator_oxiri;
 }
 ```
 
@@ -141,7 +141,7 @@ o'qish osonroq bo'ladi.
 Agar shart blokida bitta ko'rsatma bo'lsa, qavslarsiz yozish mumkin:
 
 ```cpp
-agar (yosh >= 18) yozish << "Voyaga yetgan" << qator_oxiri
+agar (yosh >= 18) yozish << "Voyaga yetgan" << qator_oxiri;
 ```
 
 Lekin **biz buni tavsiya qilmaymiz**. Qavslar bo'lsa, kod tartibga
@@ -149,23 +149,23 @@ keladi va kelajakda yangi qator qo'shish oson bo'ladi.
 
 ---
 
-## `tanlash` — bir nechta yo'naltirishlardan tanlash
+## `moslash` — bir nechta yo'naltirishlardan tanlash
 
-Agar siz bir nechta aniq qiymatlarni tekshirayotgan bo'lsangiz, `tanlash`
+Agar siz bir nechta aniq qiymatlarni tekshirayotgan bo'lsangiz, `moslash`
 (C++ da `switch`) qulayroq:
 
 ```cpp
-butun kun = 3
+butun kun = 3;
 
-tanlash (kun) {
-    holat 1: yozish << "Dushanba" << qator_oxiri; to'xtatish
-    holat 2: yozish << "Seshanba" << qator_oxiri; to'xtatish
-    holat 3: yozish << "Chorshanba" << qator_oxiri; to'xtatish
-    holat 4: yozish << "Payshanba" << qator_oxiri; to'xtatish
-    holat 5: yozish << "Juma" << qator_oxiri; to'xtatish
-    holat 6: yozish << "Shanba" << qator_oxiri; to'xtatish
-    holat 7: yozish << "Yakshanba" << qator_oxiri; to'xtatish
-    boshqa: yozish << "Noto'g'ri kun" << qator_oxiri
+moslash (kun) {
+    holat 1: yozish << "Dushanba" << qator_oxiri; to'xtatish;
+    holat 2: yozish << "Seshanba" << qator_oxiri; to'xtatish;
+    holat 3: yozish << "Chorshanba" << qator_oxiri; to'xtatish;
+    holat 4: yozish << "Payshanba" << qator_oxiri; to'xtatish;
+    holat 5: yozish << "Juma" << qator_oxiri; to'xtatish;
+    holat 6: yozish << "Shanba" << qator_oxiri; to'xtatish;
+    holat 7: yozish << "Yakshanba" << qator_oxiri; to'xtatish;
+    boshqa: yozish << "Noto'g'ri kun" << qator_oxiri;
 }
 ```
 
@@ -182,48 +182,48 @@ tanlash (kun) {
 > dastur **keyingi `holat`ga ham o'tib ketadi**. Bu ba'zan ataylab
 > qilinadi, lekin ko'pincha xato.
 
-### `to'xtatish` siz "fallthrough"
+### `to'xtatish` siz "fallthrough" (oqib o'tish)
 
 ```cpp
-butun oy = 2
+butun oy = 2;
 
-tanlash (oy) {
+moslash (oy) {
     holat 12:
     holat 1:
     holat 2:
-        yozish << "Qish" << qator_oxiri
-        to'xtatish
+        yozish << "Qish" << qator_oxiri;
+        to'xtatish;
     holat 3:
     holat 4:
     holat 5:
-        yozish << "Bahor" << qator_oxiri
-        to'xtatish
+        yozish << "Bahor" << qator_oxiri;
+        to'xtatish;
     holat 6:
     holat 7:
     holat 8:
-        yozish << "Yoz" << qator_oxiri
-        to'xtatish
+        yozish << "Yoz" << qator_oxiri;
+        to'xtatish;
     holat 9:
     holat 10:
     holat 11:
-        yozish << "Kuz" << qator_oxiri
-        to'xtatish
+        yozish << "Kuz" << qator_oxiri;
+        to'xtatish;
 }
 ```
 
 12, 1, va 2-oylar uchun bitta natija — "Qish". `to'xtatish` qo'yilmagani
 sababli kompilyator pastki `holat`larga oqib boradi.
 
-### `tanlash` ning chegaralari
+### `moslash` ning chegaralari
 
-`tanlash` faqat **butun va belgi** turi bilan ishlay oladi. Matn,
-kasr yoki `mantiq` bilan ishlamaydi. Shu bilan bir qatorda — har bir
+`moslash` faqat **butun va belgi** turi bilan ishlay oladi. Matn,
+kasr yoki `mantiqiy` bilan ishlamaydi. Shu bilan bir qatorda — har bir
 `holat` **aniq qiymat** bo'lishi kerak, oraliq emas.
 
 ```cpp
-tanlash (baho) {
+moslash (baho) {
     holat (baho >= 90):       // ← XATO! Bunday yozib bo'lmaydi
-    ...
+    ...;
 }
 ```
 
@@ -231,13 +231,12 @@ Bu hollarda `agar/aks_holda` ishlating.
 
 ---
 
-## Sikl — `davr` (while)
+## Sikl — `toki` (while)
 
-Sikl — bu kod blokini bir necha marta takrorlovchi konstruksiya.
-**`davr`** (C++ da `while`) eng oddiy sikl:
+**`toki`** (C++ da `while`) eng oddiy sikl:
 
 ```cpp
-davr (shart) {
+toki (shart) {
     // shart rost bo'lguncha takrorlanadi
 }
 ```
@@ -245,10 +244,10 @@ davr (shart) {
 Misol — 1 dan 5 gacha sonlarni chiqarish:
 
 ```cpp
-butun i = 1
-davr (i <= 5) {
-    yozish << i << qator_oxiri
-    i++
+butun i = 1;
+toki (i <= 5) {
+    yozish << i << qator_oxiri;
+    i++;
 }
 ```
 
@@ -290,9 +289,9 @@ U sikl davomida o'zgaradi va sikl qachon to'xtashini belgilaydi.
 dastur hech qachon to'xtamaydi:
 
 ```cpp
-butun i = 1
-davr (i <= 5) {
-    yozish << i << qator_oxiri
+butun i = 1;
+toki (i <= 5) {
+    yozish << i << qator_oxiri;
     // i++ unutilgan — cheksiz sikl!
 }
 ```
@@ -302,14 +301,14 @@ Bunday holatlarda dasturni `Ctrl+C` bilan to'xtatishingiz kerak.
 ### `bajar/davr` — kamida bir marta bajariladi
 
 ```cpp
-butun javob
+butun javob;
 
 bajar {
-    yozish << "0 dan katta son kiriting: "
-    kiritish >> javob
-} davr (javob <= 0)
+    yozish << "0 dan katta son kiriting: ";
+    kiritish >> javob;
+} toki (javob <= 0);
 
-yozish << "Rahmat! " << javob << " qabul qilindi" << qator_oxiri
+yozish << "Rahmat! " << javob << " qabul qilindi" << qator_oxiri;
 ```
 
 Bu yerda farq: blok **birinchi marta har holda** bajariladi, keyin
@@ -323,7 +322,7 @@ shart tekshiriladi.
 
 ## Sikl — `uchun` (for)
 
-`uchun` — eng ko'p ishlatiladigan sikl. U `davr` ga qaraganda
+`uchun` — eng ko'p ishlatiladigan sikl. U `toki` ga qaraganda
 qisqaroq va aniqroq.
 
 ### Sintaksis
@@ -340,16 +339,16 @@ Uchta qism — `;` bilan ajratiladi:
 2. **Shart** — har iteratsiyada tekshiriladi
 3. **O'zgartirish** — har iteratsiya **oxirida** bajariladi
 
-Misol — 1 dan 5 gacha sonlarni chiqarish (yuqoridagi `davr` kabi,
+Misol — 1 dan 5 gacha sonlarni chiqarish (yuqoridagi `toki` kabi,
 lekin qisqaroq):
 
 ```cpp
 uchun (butun i = 1; i <= 5; i++) {
-    yozish << i << qator_oxiri
+    yozish << i << qator_oxiri;
 }
 ```
 
-Bu xuddi `davr` kabi ishlaydi, lekin 3 qator o'rniga 1 qator.
+Bu xuddi `toki` kabi ishlaydi, lekin 3 qator o'rniga 1 qator.
 
 ### `uchun` qanday ishlaydi?
 
@@ -374,19 +373,19 @@ Bu xuddi `davr` kabi ishlaydi, lekin 3 qator o'rniga 1 qator.
 ```cpp
 // 10 dan 1 gacha teskari hisoblash
 uchun (butun i = 10; i >= 1; i--) {
-    yozish << i << " "
+    yozish << i << " ";
 }
 // Natija: 10 9 8 7 6 5 4 3 2 1
 
 // 2 lik qadam bilan
 uchun (butun i = 0; i <= 20; i += 2) {
-    yozish << i << " "
+    yozish << i << " ";
 }
 // Natija: 0 2 4 6 8 10 12 14 16 18 20
 
 // Quvvatlash — 1, 2, 4, 8, 16, ...
 uchun (butun i = 1; i <= 1000; i *= 2) {
-    yozish << i << " "
+    yozish << i << " ";
 }
 // Natija: 1 2 4 8 16 32 64 128 256 512
 ```
@@ -400,7 +399,7 @@ oddiy sintaksis:
 vektor<butun> sonlar = {10, 20, 30, 40, 50}
 
 uchun (butun son : sonlar) {
-    yozish << son << qator_oxiri
+    yozish << son << qator_oxiri;
 }
 ```
 
@@ -418,9 +417,9 @@ Bir sikl ichida boshqa sikl bo'lishi mumkin. Bu **ichma-ich sikllar**.
 ```cpp
 uchun (butun i = 1; i <= 5; i++) {
     uchun (butun j = 1; j <= 5; j++) {
-        yozish << (i * j) << "\t"
+        yozish << (i * j) << "\t";
     }
-    yozish << qator_oxiri
+    yozish << qator_oxiri;
 }
 ```
 
@@ -462,9 +461,9 @@ qilinadi.
 ```cpp
 uchun (butun i = 1; i <= 100; i++) {
     agar (i == 5) {
-        to'xtatish
+        to'xtatish;
     }
-    yozish << i << " "
+    yozish << i << " ";
 }
 // Natija: 1 2 3 4
 ```
@@ -473,25 +472,25 @@ uchun (butun i = 1; i <= 100; i++) {
 bo'lsa, sikldan chiqish:
 
 ```cpp
-davr (rost) {
-    matn parol
-    yozish << "Parolni kiriting: "
-    kiritish >> parol
+toki (rost) {
+    matn parol;
+    yozish << "Parolni kiriting: ";
+    kiritish >> parol;
 
     agar (parol == "salom123") {
-        yozish << "Tabriklayman! Tizimga kirdingiz" << qator_oxiri
-        to'xtatish
+        yozish << "Tabriklayman! Tizimga kirdingiz" << qator_oxiri;
+        to'xtatish;
     }
     aks_holda {
-        yozish << "Noto'g'ri parol. Qayta urinib ko'ring" << qator_oxiri
+        yozish << "Noto'g'ri parol. Qayta urinib ko'ring" << qator_oxiri;
     }
 }
 ```
 
-`davr (rost)` — bu **cheksiz sikl**. U faqat `to'xtatish` orqali
+`toki (rost)` — bu **cheksiz sikl**. U faqat `to'xtatish` orqali
 to'xtaydi.
 
-### `davom_ettirish` (continue)
+### `davom_etish` (continue)
 
 Joriy iteratsiyani **o'tkazib yuborish**, lekin sikldan chiqmaslik —
 keyingi iteratsiyaga o'tish.
@@ -499,23 +498,23 @@ keyingi iteratsiyaga o'tish.
 ```cpp
 uchun (butun i = 1; i <= 10; i++) {
     agar (i % 2 == 0) {
-        davom_ettirish      // juft sonlarni o'tkazib yuboramiz
+        davom_etish; // juft sonlarni o'tkazib yuboramiz
     }
-    yozish << i << " "
+    yozish << i << " ";
 }
 // Natija: 1 3 5 7 9 (faqat toq sonlar)
 ```
 
-> **Eng ko'p uchraydigan xato:** `to'xtatish` va `davom_ettirish` ni
+> **Eng ko'p uchraydigan xato:** `to'xtatish` va `davom_etish` ni
 > chalkashtirish. `to'xtatish` — sikldan **butunlay** chiqish.
-> `davom_ettirish` — faqat joriy iteratsiyani o'tkazib, keyingisiga
+> `davom_etish` — faqat joriy iteratsiyani o'tkazib, keyingisiga
 > o'tish.
 
 ---
 
 ## Cheksiz sikllar va ulardan qutilish
 
-### `davr (rost)`
+### `toki (rost)`
 
 Bu eng tipik cheksiz sikl. Faqat `to'xtatish` orqali chiqish mumkin.
 
@@ -546,25 +545,25 @@ yig'indisi o'ziga teng bo'lgan son. Masalan: 6 = 1 + 2 + 3.
 
 ```cpp
 butun asosiy() {
-    butun son
-    yozish << "Sonni kiriting: "
-    kiritish >> son
+    butun son;
+    yozish << "Sonni kiriting: ";
+    kiritish >> son;
 
-    butun yigindi = 0
+    butun yigindi = 0;
     uchun (butun i = 1; i < son; i++) {
         agar (son % i == 0) {
-            yigindi += i
+            yigindi += i;
         }
     }
 
     agar (yigindi == son) {
-        yozish << son << " — mukammal son!" << qator_oxiri
+        yozish << son << " — mukammal son!" << qator_oxiri;
     }
     aks_holda {
-        yozish << son << " — mukammal son emas" << qator_oxiri
+        yozish << son << " — mukammal son emas" << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -575,22 +574,22 @@ son oldingi ikkitasining yig'indisi.
 
 ```cpp
 butun asosiy() {
-    butun n
-    yozish << "Necha ta Fibonachchi soni? "
-    kiritish >> n
+    butun n;
+    yozish << "Necha ta Fibonachchi soni? ";
+    kiritish >> n;
 
-    butun a = 0
-    butun b = 1
+    butun a = 0;
+    butun b = 1;
 
     uchun (butun i = 0; i < n; i++) {
-        yozish << a << " "
-        butun temp = a + b
-        a = b
-        b = temp
+        yozish << a << " ";
+        butun temp = a + b;
+        a = b;
+        b = temp;
     }
-    yozish << qator_oxiri
+    yozish << qator_oxiri;
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -600,25 +599,25 @@ Tub son — bu faqat 1 va o'ziga bo'linadigan son. 2, 3, 5, 7, 11, 13...
 
 ```cpp
 butun asosiy() {
-    butun n
-    yozish << "N gacha tub sonlar (N): "
-    kiritish >> n
+    butun n;
+    yozish << "N gacha tub sonlar (N): ";
+    kiritish >> n;
 
     uchun (butun son = 2; son <= n; son++) {
-        mantiq tub = rost
+        mantiqiy tub = rost;
         uchun (butun i = 2; i * i <= son; i++) {
             agar (son % i == 0) {
-                tub = yolg'on
-                to'xtatish
+                tub = yolg'on;
+                to'xtatish;
             }
         }
         agar (tub) {
-            yozish << son << " "
+            yozish << son << " ";
         }
     }
-    yozish << qator_oxiri
+    yozish << qator_oxiri;
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -633,9 +632,9 @@ bo'luvchisi `sqrt(son)` dan kichik bo'lsa, biz uni topamiz. Aks holda
 ### 1. Cheksiz sikl
 
 ```cpp
-butun i = 1
-davr (i <= 10) {
-    yozish << i << qator_oxiri
+butun i = 1;
+toki (i <= 10) {
+    yozish << i << qator_oxiri;
     // i++ ni unutdi! Cheksiz sikl.
 }
 ```
@@ -644,9 +643,9 @@ davr (i <= 10) {
 
 ```cpp
 // "1 dan 10 gacha" deb yozmoqchimiz
-uchun (butun i = 1; i < 10; i++)     // 1 dan 9 gacha (faqat 9!)
-uchun (butun i = 1; i <= 10; i++)    // 1 dan 10 gacha (TO'G'RI)
-uchun (butun i = 0; i < 10; i++)     // 0 dan 9 gacha (10 ta son)
+uchun (butun i = 1; i < 10; i++); // 1 dan 9 gacha (faqat 9!)
+uchun (butun i = 1; i <= 10; i++); // 1 dan 10 gacha (TO'G'RI)
+uchun (butun i = 0; i < 10; i++); // 0 dan 9 gacha (10 ta son)
 ```
 
 Off-by-one — bu eng ko'p uchraydigan xato. Doim aniq tekshiring:
@@ -658,7 +657,7 @@ Off-by-one — bu eng ko'p uchraydigan xato. Doim aniq tekshiring:
 uchun (butun i = 0; i < 10; i++) {
     uchun (butun j = 0; j < 10; j++) {
         agar (j == 5) {
-            to'xtatish      // Faqat ichki sikldan chiqadi!
+            to'xtatish; // Faqat ichki sikldan chiqadi!
         }
     }
     // Tashqi sikl davom etadi
@@ -668,9 +667,9 @@ uchun (butun i = 0; i < 10; i++) {
 ### 4. Switch ichida `to'xtatish` ni unutish
 
 ```cpp
-tanlash (kun) {
-    holat 1: yozish << "Dush"
-    holat 2: yozish << "Sesh"
+moslash (kun) {
+    holat 1: yozish << "Dush";
+    holat 2: yozish << "Sesh";
 }
 // "Dush" ham, "Sesh" ham chiqadi (fallthrough)!
 ```
@@ -704,9 +703,9 @@ Talabadan ball so'rang (0-100). Bahoni chiqaring:
 `n!` ni hisoblang (`5! = 1*2*3*4*5 = 120`). Foydalanuvchidan `n` so'rang.
 
 ```cpp
-butun faktorial = 1
+butun faktorial = 1;
 uchun (butun i = 1; i <= n; i++) {
-    faktorial *= i
+    faktorial *= i;
 }
 ```
 
@@ -717,10 +716,10 @@ Foydalanuvchidan butun son so'rang. Uni teskari aylantiring (123 →
 
 **Maslahat:**
 ```cpp
-butun teskari = 0
-davr (son > 0) {
-    teskari = teskari * 10 + son % 10
-    son /= 10
+butun teskari = 0;
+toki (son > 0) {
+    teskari = teskari * 10 + son % 10;
+    son /= 10;
 }
 ```
 
@@ -747,8 +746,8 @@ chiqaring.
 
 **Maslahat:** Tasodifiy son uchun:
 ```cpp
-#include <random>
-butun sirli_son = std::rand() % 100 + 1
+ulash <random>
+butun sirli_son = std::rand() % 100 + 1;
 ```
 
 ### Mashq 7: Eng katta umumiy bo'luvchi (qiyin)
@@ -758,10 +757,10 @@ bilan toping.
 
 **Maslahat:**
 ```cpp
-davr (b != 0) {
-    butun temp = b
-    b = a % b
-    a = temp
+toki (b != 0) {
+    butun temp = b;
+    b = a % b;
+    a = temp;
 }
 // a — javob
 ```
@@ -773,14 +772,14 @@ davr (b != 0) {
 Bu bobda biz dastur oqimini boshqarishni o'rgandik:
 
 - **`agar/aks_holda`** — shartga qarab boshqacha kod bajarish.
-- **`tanlash`** — bir nechta aniq qiymatdan tanlash, `tanlash` ning
+- **`moslash`** — bir nechta aniq qiymatdan tanlash, `moslash` ning
   `holat` va `to'xtatish` qoidalari.
-- **`davr`** — shart rost bo'lguncha takrorlash.
-- **`bajar/davr`** — kamida bir marta bajaradigan sikl.
+- **`toki`** — shart rost bo'lguncha takrorlash (while).
+- **`do-while` muammosi** — uz++ tilida `do-while` sikli bevosita qo'llab-quvvatlanmaydi, lekin uni `toki` va `to'xtatish` yordamida emulyatsiya qilish oson.
 - **`uchun`** — ishga tushirish, shart va o'zgartirish bilan eng ko'p
   ishlatiladigan sikl.
 - **Sikl ichida sikl** — ichma-ich sikllar va ularning murakkabligi.
-- **`to'xtatish`** va **`davom_ettirish`** — sikldan chiqish va
+- **`to'xtatish`** va **`davom_etish`** — sikldan chiqish va
   iteratsiyani o'tkazib yuborish.
 - **Amaliyotda** — Fibonachchi, mukammal son, tub sonlar dasturlarini
   yozdik.

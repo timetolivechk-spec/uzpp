@@ -6,11 +6,11 @@ Tasavvur qiling, siz maktab darajachisiz va sizga 30 ta talaba
 bahosini saqlash kerak. 30 ta o'zgaruvchini alohida e'lon qilasizmi?
 
 ```cpp
-butun baho_1 = 85
-butun baho_2 = 92
-butun baho_3 = 78
+butun baho_1 = 85;
+butun baho_2 = 92;
+butun baho_3 = 78;
 // ... 27 ta yana
-butun baho_30 = 88
+butun baho_30 = 88;
 ```
 
 Bu juda noqulay. Eng kichik vazifani bajarish — masalan, **o'rtacha
@@ -50,9 +50,9 @@ Tahlil:
 ### Elementga kirish — indeks orqali
 
 ```cpp
-yozish << baholar[0]          // 85 (birinchi)
-yozish << baholar[2]          // 78 (uchinchi)
-yozish << baholar[4]          // 88 (oxirgi)
+yozish << baholar[0]; // 85 (birinchi)
+yozish << baholar[2]; // 78 (uchinchi)
+yozish << baholar[4]; // 88 (oxirgi)
 ```
 
 **Diqqat!** Indeks **0 dan boshlanadi**, `n-1` da tugaydi (n — uzunlik).
@@ -65,15 +65,15 @@ indeks:      0   1   2   3   4
 ### Element o'zgartirish
 
 ```cpp
-baholar[2] = 80               // uchinchi bahoni o'zgartirdik
-yozish << baholar[2]          // 80
+baholar[2] = 80; // uchinchi bahoni o'zgartirdik
+yozish << baholar[2]; // 80
 ```
 
 ### Bo'ylab yurish
 
 ```cpp
 uchun (butun i = 0; i < 5; i++) {
-    yozish << baholar[i] << " "
+    yozish << baholar[i] << " ";
 }
 ```
 
@@ -81,7 +81,7 @@ Yoki **range-based for**:
 
 ```cpp
 uchun (butun baho : baholar) {
-    yozish << baho << " "
+    yozish << baho << " ";
 }
 ```
 
@@ -91,8 +91,8 @@ kerak emas.
 ### Chegaradan tashqari kirish — XATO
 
 ```cpp
-butun baholar[5]
-baholar[10] = 100             // ← XATO: out of bounds!
+butun baholar[5];
+baholar[10] = 100; // ← XATO: out of bounds!
 ```
 
 Kompilyator ba'zan buni ushlamaydi, lekin dastur ishga tushganda
@@ -102,17 +102,17 @@ kutilmagan natija beradi yoki ishdan chiqadi. C++ da bu chegarani
 ### Massiv hajmi
 
 ```cpp
-butun baholar[5]
-butun n = sizeof(baholar) / sizeof(baholar[0])    // 5
+butun baholar[5];
+butun n = sizeof(baholar) / sizeof(baholar[0]); // 5
 ```
 
 Bu — `total_size / element_size`. Lekin bu mexanizm noqulay. Zamonaviy
 yo'l: `std::array`:
 
 ```cpp
-#include <array>
+ulash <array>
 std::array<butun, 5> baholar = {85, 92, 78, 90, 88}
-yozish << baholar.size()      // 5 — sodda!
+yozish << baholar.size(); // 5 — sodda!
 ```
 
 ---
@@ -125,20 +125,20 @@ oldindan ma'lum bo'lmasa, vektordan foydalaning.
 ### E'lon qilish
 
 ```cpp
-#include <vector>
+ulash <vector>
 
-vektor<butun> sonlar                              // bo'sh
+vektor<butun> sonlar; // bo'sh
 vektor<butun> baholar = {85, 92, 78, 90, 88}      // qiymat bilan
-vektor<butun> nollar(10, 0)                        // 10 ta nol
+vektor<butun> nollar(10, 0); // 10 ta nol
 ```
 
 ### Element qo'shish — `.push_back()`
 
 ```cpp
-vektor<butun> sonlar
-sonlar.push_back(10)
-sonlar.push_back(20)
-sonlar.push_back(30)
+vektor<butun> sonlar;
+sonlar.push_back(10);
+sonlar.push_back(20);
+sonlar.push_back(30);
 // sonlar = {10, 20, 30}
 ```
 
@@ -147,28 +147,28 @@ sonlar.push_back(30)
 ### Element o'chirish — `.pop_back()`
 
 ```cpp
-sonlar.pop_back()             // oxirgini olib tashlaydi
+sonlar.pop_back(); // oxirgini olib tashlaydi
 ```
 
 ### Element soni — `.size()`
 
 ```cpp
-yozish << sonlar.size()       // 2 (yuqorisidan keyin)
+yozish << sonlar.size(); // 2 (yuqorisidan keyin)
 ```
 
 ### Bo'sh ekanligini tekshirish
 
 ```cpp
 agar (sonlar.empty()) {
-    yozish << "Bo'sh"
+    yozish << "Bo'sh";
 }
 ```
 
 ### Elementga kirish
 
 ```cpp
-sonlar[0]                     // tezroq, lekin chegaradan tashqari xavfli
-sonlar.at(0)                  // sekinroq, lekin chegaradan tashqari exception
+sonlar[0]; // tezroq, lekin chegaradan tashqari xavfli
+sonlar.at(0); // sekinroq, lekin chegaradan tashqari exception
 ```
 
 `.at()` — agar chegaradan tashqari bo'lsa, **xatolik ko'taradi**
@@ -179,24 +179,24 @@ sonlar.at(0)                  // sekinroq, lekin chegaradan tashqari exception
 ```cpp
 // Indeks bilan
 uchun (butun i = 0; i < sonlar.size(); i++) {
-    yozish << sonlar[i] << " "
+    yozish << sonlar[i] << " ";
 }
 
 // Range-based for (afzal)
 uchun (butun son : sonlar) {
-    yozish << son << " "
+    yozish << son << " ";
 }
 
 // Havola bilan (o'zgartirish uchun)
 uchun (butun& son : sonlar) {
-    son *= 2                  // har birini ikkilantir
+    son *= 2; // har birini ikkilantir
 }
 ```
 
 ### Vektor tozalash
 
 ```cpp
-sonlar.clear()                // hamma elementlarni olib tashlaydi
+sonlar.clear(); // hamma elementlarni olib tashlaydi
 ```
 
 ### Misol: Ortacha baho
@@ -204,12 +204,12 @@ sonlar.clear()                // hamma elementlarni olib tashlaydi
 ```cpp
 vektor<butun> baholar = {85, 92, 78, 90, 88, 95}
 
-butun yigindi = 0
+butun yigindi = 0;
 uchun (butun b : baholar) {
-    yigindi += b
+    yigindi += b;
 }
-ikkilangan ortacha = ikkilangan(yigindi) / baholar.size()
-yozish << "O'rtacha: " << ortacha << qator_oxiri
+haqiqiy ortacha = haqiqiy(yigindi) / baholar.size();
+yozish << "O'rtacha: " << ortacha << qator_oxiri;
 ```
 
 ---
@@ -221,14 +221,14 @@ yozish << "O'rtacha: " << ortacha << qator_oxiri
 ### Misol — talaba bahosi xaritasi
 
 ```cpp
-#include <map>
+ulash <map>
 
-std::map<matn, butun> baholar
-baholar["Aziza"] = 92
-baholar["Bobur"] = 85
-baholar["Karim"] = 78
+std::map<matn, butun> baholar;
+baholar["Aziza"] = 92;
+baholar["Bobur"] = 85;
+baholar["Karim"] = 78;
 
-yozish << baholar["Aziza"]    // 92
+yozish << baholar["Aziza"]; // 92
 ```
 
 Bu yerda:
@@ -239,12 +239,12 @@ Bu yerda:
 
 ```cpp
 agar (baholar.count("Aziza") > 0) {
-    yozish << "Aziza topildi"
+    yozish << "Aziza topildi";
 }
 
 // Yoki — find orqali
 agar (baholar.find("Aziza") != baholar.end()) {
-    yozish << "Topildi"
+    yozish << "Topildi";
 }
 ```
 
@@ -256,7 +256,7 @@ agar (baholar.find("Aziza") != baholar.end()) {
 
 ```cpp
 uchun (o'zgarmas avto& juft : baholar) {
-    yozish << juft.first << ": " << juft.second << qator_oxiri
+    yozish << juft.first << ": " << juft.second << qator_oxiri;
 }
 ```
 
@@ -273,7 +273,7 @@ Map elementlari **kalit bo'yicha** avtomatik tartibga keltiriladi.
 ### Element o'chirish
 
 ```cpp
-baholar.erase("Bobur")
+baholar.erase("Bobur");
 ```
 
 ---
@@ -283,34 +283,34 @@ baholar.erase("Bobur")
 `set` — bu **takrorsiz** elementlar to'plami. Tartiblangan.
 
 ```cpp
-#include <set>
+ulash <set>
 
-std::set<butun> raqamlar
-raqamlar.insert(5)
-raqamlar.insert(3)
-raqamlar.insert(5)            // takror — qo'shilmaydi
-raqamlar.insert(7)
+std::set<butun> raqamlar;
+raqamlar.insert(5);
+raqamlar.insert(3);
+raqamlar.insert(5); // takror — qo'shilmaydi
+raqamlar.insert(7);
 
-yozish << raqamlar.size()      // 3 (5, 3, 7)
+yozish << raqamlar.size(); // 3 (5, 3, 7)
 ```
 
 ### Foydali amallar
 
 ```cpp
 agar (raqamlar.count(5) > 0) {
-    yozish << "5 bor"
+    yozish << "5 bor";
 }
 
-raqamlar.erase(3)              // 3 ni o'chirish
+raqamlar.erase(3); // 3 ni o'chirish
 ```
 
 ### Misol: noyob so'zlarni sanash
 
 ```cpp
 vektor<matn> matnlar = {"olma", "anor", "olma", "anor", "uzum"}
-std::set<matn> noyob(matnlar.begin(), matnlar.end())
+std::set<matn> noyob(matnlar.begin(), matnlar.end());
 
-yozish << "Noyob so'zlar soni: " << noyob.size()   // 3
+yozish << "Noyob so'zlar soni: " << noyob.size(); // 3
 ```
 
 ---
@@ -322,10 +322,10 @@ yozish << "Noyob so'zlar soni: " << noyob.size()   // 3
 Vektor kabi, lekin **ikkala tomondan** ham qo'shish/olib tashlash tez:
 
 ```cpp
-#include <deque>
-std::deque<butun> dq
-dq.push_back(1)
-dq.push_front(0)              // boshiga qo'shish
+ulash <deque>
+std::deque<butun> dq;
+dq.push_back(1);
+dq.push_front(0); // boshiga qo'shish
 // dq = {0, 1}
 ```
 
@@ -353,8 +353,8 @@ Ikki qiymatni birga saqlash uchun:
 
 ```cpp
 std::pair<matn, butun> talaba = {"Aziza", 92}
-yozish << talaba.first         // "Aziza"
-yozish << talaba.second        // 92
+yozish << talaba.first; // "Aziza"
+yozish << talaba.second; // 92
 ```
 
 ### Foydali misol
@@ -367,7 +367,7 @@ vektor<std::pair<matn, butun>> baholar = {
 }
 
 uchun (o'zgarmas avto& p : baholar) {
-    yozish << p.first << ": " << p.second << qator_oxiri
+    yozish << p.first << ": " << p.second << qator_oxiri;
 }
 ```
 
@@ -381,17 +381,17 @@ uchun (o'zgarmas avto& p : baholar) {
 Uchta yoki undan ko'p qiymat birga:
 
 ```cpp
-std::tuple<matn, butun, ikkilangan> talaba = {"Aziza", 22, 4.7}
-yozish << std::get<0>(talaba)         // "Aziza"
-yozish << std::get<1>(talaba)         // 22
-yozish << std::get<2>(talaba)         // 4.7
+std::tuple<matn, butun, haqiqiy> talaba = {"Aziza", 22, 4.7}
+yozish << std::get<0>(talaba); // "Aziza"
+yozish << std::get<1>(talaba); // 22
+yozish << std::get<2>(talaba); // 4.7
 ```
 
 Yoki `structured binding`:
 
 ```cpp
-o'zgarmas avto [ism, yosh, baho] = talaba
-yozish << ism << " " << yosh << " " << baho
+o'zgarmas avto [ism, yosh, baho] = talaba;
+yozish << ism << " " << yosh << " " << baho;
 ```
 
 ---
@@ -401,25 +401,26 @@ yozish << ism << " " << yosh << " " << baho
 Ba'zan qiymat **bo'lmasligi** mumkin. Masalan, qidirish funksiyasi:
 
 ```cpp
-std::optional<butun> qidirish(vektor<butun> sonlar, butun maqsad) {
+ixtiyoriy<butun> qidiruv(vektor<butun> sonlar, butun maqsad) {
     uchun (butun i = 0; i < sonlar.size(); i++) {
         agar (sonlar[i] == maqsad) {
-            qaytarish i               // topildi
+            qaytarish i; // topildi
         }
     }
-    qaytarish std::nullopt           // topilmadi
+    qaytarish std::nullopt; // topilmadi
 }
 
 butun asosiy() {
-    vektor<butun> v = {10, 20, 30}
-    avto natija = qidirish(v, 20)
+    vektor<butun> v = {10, 20, 30};
+    o'zgaruvchan natija = qidiruv(v, 20);
 
     agar (natija) {
-        yozish << "Topildi, indeks: " << *natija
+        yozish << "Topildi, indeks: " << *natija;
     }
     aks_holda {
-        yozish << "Topilmadi"
+        yozish << "Topilmadi";
     }
+    qaytarish 0;
 }
 ```
 
@@ -431,13 +432,13 @@ butun asosiy() {
 ## Amaliy misol: Talabalar jurnali
 
 ```cpp
-#include <vector>
-#include <map>
+ulash <vector>
+ulash <map>
 
 tuzilma Talaba {
-    matn ism
-    butun yoshi
-    vektor<butun> baholar
+    matn ism;
+    butun yoshi;
+    vektor<butun> baholar;
 }
 
 butun asosiy() {
@@ -448,15 +449,14 @@ butun asosiy() {
     vektor<Talaba> guruh = {t1, t2, t3}
 
     uchun (o'zgarmas Talaba& t : guruh) {
-        butun yigindi = 0
-        uchun (butun b : t.baholar) yigindi += b
-        ikkilangan ortacha = ikkilangan(yigindi) / t.baholar.size()
+        butun yigindi = 0;
+        uchun (butun b : t.baholar) yigindi += b;
+        haqiqiy ortacha = haqiqiy(yigindi) / t.baholar.size();
 
-        yozish << t.ism << " (" << t.yoshi << " yosh): "
-               << "o'rtacha = " << ortacha << qator_oxiri
+        yozish << t.ism << " (" << t.yoshi << " yosh): o'rtacha = " << ortacha << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -479,14 +479,14 @@ talaba boshqaruv tizimi.
 
 ```cpp
 vektor<butun> v = {1, 2, 3}
-v[5] = 10                     // ← XATO yoki crash
+v[5] = 10; // ← XATO yoki crash
 ```
 
 ### 2. Bo'sh vektordan element olish
 
 ```cpp
-vektor<butun> v
-yozish << v[0]                // ← XATO
+vektor<butun> v;
+yozish << v[0]; // ← XATO
 ```
 
 Tekshiring: `agar (!v.empty())`.
@@ -494,7 +494,7 @@ Tekshiring: `agar (!v.empty())`.
 ### 3. Map elementiga kirib unga avtomatik element qo'shish
 
 ```cpp
-std::map<matn, butun> m
+std::map<matn, butun> m;
 agar (m["yangi"] == 0) {      // ← "yangi" ni yaratdi (0 qiymat bilan)!
     // ...
 }
@@ -507,7 +507,7 @@ agar (m["yangi"] == 0) {      // ← "yangi" ni yaratdi (0 qiymat bilan)!
 vektor<butun> v = {1, 2, 3, 4, 5}
 uchun (avto it = v.begin(); it != v.end(); it++) {
     agar (*it == 3) {
-        v.erase(it)            // ← XATO: it endi tutashmagan
+        v.erase(it); // ← XATO: it endi tutashmagan
     }
 }
 ```
@@ -516,10 +516,10 @@ To'g'risi:
 ```cpp
 uchun (avto it = v.begin(); it != v.end(); ) {
     agar (*it == 3) {
-        it = v.erase(it)       // erase yangi iterator qaytaradi
+        it = v.erase(it); // erase yangi iterator qaytaradi
     }
     aks_holda {
-        it++
+        it++;
     }
 }
 ```

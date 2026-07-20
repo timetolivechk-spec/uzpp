@@ -14,9 +14,9 @@ nomlangan quti. Siz unga qiymat saqlaysiz, keyin nom orqali murojaat
 qilasiz va qiymatni o'qiysiz yoki o'zgartirasiz.
 
 ```cpp
-butun yosh = 25            // "yosh" deb nomlangan qutiga 25 ni saqla
-yozish << yosh             // "yosh" qutisidan qiymatni o'qib chiqar
-yosh = 26                  // qiymatni o'zgartir
+butun yosh = 25; // "yosh" deb nomlangan qutiga 25 ni saqla
+yozish << yosh; // "yosh" qutisidan qiymatni o'qib chiqar
+yosh = 26; // qiymatni o'zgartir
 ```
 
 E'tibor bering: `yosh` — bu nom (etiketka). `25` — qiymat (mazmun). Quti
@@ -65,8 +65,8 @@ keyin har biriga batafsil to'xtalamiz.
 | `butun` | `int` | 4 bayt | -2,147,483,648 dan 2,147,483,647 gacha | `25`, `-7`, `1000000` |
 | `uzun` | `long long` | 8 bayt | -9×10¹⁸ dan 9×10¹⁸ gacha | `9999999999` |
 | `kasr` | `float` | 4 bayt | ±3.4×10³⁸ (taxminan 7 ta aniq raqam) | `3.14`, `-0.5` |
-| `ikkilangan` | `double` | 8 bayt | ±1.8×10³⁰⁸ (taxminan 15 ta aniq raqam) | `3.141592653589` |
-| `mantiq` | `bool` | 1 bayt | `rost` yoki `yolg'on` | `rost`, `yolg'on` |
+| `haqiqiy` | `double` | 8 bayt | ±1.8×10³⁰⁸ (taxminan 15 ta aniq raqam) | `3.141592653589` |
+| `mantiqiy` | `bool` | 1 bayt | `rost` yoki `yolg'on` | `rost`, `yolg'on` |
 | `belgi` | `char` | 1 bayt | 0 dan 255 gacha (ASCII) | `'A'`, `'?'`, `'5'` |
 | `matn` | `std::string` | o'zgaruvchan | har qanday matn | `"Salom"`, `"Aziza"` |
 
@@ -76,9 +76,9 @@ Bu eng ko'p ishlatiladigan tur. `butun` 4 baytni egallaydi va manfiy
 hamda musbat butun sonlarni saqlay oladi.
 
 ```cpp
-butun yosh = 25
-butun temperatura = -15
-butun aholisi = 35000000      // Toshkent aholisi
+butun yosh = 25;
+butun temperatura = -15;
+butun aholisi = 35000000; // Toshkent aholisi
 ```
 
 **Real hayotdagi misol:** Talabaning yoshi, mahsulot soni, do'kondagi
@@ -91,8 +91,8 @@ katta son saqlamoqchi bo'lsangiz (masalan, dunyo aholisi 8 milliard),
 `uzun` ishlatishingiz kerak.
 
 ```cpp
-butun dunyo_aholisi = 8000000000      // ← XATO! butun chegaradan tashqari
-uzun dunyo_aholisi = 8000000000       // ← TO'G'RI
+butun dunyo_aholisi = 8000000000; // ← XATO! butun chegaradan tashqari
+uzun dunyo_aholisi = 8000000000; // ← TO'G'RI
 ```
 
 ### `uzun` — katta butun sonlar
@@ -101,27 +101,27 @@ uzun dunyo_aholisi = 8000000000       // ← TO'G'RI
 — u koinotdagi yulduzlar sonidan ko'p!
 
 ```cpp
-uzun galaktika_yulduzlari = 100000000000    // 10¹¹
-uzun fayl_hajmi_baytda = 5368709120          // 5 GB
+uzun galaktika_yulduzlari = 100000000000; // 10¹¹
+uzun fayl_hajmi_baytda = 5368709120; // 5 GB
 ```
 
-### `kasr` va `ikkilangan` — haqiqiy sonlar
+### `kasr` va `haqiqiy` — haqiqiy sonlar
 
 Agar son kasrli bo'lsa (`3.14`, `0.5`, `-2.7`), unda `kasr` yoki
-`ikkilangan` ishlatiladi.
+`haqiqiy` ishlatiladi.
 
 | Tur | Hajm | Aniqligi |
 |-----|------|----------|
 | `kasr` | 4 bayt | taxminan 7 ta raqam |
-| `ikkilangan` | 8 bayt | taxminan 15 ta raqam |
+| `haqiqiy` | 8 bayt | taxminan 15 ta raqam |
 
 ```cpp
-kasr balandlik = 1.75           // metrlarda
-ikkilangan pi = 3.14159265358979
+kasr balandlik = 1.75; // metrlarda
+haqiqiy pi = 3.14159265358979;
 ```
 
-**Qaysi birini ishlatish kerak?** Ko'p hollarda — `ikkilangan`. U
-aniqroq, va zamonaviy protsessorlar `ikkilangan` bilan `kasr` kabi
+**Qaysi birini ishlatish kerak?** Ko'p hollarda — `haqiqiy`. U
+aniqroq, va zamonaviy protsessorlar `haqiqiy` bilan `kasr` kabi
 tez ishlaydi. `kasr` ni faqat juda ko'p sonlar saqlash kerak bo'lsa
 ishlating (grafika, mashina o'rganishi).
 
@@ -129,44 +129,41 @@ ishlating (grafika, mashina o'rganishi).
 > binar (ikkilik) sistemada ishlaydi, va `0.1` o'nlik kasr ikkilik
 > kasrda **cheksiz takrorlanuvchi** son. Shuning uchun:
 > ```cpp
-> ikkilangan a = 0.1 + 0.2
+> haqiqiy a = 0.1 + 0.2
 > yozish << a << qator_oxiri      // 0.30000000000000004
 > ```
 > Aniqlik talab qilinadigan hisoblashlarda (pul, narx) — siz `butun`
 > ishlatib so'mlarda hisoblashingiz yaxshiroq, yoki maxsus kutubxonalardan
 > foydalanishingiz mumkin.
 
-### `mantiq` — rost yoki yolg'on
+### `mantiqiy` — rost yoki yolg'on
 
-`mantiq` faqat ikkita qiymatni saqlay oladi: `rost` (true) va `yolg'on`
+`mantiqiy` faqat ikkita qiymatni saqlay oladi: `rost` (true) va `yolg'on`
 (false). Bu shartlarni va bayroqlarni ifodalash uchun ishlatiladi.
-
 ```cpp
-mantiq foydalanuvchi_kirgan = rost
-mantiq parol_togri = yolg'on
-mantiq tugma_bosilgan = (yosh > 18)
+mantiqiy foydalanuvchi_kirgan = rost;
+mantiqiy parol_togri = yolg'on;
+mantiqiy tugma_bosilgan = (yosh > 18);
 ```
 
 **Real hayotdagi misol:** Lift tugmasi bosilganmi yoki yo'qmi, foydalanuvchi
-tizimga kirganmi, hujjat saqlandimi — barchasi `mantiq`.
+tizimga kirganmi, hujjat saqlandimi — barchasi `mantiqiy`.
 
 ### `belgi` — bitta belgi
 
 Bitta belgini saqlash uchun. Qo'shtirnoqlar yagona apostrofda:
-
 ```cpp
-belgi birinchi = 'A'
-belgi savol = '?'
-belgi raqam = '5'        // diqqat — bu son emas, BELGI!
+belgi birinchi = 'A';
+belgi savol = '?';
+belgi raqam = '5'; // diqqat — bu son emas, BELGI!
 ```
 
 `belgi` aslida 1 baytlik son sifatida saqlanadi. `'A'` ning ichki
 qiymati 65 (ASCII jadvalida). Shu sababli siz unga arifmetik amallar
 ham qila olasiz:
-
 ```cpp
-belgi A = 'A'
-belgi B = A + 1          // 'B' bo'ladi (65 + 1 = 66)
+belgi A = 'A';
+belgi B = A + 1; // 'B' bo'ladi (65 + 1 = 66)
 ```
 
 > **Real hayotda:** Eski Caesar shifri — har bir harfni 3 ta oldinga
@@ -175,11 +172,10 @@ belgi B = A + 1          // 'B' bo'ladi (65 + 1 = 66)
 ### `matn` — matn satrlari
 
 Matn (so'z, jumla, paragraf) `matn` turi orqali saqlanadi:
-
 ```cpp
-matn ism = "Aziza"
-matn salom = "Salom, dunyo!"
-matn paragraf = "Bu uzun matn ham bo'lishi mumkin."
+matn ism = "Aziza";
+matn salom = "Salom, dunyo!";
+matn paragraf = "Bu uzun matn ham bo'lishi mumkin.";
 ```
 
 `matn` — bu maxsus tur, u xotirada o'zgaruvchan miqdorda joy egallaydi
@@ -191,22 +187,20 @@ o'rganamiz.
 ## O'zgaruvchi e'lon qilish usullari
 
 ### 1-usul: aniq tur belgisi bilan
-
 ```cpp
-butun yosh = 25
-matn ism = "Aziza"
-ikkilangan PI = 3.14159
+butun yosh = 25;
+matn ism = "Aziza";
+haqiqiy PI = 3.14159;
 ```
 
 Bu eng aniq usul. Siz kompyuterga: "men butun son saqlayman" deb
 aytasiz.
 
 ### 2-usul: tip xulosalash (`o'zgaruvchan`)
-
 ```cpp
-o'zgaruvchan yosh = 25                // butun deb xulosa qilinadi
-o'zgaruvchan ism = "Aziza"            // matn deb xulosa qilinadi
-o'zgaruvchan PI = 3.14159             // ikkilangan deb xulosa qilinadi
+o'zgaruvchan yosh = 25; // butun deb xulosa qilinadi
+o'zgaruvchan ism = "Aziza"; // matn deb xulosa qilinadi
+o'zgaruvchan PI = 3.14159; // haqiqiy deb xulosa qilinadi
 ```
 
 `o'zgaruvchan` (C++ da `auto`) — bu "qiymatdan kelib chiqib tipni o'zing
@@ -222,34 +216,30 @@ kod yozasiz.
 - Tip muhim va aniq belgilash kerak
 
 ### 3-usul: qiymatsiz e'lon
-
 ```cpp
-butun yosh                  // butun e'lon qilindi, lekin qiymat yo'q
-matn ism
+butun yosh; // butun e'lon qilindi, lekin qiymat yo'q
+matn ism;
 ```
 
 **Diqqat!** Qiymatsiz e'lon qilingan butun son **noma'lum qiymat**
 oladi (xotirada qaysi bayt bo'lsa, o'sha). Buni "garbage value" deyiladi
 va bu xato manbai. Doim qiymat bering:
-
 ```cpp
-butun yosh = 0              // yaxshi
-matn ism = ""               // yaxshi (bo'sh matn)
+butun yosh = 0; // yaxshi
+matn ism = ""; // yaxshi (bo'sh matn)
 ```
 
 ### Bir nechta o'zgaruvchini bir satrda
-
 ```cpp
-butun a = 5, b = 10, c = 15
+butun a = 5, b = 10, c = 15;
 ```
 
 Yoki:
-
 ```cpp
-butun a, b, c
-a = 5
-b = 10
-c = 15
+butun a, b, c;
+a = 5;
+b = 10;
+c = 15;
 ```
 
 Bu uslub kichik o'zgaruvchilar uchun qulay, lekin har bir o'zgaruvchi
@@ -265,18 +255,16 @@ Ba'zi qiymatlar **hech qachon o'zgarmasligi kerak**. Masalan:
 - Soatdagi soniyalar — 3600
 
 Bunday qiymatlar uchun `o'zgarmas` (const) kalit so'zi ishlatiladi:
-
 ```cpp
-o'zgarmas ikkilangan PI = 3.14159
-o'zgarmas butun YIL_KUNLARI = 365
-o'zgarmas matn DAVLAT = "O'zbekiston"
+o'zgarmas haqiqiy PI = 3.14159;
+o'zgarmas butun YIL_KUNLARI = 365;
+o'zgarmas matn DAVLAT = "O'zbekiston";
 ```
 
 Endi agar dasturda siz PI ni o'zgartirmoqchi bo'lsangiz, kompilyator
 xato beradi:
-
 ```cpp
-PI = 3.14                   // ← XATO! o'zgarmasni o'zgartirib bo'lmaydi
+PI = 3.14; // ← XATO! o'zgarmasni o'zgartirib bo'lmaydi
 ```
 
 > **Nima uchun o'zgarmaslar muhim?** Birinchidan, ular kodingizni
@@ -289,10 +277,9 @@ PI = 3.14                   // ← XATO! o'zgarmasni o'zgartirib bo'lmaydi
 **Nomlash konvensiyasi:** O'zgarmaslar nomlari odatda **BARCHA HARFLAR
 KATTA** yozilab, so'zlar `_` (pastki chiziq) bilan ajratiladi. Bu
 o'zgaruvchilardan ko'rinish jihatidan ajratish uchun.
-
 ```cpp
-o'zgarmas butun MAKS_FOYDALANUVCHILAR = 1000      // konstanta
-butun joriy_foydalanuvchilar = 25                 // o'zgaruvchi
+o'zgarmas butun MAKS_FOYDALANUVCHILAR = 1000; // konstanta
+butun joriy_foydalanuvchilar = 25; // o'zgaruvchi
 ```
 
 ---
@@ -305,68 +292,60 @@ Ba'zan bir turdagi qiymatni boshqa turga aylantirish kerak bo'ladi. Bu
 ### Yashirin (implicit) o'zgartirish
 
 uz++ ba'zan turlarni avtomatik o'zgartiradi:
-
 ```cpp
-butun a = 5
-ikkilangan b = a            // butun → ikkilangan, ma'lumot yo'qolmaydi
-yozish << b                 // 5
+butun a = 5;
+haqiqiy b = a; // butun → haqiqiy, ma'lumot yo'qolmaydi
+yozish << b; // 5
 ```
 
 Lekin ba'zan ma'lumot yo'qoladi:
-
 ```cpp
-ikkilangan x = 3.7
-butun y = x                 // ikkilangan → butun, KASR YO'QOLADI!
-yozish << y                 // 3 (3.7 emas!)
+haqiqiy x = 3.7;
+butun y = x; // haqiqiy → butun, KASR YO'QOLADI!
+yozish << y; // 3 (3.7 emas!)
 ```
 
 ### Aniq (explicit) o'zgartirish
 
 Yaxshiroq — siz aniq aytasiz nimani qilmoqchisiz:
-
 ```cpp
-ikkilangan x = 3.7
-butun y = butun(x)          // aniq aytamiz: butunga aylantir
+haqiqiy x = 3.7;
+butun y = butun(x); // aniq aytamiz: butunga aylantir
 ```
 
 Yoki C++ uslubida:
-
 ```cpp
-butun y = static_cast<butun>(x)
+butun y = static_cast<butun>(x);
 ```
 
 **Real hayotdagi misol:** Sizda 3.7 metr arqon bor. Lekin sizga
 faqat butun metr o'lchaydigan asbob berildi. Asbob "3 metr" deydi —
 qolgan 0.7 metr "yo'qoladi".
-
 ```cpp
-ikkilangan arqon_uzunligi = 3.7
-butun ulchov = butun(arqon_uzunligi)     // 3
-yozish << "Asbob ko'rsatdi: " << ulchov << " metr"
+haqiqiy arqon_uzunligi = 3.7;
+butun ulchov = butun(arqon_uzunligi); // 3
+yozish << "Asbob ko'rsatdi: " << ulchov << " metr";
 ```
 
 ### Bo'lish va integer division
 
 uz++ da (C++ kabi) **butun ÷ butun = butun**. Kasr qismi yo'qoladi:
-
 ```cpp
-butun a = 7
-butun b = 2
-butun natija = a / b            // 3 (3.5 emas!)
+butun a = 7;
+butun b = 2;
+butun natija = a / b; // 3 (3.5 emas!)
 ```
 
-Agar kasrli natija kerak bo'lsa, kamida bittasi `ikkilangan` bo'lsin:
-
+Agar kasrli natija kerak bo'lsa, kamida bittasi `haqiqiy` bo'lsin:
 ```cpp
-butun a = 7
-butun b = 2
-ikkilangan natija = ikkilangan(a) / b     // 3.5
+butun a = 7;
+butun b = 2;
+haqiqiy natija = haqiqiy(a) / b; // 3.5
 ```
 
 Yoki:
-
 ```cpp
-ikkilangan natija = 7.0 / 2               // 3.5 (7.0 — kasr)
+haqiqiy natija = 7.0 / 2; // 3.5 (7.0 — kasr)
 ```
 
 > **Eng ko'p uchraydigan xato:** Yangi boshlovchilar `5 / 2` ni `2.5`
@@ -386,18 +365,17 @@ kichik. Kichik zaldan — faqat kichik.
 
 Xuddi shunday, o'zgaruvchi qaysi blokda e'lon qilingan bo'lsa, faqat
 o'sha blokda va uning ichidagi bloklarda ko'rinadi.
-
 ```cpp
 butun asosiy() {
-    butun x = 10                    // x — asosiy ichida ko'rinadi
+    butun x = 10; // x — asosiy ichida ko'rinadi
 
     agar (x > 0) {
-        butun y = 20                 // y — faqat shu blokda
-        yozish << x << " " << y     // ikkalasi ham ko'rinadi
+        butun y = 20; // y — faqat shu blokda
+        yozish << x << " " << y; // ikkalasi ham ko'rinadi
     }
 
-    yozish << x                      // x ko'rinadi
-    yozish << y                      // ← XATO! y ko'rinmaydi bu yerda
+    yozish << x; // x ko'rinadi
+    yozish << y; // ← XATO! y ko'rinmaydi bu yerda
 }
 ```
 
@@ -411,12 +389,11 @@ hisoblanadi. Ular blok tugashi bilan _yo'qoladi_.
 Funksiyalardan _tashqarida_ e'lon qilingan o'zgaruvchilar **global**
 hisoblanadi. Ular butun dastur davomida yashaydi va hamma joydan
 ko'rinadi:
-
 ```cpp
-butun global_x = 100                  // global, hamma joydan ko'rinadi
+butun global_x = 100; // global, hamma joydan ko'rinadi
 
 butun asosiy() {
-    yozish << global_x                // 100
+    yozish << global_x; // 100
 }
 ```
 
@@ -429,15 +406,14 @@ funksiyalarga parametr sifatida bering.
 
 Agar ichki blokda tashqi bilan bir xil nomli o'zgaruvchi e'lon qilinsa
 — ichkari _tashqarisini yopadi_:
-
 ```cpp
 butun asosiy() {
-    butun x = 10
+    butun x = 10;
     {
-        butun x = 20                  // tashqi x ni yopadi
-        yozish << x                   // 20
+        butun x = 20; // tashqi x ni yopadi
+        yozish << x; // 20
     }
-    yozish << x                       // 10 (tashqi x qaytdi)
+    yozish << x; // 10 (tashqi x qaytdi)
 }
 ```
 
@@ -449,44 +425,40 @@ xatoga olib keladi.
 ## Qiymat berish va operatorlar
 
 ### Asosiy qiymat berish
-
 ```cpp
-butun x = 5             // x ga 5 qiymatini ber
-x = 10                  // x ni 10 ga o'zgartir
-x = x + 1               // x ni o'zining qiymati + 1 ga o'zgartir
+butun x = 5; // x ga 5 qiymatini ber
+x = 10; // x ni 10 ga o'zgartir
+x = x + 1; // x ni o'zining qiymati + 1 ga o'zgartir
 ```
 
 ### Qisqacha qiymat berish
 
 `x = x + 1` ni qisqacha yozish mumkin:
-
 ```cpp
-x += 1                  // x = x + 1
-x -= 2                  // x = x - 2
-x *= 3                  // x = x * 3
-x /= 4                  // x = x / 4
-x %= 5                  // x = x % 5
+x += 1; // x = x + 1
+x -= 2; // x = x - 2
+x *= 3; // x = x * 3
+x /= 4; // x = x / 4
+x %= 5; // x = x % 5
 ```
 
 Va eng qisqasi — **inkrement** va **dekrement**:
-
 ```cpp
-x++                     // x = x + 1 (orqa)
-++x                     // x = x + 1 (oldi)
-x--                     // x = x - 1
---x                     // x = x - 1
+x++; // x = x + 1 (orqa)
+++x; // x = x + 1 (oldi)
+x--; // x = x - 1
+--x; // x = x - 1
 ```
 
 **`++x` va `x++` o'rtasidagi farq:** ifoda ichida qiymat _qachon_
 yangilanadi:
-
 ```cpp
-butun a = 5
-butun b = a++           // b = 5, keyin a = 6
+butun a = 5;
+butun b = a++; // b = 5, keyin a = 6
                         // (oldin qiymat berdi, keyin oshirdi)
 
-butun c = 5
-butun d = ++c           // c = 6, keyin d = 6
+butun c = 5;
+butun d = ++c; // c = 6, keyin d = 6
                         // (oldin oshirdi, keyin qiymat berdi)
 ```
 
@@ -499,42 +471,40 @@ yoki `++x` deb yozsangiz) — farqi yo'q.
 
 Endi biz o'rgangan barcha narsalarni bitta amaliy dasturda ko'rib
 chiqamiz. Talabaning ma'lumotnomasini yarataylik.
-
 ```cpp
 // talaba.uzpp — talaba ma'lumotnomasi
 
-o'zgarmas butun JORIY_YIL = 2026
+o'zgarmas butun JORIY_YIL = 2026;
 
 butun asosiy() {
     // Talaba ma'lumotlari
-    matn ism = "Aziza"
-    matn familiya = "Karimova"
-    butun tugilgan_yili = 2003
-    ikkilangan ortacha_bahosi = 4.7
-    mantiq stipendiyada = rost
+    matn ism = "Aziza";
+    matn familiya = "Karimova";
+    butun tugilgan_yili = 2003;
+    haqiqiy ortacha_bahosi = 4.7;
+    mantiqiy stipendiyada = rost;
 
     // Hisoblash
-    butun yoshi = JORIY_YIL - tugilgan_yili
+    butun yoshi = JORIY_YIL - tugilgan_yili;
 
     // Chiqarish
-    yozish << "=== TALABA MA'LUMOTNOMASI ===" << qator_oxiri
-    yozish << "Ism: " << ism << " " << familiya << qator_oxiri
-    yozish << "Yoshi: " << yoshi << qator_oxiri
-    yozish << "O'rtacha baho: " << ortacha_bahosi << qator_oxiri
+    yozish << "=== TALABA MA'LUMOTNOMASI ===" << qator_oxiri;
+    yozish << "Ism: " << ism << " " << familiya << qator_oxiri;
+    yozish << "Yoshi: " << yoshi << qator_oxiri;
+    yozish << "O'rtacha baho: " << ortacha_bahosi << qator_oxiri;
 
     agar (stipendiyada) {
-        yozish << "Stipendiyada: ha" << qator_oxiri
+        yozish << "Stipendiyada: ha" << qator_oxiri;
     }
     aks_holda {
-        yozish << "Stipendiyada: yo'q" << qator_oxiri
+        yozish << "Stipendiyada: yo'q" << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
 **Natija:**
-
 ```
 === TALABA MA'LUMOTNOMASI ===
 Ism: Aziza Karimova
@@ -549,7 +519,7 @@ Stipendiyada: ha
    (yoki yangi yilga ko'tarish kerak bo'lsa, **bitta joyda** — bu
    yerda).
 2. **Turli turdagi o'zgaruvchilar** — matn (ism), butun (yosh), kasr
-   (baho), mantiq (stipendiya). Har bir tur o'zining maqsadi uchun.
+   (baho), mantiqiy (stipendiya). Har bir tur o'zining maqsadi uchun.
 3. **Hisoblash** — `yoshi = JORIY_YIL - tugilgan_yili`. Ikkita butun
    sonning ayirmasi yana butun.
 4. **Shart operatori** — `agar` orqali boolean qiymatga qarab boshqacha
@@ -560,44 +530,39 @@ Stipendiyada: ha
 ## Eng ko'p uchraydigan xatolar
 
 ### 1. Tip mosligini buzish
-
 ```cpp
-butun yosh = 3.7              // ← XATO yoki ogohlantirish: 3 bo'lib qoladi
-butun yosh = 3                // TO'G'RI
-ikkilangan yosh = 3.7         // TO'G'RI
+butun yosh = 3.7; // ← XATO yoki ogohlantirish: 3 bo'lib qoladi
+butun yosh = 3; // TO'G'RI
+haqiqiy yosh = 3.7; // TO'G'RI
 ```
 
 ### 2. Butun bo'lish
-
 ```cpp
-ikkilangan ortacha = 7 / 2     // ← XATO: 3.0 (3.5 emas)
-ikkilangan ortacha = 7.0 / 2   // TO'G'RI: 3.5
+haqiqiy ortacha = 7 / 2; // ← XATO: 3.0 (3.5 emas)
+haqiqiy ortacha = 7.0 / 2; // TO'G'RI: 3.5
 ```
 
 ### 3. Inicializatsiya qilmaslik
-
 ```cpp
-butun a                        // a — noma'lum qiymat
-yozish << a                    // ← XATO: kim biladi nima chiqadi!
+butun a; // a — noma'lum qiymat
+yozish << a; // ← XATO: kim biladi nima chiqadi!
 
-butun a = 0                    // TO'G'RI
+butun a = 0; // TO'G'RI
 ```
 
 ### 4. O'zgarmasni o'zgartirishga urinish
-
 ```cpp
-o'zgarmas butun PI_TAXMINAN = 3
-PI_TAXMINAN = 4                // ← XATO: o'zgarmas
+o'zgarmas butun PI_TAXMINAN = 3;
+PI_TAXMINAN = 4; // ← XATO: o'zgarmas
 ```
 
 ### 5. Scope tashqarisidan o'zgaruvchini ishlatish
-
 ```cpp
 butun asosiy() {
     {
-        butun temp = 100
+        butun temp = 100;
     }
-    yozish << temp             // ← XATO: temp ko'rinmaydi
+    yozish << temp; // ← XATO: temp ko'rinmaydi
 }
 ```
 
@@ -607,12 +572,12 @@ butun asosiy() {
 
 ### Mashq 1: Barcha turlar (oson)
 
-Har bir asosiy tur (`butun`, `kasr`, `mantiq`, `belgi`, `matn`) uchun
+Har bir asosiy tur (`butun`, `kasr`, `mantiqiy`, `belgi`, `matn`) uchun
 bittadan o'zgaruvchi yarating va konsolga chiqaring.
 
 ### Mashq 2: Tur o'zgartirish (o'rta)
 
-Foydalanuvchidan `ikkilangan` turdagi son so'rang. Uni `butun` ga
+Foydalanuvchidan `haqiqiy` turdagi son so'rang. Uni `butun` ga
 aylantiring va ikkala qiymatni chiqaring. Kasr qismi qancha yo'qolganini
 ham ko'rsating.
 
@@ -648,11 +613,10 @@ chiqaring (`A` → `D`, `B` → `E`, va h.k.).
 
 Ikkita o'zgaruvchining qiymatlarini almashtirib chiqing. Sizga uchinchi
 o'zgaruvchi kerak — vaqtinchalik saqlash uchun.
-
 ```cpp
-butun temp = a
-a = b
-b = temp
+butun temp = a;
+a = b;
+b = temp;
 ```
 
 ---
@@ -665,7 +629,7 @@ Bu bobda biz:
 - **Xotira haqida** umumiy tushunchaga ega bo'ldik — har bir o'zgaruvchi
   baytlar miqdorini egallaydi.
 - **Asosiy turlarni** ko'rib chiqdik: `butun`, `uzun`, `kasr`,
-  `ikkilangan`, `mantiq`, `belgi`, `matn`.
+  `haqiqiy`, `mantiqiy`, `belgi`, `matn`.
 - **O'zgaruvchi e'lon qilish** uch usulini bilib oldik — aniq tur,
   `o'zgaruvchan`, qiymatsiz.
 - **O'zgarmaslar (`o'zgarmas`)** bilan tanishdik.

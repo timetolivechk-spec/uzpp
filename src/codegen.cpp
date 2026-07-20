@@ -662,6 +662,16 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         return uzppType;
     }
 
+    if (uzppType.starts_with("inline static ")) {
+        return "inline static " + getCppType(uzppType.substr(14), depth + 1);
+    }
+    if (uzppType.starts_with("static ")) {
+        return "static " + getCppType(uzppType.substr(7), depth + 1);
+    }
+    if (uzppType.starts_with("inline ")) {
+        return "inline " + getCppType(uzppType.substr(7), depth + 1);
+    }
+
     // Handle decltype(expr) — pass through as-is, it's a type expression
     if (uzppType.starts_with("decltype(") || uzppType.starts_with("tur_baholash(")) {
         std::string result = uzppType;

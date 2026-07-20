@@ -27,14 +27,14 @@ Funksiyaning afzalliklari:
 ```cpp
 // salomlashish funksiyasi
 bosh salom_ber(matn ism) {
-    yozish << "Salom, " << ism << "!" << qator_oxiri
+    yozish << "Salom, " << ism << "!" << qator_oxiri;
 }
 
 butun asosiy() {
-    salom_ber("Aziza")        // funksiyani chaqirish
-    salom_ber("Bobur")
-    salom_ber("Karim")
-    qaytarish 0
+    salom_ber("Aziza"); // funksiyani chaqirish
+    salom_ber("Bobur");
+    salom_ber("Karim");
+    qaytarish 0;
 }
 ```
 
@@ -56,7 +56,7 @@ bo'lsa, har biri uchun "yozish << ..." ni qaytaqayta yozish kerak emas.
 ```cpp
 qaytarish_turi  funksiya_nomi  ( parametrlar )  {
     // funksiya tanasi
-    qaytarish qiymat
+    qaytarish qiymat;
 }
 ```
 
@@ -64,7 +64,7 @@ Misol uchun:
 
 ```cpp
 butun kvadrat(butun x) {
-    qaytarish x * x
+    qaytarish x * x;
 }
 ```
 
@@ -81,8 +81,8 @@ Tahlil qilamiz:
 ### Funksiya chaqirish
 
 ```cpp
-butun natija = kvadrat(5)        // 25
-butun ikkinchi = kvadrat(10)     // 100
+butun natija = kvadrat(5); // 25
+butun ikkinchi = kvadrat(10); // 100
 ```
 
 Bu yerda biz `kvadrat` funksiyasini ikki marta chaqirdik, har safar
@@ -99,11 +99,11 @@ nuqtasi_.
 
 ```cpp
 bosh salom_ber() {
-    yozish << "Salom!" << qator_oxiri
+    yozish << "Salom!" << qator_oxiri;
 }
 
-salom_ber()              // chaqirish
-salom_ber()              // yana
+salom_ber(); // chaqirish
+salom_ber(); // yana
 ```
 
 Hech qanday kirish kerak emas — har safar bir xil ish.
@@ -112,12 +112,12 @@ Hech qanday kirish kerak emas — har safar bir xil ish.
 
 ```cpp
 butun yigindi(butun a, butun b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 
-butun n1 = yigindi(5, 3)           // 8
-butun n2 = yigindi(10, 20)         // 30
-butun n3 = yigindi(n1, n2)         // 38 (8 + 30)
+butun n1 = yigindi(5, 3); // 8
+butun n2 = yigindi(10, 20); // 30
+butun n3 = yigindi(n1, n2); // 38 (8 + 30)
 ```
 
 Parametrlar **`,` (vergul) bilan ajratiladi**. Har bir parametrning
@@ -126,15 +126,15 @@ turi alohida yozilishi kerak — `yigindi(butun a, b)` deb yozib bo'lmaydi.
 ### Turli xil parametrlar
 
 ```cpp
-matn formatlash(matn ism, butun yosh, mantiq talaba) {
-    matn natija = ism + " (" + std::to_string(yosh) + " yosh)"
+matn formatlash(matn ism, butun yosh, mantiqiy talaba) {
+    matn natija = ism + " (" + std::to_string(yosh) + " yosh)";
     agar (talaba) {
-        natija += ", talaba"
+        natija += ", talaba";
     }
-    qaytarish natija
+    qaytarish natija;
 }
 
-yozish << formatlash("Aziza", 22, rost)
+yozish << formatlash("Aziza", 22, rost);
 // Natija: Aziza (22 yosh), talaba
 ```
 
@@ -147,7 +147,7 @@ qaytaradi.
 
 ```cpp
 butun kub(butun x) {
-    qaytarish x * x * x       // qaytar va funksiyadan chiq
+    qaytarish x * x * x; // qaytar va funksiyadan chiq
 }
 ```
 
@@ -156,9 +156,9 @@ butun kub(butun x) {
 ```cpp
 butun absolyut(butun x) {
     agar (x >= 0) {
-        qaytarish x           // bu yerda chiqamiz
+        qaytarish x; // bu yerda chiqamiz
     }
-    qaytarish -x              // bu satr faqat x < 0 bo'lsa bajariladi
+    qaytarish -x; // bu satr faqat x < 0 bo'lsa bajariladi
 }
 ```
 
@@ -166,10 +166,10 @@ butun absolyut(butun x) {
 
 ```cpp
 matn baho_nomi(butun ball) {
-    agar (ball >= 90) qaytarish "A'lo"
-    agar (ball >= 70) qaytarish "Yaxshi"
-    agar (ball >= 60) qaytarish "Qoniqarli"
-    qaytarish "Qoniqarsiz"
+    agar (ball >= 90) qaytarish "A'lo";
+    agar (ball >= 70) qaytarish "Yaxshi";
+    agar (ball >= 60) qaytarish "Qoniqarli";
+    qaytarish "Qoniqarsiz";
 }
 ```
 
@@ -182,7 +182,7 @@ Agar funksiya qiymat qaytarmasa, qaytarish turi **`bosh`** (C++ da
 
 ```cpp
 bosh chiqarish(matn xabar) {
-    yozish << xabar << qator_oxiri
+    yozish << xabar << qator_oxiri;
     // qaytarish yo'q
 }
 ```
@@ -193,10 +193,10 @@ mumkin (faqat qiymatsiz):
 ```cpp
 bosh tekshirish(butun x) {
     agar (x < 0) {
-        yozish << "Xato!" << qator_oxiri
-        qaytarish                 // funksiyadan darhol chiqamiz
+        yozish << "Xato!" << qator_oxiri;
+        qaytarish; // funksiyadan darhol chiqamiz
     }
-    yozish << "OK" << qator_oxiri
+    yozish << "OK" << qator_oxiri;
 }
 ```
 
@@ -213,14 +213,14 @@ Eng oddiy va xavfsiz usul. Funksiyaga _nusxa_ uzatiladi:
 
 ```cpp
 bosh oshiring(butun x) {
-    x = x + 100
-    yozish << "Funksiyada: " << x << qator_oxiri
+    x = x + 100;
+    yozish << "Funksiyada: " << x << qator_oxiri;
 }
 
 butun asosiy() {
-    butun a = 5
-    oshiring(a)
-    yozish << "Asosiyda: " << a << qator_oxiri
+    butun a = 5;
+    oshiring(a);
+    yozish << "Asosiyda: " << a << qator_oxiri;
 }
 ```
 
@@ -246,13 +246,13 @@ parametr nomidan oldin `&` qo'ying:
 
 ```cpp
 bosh oshiring(butun& x) {        // & belgisiga e'tibor!
-    x = x + 100
+    x = x + 100;
 }
 
 butun asosiy() {
-    butun a = 5
-    oshiring(a)
-    yozish << a << qator_oxiri   // 105
+    butun a = 5;
+    oshiring(a);
+    yozish << a << qator_oxiri; // 105
 }
 ```
 
@@ -267,11 +267,11 @@ ishlating:
 
 ```cpp
 butun matn_uzunligi(o'zgarmas matn& s) {     // havola, lekin o'zgartirib bo'lmaydi
-    qaytarish s.length()
+    qaytarish s.length();
 }
 
-matn katta_matn = "Juda uzun matn..."
-butun uzunlik = matn_uzunligi(katta_matn)
+matn katta_matn = "Juda uzun matn...";
+butun uzunlik = matn_uzunligi(katta_matn);
 ```
 
 Bu eng tez va xavfsiz usul.
@@ -280,7 +280,7 @@ Bu eng tez va xavfsiz usul.
 
 | Holat | Tavsiya |
 |-------|---------|
-| Kichik tur (`butun`, `kasr`, `mantiq`) | Qiymat orqali (`butun x`) |
+| Kichik tur (`butun`, `kasr`, `mantiqiy`) | Qiymat orqali (`butun x`) |
 | Funksiya parametrni o'zgartirishi kerak | Havola orqali (`butun& x`) |
 | Katta tur, o'zgartirmaslik kerak | Const havola (`o'zgarmas matn& s`) |
 
@@ -292,18 +292,18 @@ Parametrga **standart qiymat** belgilash mumkin:
 
 ```cpp
 bosh salom_ber(matn ism = "Mehmon") {
-    yozish << "Salom, " << ism << "!" << qator_oxiri
+    yozish << "Salom, " << ism << "!" << qator_oxiri;
 }
 
-salom_ber()                  // "Salom, Mehmon!"
-salom_ber("Aziza")           // "Salom, Aziza!"
+salom_ber(); // "Salom, Mehmon!"
+salom_ber("Aziza"); // "Salom, Aziza!"
 ```
 
 Standart qiymatli parametrlar **oxirida** bo'lishi kerak:
 
 ```cpp
-bosh f(butun a, butun b = 0, butun c = 0)   // TO'G'RI
-bosh f(butun a = 0, butun b, butun c)       // XATO
+bosh f(butun a, butun b = 0, butun c = 0); // TO'G'RI
+bosh f(butun a = 0, butun b, butun c); // XATO
 ```
 
 ---
@@ -315,20 +315,20 @@ agar ularning parametrlari farqli bo'lsa:
 
 ```cpp
 butun yigindi(butun a, butun b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 
-ikkilangan yigindi(ikkilangan a, ikkilangan b) {
-    qaytarish a + b
+haqiqiy yigindi(haqiqiy a, haqiqiy b) {
+    qaytarish a + b;
 }
 
 butun yigindi(butun a, butun b, butun c) {
-    qaytarish a + b + c
+    qaytarish a + b + c;
 }
 
-yigindi(5, 3)              // 1-versiya: butun
-yigindi(2.5, 3.7)          // 2-versiya: ikkilangan
-yigindi(1, 2, 3)           // 3-versiya: 3 ta parametr
+yigindi(5, 3); // 1-versiya: butun
+yigindi(2.5, 3.7); // 2-versiya: haqiqiy
+yigindi(1, 2, 3); // 3-versiya: 3 ta parametr
 ```
 
 Kompilyator parametrlarga qarab qaysi versiyani chaqirishni aniqlaydi.
@@ -347,9 +347,9 @@ muammolarni yechish uchun foydali.
 ```cpp
 butun faktoriyal(butun n) {
     agar (n <= 1) {
-        qaytarish 1            // bazaviy holat
+        qaytarish 1; // bazaviy holat
     }
-    qaytarish n * faktoriyal(n - 1)   // rekursiya
+    qaytarish n * faktoriyal(n - 1); // rekursiya
 }
 ```
 
@@ -375,9 +375,9 @@ Har bir rekursiv funksiya kerak:
 ```cpp
 butun fibonachchi(butun n) {
     agar (n <= 1) {
-        qaytarish n            // F(0) = 0, F(1) = 1
+        qaytarish n; // F(0) = 0, F(1) = 1
     }
-    qaytarish fibonachchi(n-1) + fibonachchi(n-2)
+    qaytarish fibonachchi(n-1) + fibonachchi(n-2);
 }
 ```
 
@@ -403,7 +403,7 @@ keyin tashlamoqchi bo'lganda.
 
 ```cpp
 o'zgaruvchan kvadrat = [](butun x) { qaytarish x * x; }
-yozish << kvadrat(5)         // 25
+yozish << kvadrat(5); // 25
 ```
 
 ### Foydali misol — to'plamlarda tartiblash
@@ -413,8 +413,8 @@ vektor<butun> sonlar = {3, 1, 4, 1, 5, 9, 2, 6}
 
 // Pasayish bo'yicha tartiblash
 std::sort(sonlar.begin(), sonlar.end(), [](butun a, butun b) {
-    qaytarish a > b
-})
+    qaytarish a > b;
+});
 ```
 
 Bu yerda lambda — taqqoslash funksiyasi sifatida `sort` ga uzatildi.
@@ -424,10 +424,10 @@ Bu yerda lambda — taqqoslash funksiyasi sifatida `sort` ga uzatildi.
 Lambda tashqi o'zgaruvchilarni "qo'lga olishi" mumkin:
 
 ```cpp
-butun ko'paytma = 3
+butun ko'paytma = 3;
 o'zgaruvchan ko'p = [ko'paytma](butun x) { qaytarish x * ko'paytma; }
 
-yozish << ko'p(5)            // 15
+yozish << ko'p(5); // 15
 ```
 
 `[ko'paytma]` — "tashqi `ko'paytma` ni qiymat orqali qo'lga ol" demakdir.
@@ -443,7 +443,7 @@ tanasini chaqirish joyiga **kiritib qo'yish** kompilyatorga tavsiya:
 
 ```cpp
 qator_ichi butun maks(butun a, butun b) {
-    qaytarish (a > b) ? a : b
+    qaytarish (a > b) ? a : b;
 }
 ```
 
@@ -461,14 +461,14 @@ Agar siz `yigindi` ni faqat `butun` uchun emas, har xil tur uchun
 yozmoqchi bo'lsangiz, **shablon** ishlatasiz:
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T yigindi(T a, T b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 
-yigindi(5, 3)                // butun
-yigindi(2.5, 3.7)            // ikkilangan
-yigindi("Salom ", "dunyo")   // matn
+yigindi(5, 3); // butun
+yigindi(2.5, 3.7); // haqiqiy
+yigindi("Salom ", "dunyo"); // matn
 ```
 
 Shablonlarni 9-bobda batafsil ko'ramiz.
@@ -483,47 +483,47 @@ Mana, bir nechta matematik funksiyalarni birlashtirgan dastur:
 // matematika.uzpp
 
 butun yigindi(butun a, butun b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 
 butun ko'paytma(butun a, butun b) {
-    qaytarish a * b
+    qaytarish a * b;
 }
 
 butun maks(butun a, butun b) {
-    qaytarish (a > b) ? a : b
+    qaytarish (a > b) ? a : b;
 }
 
 butun min(butun a, butun b) {
-    qaytarish (a < b) ? a : b
+    qaytarish (a < b) ? a : b;
 }
 
 butun absolyut(butun x) {
-    qaytarish (x >= 0) ? x : -x
+    qaytarish (x >= 0) ? x : -x;
 }
 
 butun faktoriyal(butun n) {
-    agar (n <= 1) qaytarish 1
-    qaytarish n * faktoriyal(n - 1)
+    agar (n <= 1) qaytarish 1;
+    qaytarish n * faktoriyal(n - 1);
 }
 
-mantiq tubmi(butun n) {
-    agar (n < 2) qaytarish yolg'on
+mantiqiy tubmi(butun n) {
+    agar (n < 2) qaytarish yolg'on;
     uchun (butun i = 2; i * i <= n; i++) {
-        agar (n % i == 0) qaytarish yolg'on
+        agar (n % i == 0) qaytarish yolg'on;
     }
-    qaytarish rost
+    qaytarish rost;
 }
 
 butun asosiy() {
-    yozish << "5 + 3 = " << yigindi(5, 3) << qator_oxiri
-    yozish << "5 * 3 = " << ko'paytma(5, 3) << qator_oxiri
-    yozish << "maks(5, 3) = " << maks(5, 3) << qator_oxiri
-    yozish << "|-7| = " << absolyut(-7) << qator_oxiri
-    yozish << "5! = " << faktoriyal(5) << qator_oxiri
-    yozish << "7 tub? " << (tubmi(7) ? "ha" : "yo'q") << qator_oxiri
+    yozish << "5 + 3 = " << yigindi(5, 3) << qator_oxiri;
+    yozish << "5 * 3 = " << ko'paytma(5, 3) << qator_oxiri;
+    yozish << "maks(5, 3) = " << maks(5, 3) << qator_oxiri;
+    yozish << "|-7| = " << absolyut(-7) << qator_oxiri;
+    yozish << "5! = " << faktoriyal(5) << qator_oxiri;
+    yozish << "7 tub? " << (tubmi(7) ? "ha" : "yo'q") << qator_oxiri;
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -549,7 +549,7 @@ chaqiradi. Bu — _yaxshi dasturlash_ namunasi.
 
 ```cpp
 butun yigindi(butun a, butun b) {
-    butun c = a + b
+    butun c = a + b;
     // qaytarish yo'q!
 }
 // ← XATO: butun qaytarmadi
@@ -559,7 +559,7 @@ butun yigindi(butun a, butun b) {
 
 ```cpp
 butun yigindi(butun a, butun b) {
-    qaytarish "natija"        // ← XATO: matn qaytarmoqda
+    qaytarish "natija"; // ← XATO: matn qaytarmoqda
 }
 ```
 
@@ -567,17 +567,17 @@ butun yigindi(butun a, butun b) {
 
 ```cpp
 butun yigindi(butun a, butun b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 
-yigindi(5)                    // ← XATO: ikkita parametr kerak
+yigindi(5); // ← XATO: ikkita parametr kerak
 ```
 
 ### 4. Cheksiz rekursiya
 
 ```cpp
 butun fibonachchi(butun n) {
-    qaytarish fibonachchi(n-1) + fibonachchi(n-2)
+    qaytarish fibonachchi(n-1) + fibonachchi(n-2);
     // bazaviy holat yo'q!
 }
 ```
@@ -594,7 +594,7 @@ butun agar(butun x) { ... }   // ← XATO: agar — kalit so'z
 
 ### Mashq 1: Doira yuzasi (oson)
 
-`doira_yuzasi(ikkilangan r)` funksiyasini yozing, u doira yuzasini
+`doira_yuzasi(haqiqiy r)` funksiyasini yozing, u doira yuzasini
 qaytaradi.
 
 ### Mashq 2: Eng katta (oson)
@@ -616,12 +616,12 @@ qaytaring (rekursiv).
 `gcd(butun a, butun b)` — Euclid algoritmi bilan. Rekursiv yozing.
 
 ```cpp
-gcd(a, b) = (b == 0) ? a : gcd(b, a % b)
+gcd(a, b) = (b == 0) ? a : gcd(b, a % b);
 ```
 
 ### Mashq 6: Quvvatga ko'tarish (o'rtacha)
 
-`quvvat(ikkilangan asos, butun daraja)` — `asos^daraja`. Rekursiv
+`quvvat(haqiqiy asos, butun daraja)` — `asos^daraja`. Rekursiv
 versiya yozing.
 
 ### Mashq 7: Stringni teskari aylantirish (qiyinroq)

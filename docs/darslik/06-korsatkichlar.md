@@ -54,27 +54,27 @@ qiling, sizning ismingiz "Akmal", lekin do'stlaringiz sizni "Aki"
 deyishadi. Aki = Akmal. Ikkala nom — _bir xil odam_.
 
 ```cpp
-butun yosh = 25
-butun& yosh_psevdonim = yosh
+butun yosh = 25;
+butun& yosh_psevdonim = yosh;
 
-yosh_psevdonim = 30           // bu yosh ni ham o'zgartiradi!
-yozish << yosh                 // 30
-yozish << yosh_psevdonim       // 30 (bir xil narsa!)
+yosh_psevdonim = 30; // bu yosh ni ham o'zgartiradi!
+yozish << yosh; // 30
+yozish << yosh_psevdonim; // 30 (bir xil narsa!)
 ```
 
 ### Havola qoidalari
 
 1. **Havola e'lon paytida shart initsializatsiya qilinishi kerak**:
    ```cpp
-   butun& y                  // ← XATO: nimaga havola?
-   butun& y = yosh           // TO'G'RI
+   butun& y; // ← XATO: nimaga havola?
+   butun& y = yosh; // TO'G'RI
    ```
 
 2. **Havola boshqa o'zgaruvchiga "ko'chirilmaydi"**:
    ```cpp
-   butun a = 5, b = 10
-   butun& r = a
-   r = b                     // Bu — a ga b ning qiymatini saqlaydi (a = 10)
+   butun a = 5, b = 10;
+   butun& r = a;
+   r = b; // Bu — a ga b ning qiymatini saqlaydi (a = 10)
                              // r endi b ga ko'rsatadi DEYIL
    ```
 
@@ -83,18 +83,17 @@ yozish << yosh_psevdonim       // 30 (bir xil narsa!)
 ### Havolalar nima uchun foydali?
 
 **1. Funksiyalarda parametr o'zgartirish:**
-
 ```cpp
 bosh almashtirish(butun& a, butun& b) {
-    butun temp = a
-    a = b
-    b = temp
+    butun temp = a;
+    a = b;
+    b = temp;
 }
 
 butun asosiy() {
-    butun x = 5, y = 10
-    almashtirish(x, y)
-    yozish << x << " " << y    // 10 5
+    butun x = 5, y = 10;
+    almashtirish(x, y);
+    yozish << x << " " << y; // 10 5
 }
 ```
 
@@ -103,10 +102,9 @@ nusxalari. Ularni o'zgartirsangiz, asl o'zgaruvchilarga ta'sir qilmaydi.
 `&` bilan — bu xuddi bir xil o'zgaruvchilar.
 
 **2. Katta o'zgaruvchilarni samarali uzatish:**
-
 ```cpp
 butun matn_uzunligi(o'zgarmas matn& s) {
-    qaytarish s.length()
+    qaytarish s.length();
 }
 ```
 
@@ -121,10 +119,9 @@ Endi keling, ko'rsatkichga o'tamiz. **Ko'rsatkich** — bu boshqa
 o'zgaruvchining **manzilini** saqlovchi o'zgaruvchi.
 
 ### Ko'rsatkichni e'lon qilish
-
 ```cpp
-butun a = 42
-butun* p = &a              // p — a ning manzilini saqlaydi
+butun a = 42;
+butun* p = &a; // p — a ning manzilini saqlaydi
 ```
 
 Tahlil:
@@ -136,22 +133,20 @@ Tahlil:
 ### `*` (dereference) — qiymatga kirish
 
 Ko'rsatkichdan qiymatga kirish uchun `*` ishlatamiz:
-
 ```cpp
-butun a = 42
-butun* p = &a
+butun a = 42;
+butun* p = &a;
 
-yozish << p                // a ning manzili (qandaydir son)
-yozish << *p               // a ning qiymati (42)
+yozish << p; // a ning manzili (qandaydir son)
+yozish << *p; // a ning qiymati (42)
 
-*p = 100                   // a ga 100 ni saqlash
-yozish << a                // 100
+*p = 100; // a ga 100 ni saqlash
+yozish << a; // 100
 ```
 
 `*p` — "p ko'rsatadigan joydagi qiymat" demakdir.
 
 ### Visualization
-
 ```
 Xotira:
 ┌──────────┬──────────┐
@@ -174,23 +169,20 @@ p     = 0x1000  (a ning manzili)
 
 `nullptr` — bu **hech narsaga ko'rsatmaslik** qiymati. Yangi ko'rsatkich
 yaratayotganda, qiymat berishni unutmang:
-
 ```cpp
-butun* p = nullptr            // bo'sh ko'rsatkich
+butun* p = nullptr; // bo'sh ko'rsatkich
 ```
 
 `nullptr` ni `*` qilish — **xato**! Dastur ishdan chiqadi:
-
 ```cpp
-butun* p = nullptr
-*p = 5                        // ← XATO: dastur "crash" qiladi
+butun* p = nullptr;
+*p = 5; // ← XATO: dastur "crash" qiladi
 ```
 
 Doim tekshiring:
-
 ```cpp
 agar (p != nullptr) {
-    *p = 5
+    *p = 5;
 }
 ```
 
@@ -206,36 +198,33 @@ Lekin ba'zan bizga **dinamik xotira** kerak — funksiya tugagandan
 keyin ham yashaydigan. Bu **heap** xotirasi.
 
 ### `yangi` (new) — heap'dan xotira olish
-
 ```cpp
-butun* p = yangi butun(42)    // heap'da yangi butun, qiymati 42
-yozish << *p                   // 42
+butun* p = yangi butun(42); // heap'da yangi butun, qiymati 42
+yozish << *p; // 42
 ```
 
 `yangi butun(42)` — "heap'da yangi butun yarat, qiymati 42 bo'lsin,
 manzilini qaytar".
 
 ### `o'chirish` (delete) — xotirani qaytarish
-
 ```cpp
-butun* p = yangi butun(42)
-*p = 100
-o'chirish p                   // xotirani qaytarish (free)
-p = nullptr                   // havsiz ko'rsatkich qoldirma
+butun* p = yangi butun(42);
+*p = 100;
+o'chirish p; // xotirani qaytarish (free)
+p = nullptr; // havsiz ko'rsatkich qoldirma
 ```
 
 **Muhim qoida:** Har bir `yangi` ga **bitta** `o'chirish` mos kelishi
 kerak. Aks holda — **xotira sizmasi** (memory leak)!
 
 ### Massivlar uchun
-
 ```cpp
-butun* sonlar = yangi butun[10]      // 10 ta butun
-sonlar[0] = 1
-sonlar[1] = 2
+butun* sonlar = yangi butun[10]; // 10 ta butun
+sonlar[0] = 1;
+sonlar[1] = 2;
 // ...
 
-o'chirish[] sonlar                    // diqqat — [] qo'shing!
+o'chirish[] sonlar; // diqqat — [] qo'shing!
 ```
 
 > **Real hayotdagi misol:** Stack — restoranning stoli (taom keldi,
@@ -244,10 +233,9 @@ o'chirish[] sonlar                    // diqqat — [] qo'shing!
 > qo'ydingiz va unutsangiz — bardoshli iflos joy hosil bo'ladi.
 
 ### Memory leak — eng yomon kelishuv
-
 ```cpp
 bosh funksiya() {
-    butun* p = yangi butun(42)
+    butun* p = yangi butun(42);
     // p ni `o'chirish` qilmadik!
 }
 
@@ -265,16 +253,15 @@ qiladi: **aqlli ko'rsatkichlar**.
 ### `yagona_korsatkich` (unique_ptr)
 
 Avtomatik tozalanadigan ko'rsatkich. Faqat bitta egasi bor:
-
 ```cpp
 #include <memory>
 
 butun asosiy() {
-    yagona_korsatkich<butun> p = std::make_unique<butun>(42)
-    yozish << *p << qator_oxiri     // 42
+    yagona_korsatkich<butun> p = std::make_unique<butun>(42);
+    yozish << *p << qator_oxiri; // 42
 
     // funksiya tugagach, p avtomatik tozalanadi
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -284,11 +271,10 @@ butun asosiy() {
 
 Bir necha egasi bo'lishi mumkin. Oxirgi egasi yo'qolganda — xotira
 tozalanadi:
-
 ```cpp
-umumiy_korsatkich<butun> p1 = std::make_shared<butun>(42)
-umumiy_korsatkich<butun> p2 = p1        // ikkala egasi
-yozish << *p1 << " " << *p2             // 42 42
+umumiy_korsatkich<butun> p1 = std::make_shared<butun>(42);
+umumiy_korsatkich<butun> p2 = p1; // ikkala egasi
+yozish << *p1 << " " << *p2; // 42 42
 
 // p1 va p2 ikkalasi yo'qolgach — xotira tozalanadi
 ```
@@ -301,16 +287,15 @@ yozish << *p1 << " " << *p2             // 42 42
 ## Ko'rsatkich arifmetikasi
 
 Massiv elementlariga `*` orqali kirish mumkin:
-
 ```cpp
 butun massiv[5] = {10, 20, 30, 40, 50}
-butun* p = massiv             // birinchi elementga ko'rsatadi
+butun* p = massiv; // birinchi elementga ko'rsatadi
 
-yozish << *p                  // 10
-p++                            // keyingi elementga o'tdi
-yozish << *p                  // 20
-p += 2                         // 2 ta oldinga
-yozish << *p                  // 40
+yozish << *p; // 10
+p++; // keyingi elementga o'tdi
+yozish << *p; // 20
+p += 2; // 2 ta oldinga
+yozish << *p; // 40
 ```
 
 `p++` faqat 1 oshmaydi — u **`butun` hajmi**ga (4 bayt) oshadi! Bu
@@ -326,20 +311,19 @@ qanchalik siljitish kerakligini biladi.
 ## Ko'rsatkich va `const`
 
 Uchta xil "const ko'rsatkich" bor:
-
 ```cpp
 // 1. O'zgarmas qiymatga ko'rsatadigan
-o'zgarmas butun* p1 = &a
+o'zgarmas butun* p1 = &a;
 // *p1 = 10   // XATO: qiymatni o'zgartirib bo'lmaydi
 // p1 = &b    // OK: p1 ni boshqa joyga qaratish mumkin
 
 // 2. O'zgarmas ko'rsatkich
-butun* o'zgarmas p2 = &a
+butun* o'zgarmas p2 = &a;
 // *p2 = 10   // OK
 // p2 = &b    // XATO
 
 // 3. Ikkala
-o'zgarmas butun* o'zgarmas p3 = &a
+o'zgarmas butun* o'zgarmas p3 = &a;
 // *p3 = 10   // XATO
 // p3 = &b    // XATO
 ```
@@ -354,11 +338,10 @@ Kompilyator sizning niyatingizni tushunadi va xatolardan saqlaydi.
 Ko'rsatkichlarning kuchli qo'llanish maydoni — **bog'langan ro'yxat**.
 Massivdan farqi: elementlar xotirada ketma-ket emas, har biri
 keyingisining manzilini bilib turadi.
-
 ```cpp
 tuzilma Tugun {
-    butun qiymat
-    Tugun* keyingi
+    butun qiymat;
+    Tugun* keyingi;
 }
 
 butun asosiy() {
@@ -368,23 +351,23 @@ butun asosiy() {
     Tugun* uchinchi = yangi Tugun{30, nullptr}
 
     // Bog'laymiz: 10 → 20 → 30
-    birinchi->keyingi = ikkinchi
-    ikkinchi->keyingi = uchinchi
+    birinchi->keyingi = ikkinchi;
+    ikkinchi->keyingi = uchinchi;
 
     // Bo'ylab yuramiz
-    Tugun* joriy = birinchi
-    davr (joriy != nullptr) {
-        yozish << joriy->qiymat << " "
-        joriy = joriy->keyingi
+    Tugun* joriy = birinchi;
+    toki (joriy != nullptr) {
+        yozish << joriy->qiymat << " ";
+        joriy = joriy->keyingi;
     }
-    yozish << qator_oxiri          // 10 20 30
+    yozish << qator_oxiri; // 10 20 30
 
     // Tozalash
-    o'chirish birinchi
-    o'chirish ikkinchi
-    o'chirish uchinchi
+    o'chirish birinchi;
+    o'chirish ikkinchi;
+    o'chirish uchinchi;
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -408,40 +391,35 @@ Bog'langan ro'yxat afzalliklari va kamchiliklari:
 ## Eng ko'p uchraydigan xatolar
 
 ### 1. `nullptr` ni dereference qilish
-
 ```cpp
-butun* p = nullptr
-*p = 5                        // ← XATO: dastur crash
+butun* p = nullptr;
+*p = 5; // ← XATO: dastur crash
 ```
 
 ### 2. O'chirilgan ko'rsatkichni ishlatish
-
 ```cpp
-butun* p = yangi butun(42)
-o'chirish p
-*p = 5                        // ← XATO: dangling pointer
+butun* p = yangi butun(42);
+o'chirish p;
+*p = 5; // ← XATO: dangling pointer
 ```
 
 ### 3. Bir xil joyni ikki marta `o'chirish`
-
 ```cpp
-butun* p = yangi butun(42)
-o'chirish p
-o'chirish p                    // ← XATO: double-free
+butun* p = yangi butun(42);
+o'chirish p;
+o'chirish p; // ← XATO: double-free
 ```
 
 ### 4. Massivni `o'chirish` (without `[]`)
-
 ```cpp
-butun* arr = yangi butun[10]
-o'chirish arr                  // ← XATO: yo'qolgan
-o'chirish[] arr                // TO'G'RI
+butun* arr = yangi butun[10];
+o'chirish arr; // ← XATO: yo'qolgan
+o'chirish[] arr; // TO'G'RI
 ```
 
 ### 5. Memory leak
-
 ```cpp
-butun* p = yangi butun(42)
+butun* p = yangi butun(42);
 // o'chirish ni unutdik!
 ```
 

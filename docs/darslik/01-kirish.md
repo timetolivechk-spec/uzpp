@@ -96,23 +96,21 @@ oxir-oqibat C++ ga aylantirilib, so'ng kompilyatsiya qilinadi.
 
 #### 3. Sodda sintaksis
 
-uz++ Python tilidan ilhomlangan: kod oson o'qiladi, blocklar
-chekinish (indentation) orqali ko'rinadi, nuqtali vergullar ko'p
-hollarda ixtiyoriy:
+uz++ Python va C++ tillaridan ilhomlangan: kod oson o'qiladi, blocklar chekinish (indentation) orqali ko'rinadi, operatorlar oxirida nuqtali vergul (;) qo'yiladi:
 
 ```cpp
 butun asosiy() {
-    o'zgaruvchan ism = "Aziz"
-    yozish << "Salom, " << ism << qator_oxiri
-    qaytarish 0
+    o'zgaruvchan ism = "Aziz";
+    yozish << "Salom, " << ism << qator_oxiri;
+    qaytarish 0;
 }
 ```
 
 Solishtiring, bir xil dastur C++ da:
 
 ```cpp
-#include <iostream>
-#include <string>
+ulash <iostream>
+ulash <string>
 
 int main() {
     std::string ism = "Aziz";
@@ -192,7 +190,7 @@ Transpilyator avval sizning kodingizni o'qiydi va uni alohida
 Misol uchun, agar siz quyidagi kodni yozsangiz:
 
 ```cpp
-o'zgaruvchan x = 10
+o'zgaruvchan x = 10;
 ```
 
 Lexer uni quyidagi tokenlarga ajratadi:
@@ -236,7 +234,7 @@ quyidagi savollarga javob beradi:
 Misol uchun:
 
 ```cpp
-butun yosh = "yigirma"   // ← xato! butun (int) ga matn berilmoqda
+butun yosh = "yigirma"; // ← xato! butun (int) ga matn berilmoqda
 ```
 
 Type checker buni ushlaydi va sizga xato xabarini chiqaradi —
@@ -250,8 +248,8 @@ Endi tekshirilgan AST C++23 kodiga aylantiriladi. Bu erda
 
 uz++:
 ```cpp
-o'zgaruvchan x = 10
-yozish << x << qator_oxiri
+o'zgaruvchan x = 10;
+yozish << x << qator_oxiri;
 ```
 
 Generated C++ (sizga ko'rinmaydi, lekin shunday yaratiladi):
@@ -307,7 +305,7 @@ mumkin.
    kiriting:
 
    ```bash
-   uzpp --yordam
+   uzpp --yordam;
    ```
 
    Agar yordam matni chiqsa — hammasi joyida! Agar "uzpp: command not
@@ -316,7 +314,6 @@ mumkin.
 ### Linux / macOS
 
 Terminalda quyidagi buyruqni ishga tushiring:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/install.sh | bash
 ```
@@ -358,28 +355,25 @@ an'ana.
 ### Kod
 
 Quyidagi kodni `salom.uzpp` nomli faylga saqlang:
-
 ```cpp
 // salom.uzpp — birinchi uz++ dasturi
 
 butun asosiy() {
-    yozish << "Salom, dunyo!" << qator_oxiri
-    qaytarish 0
+    yozish << "Salom, dunyo!" << qator_oxiri;
+    qaytarish 0;
 }
 ```
 
 ### Ishga tushirish
 
 Terminalni faylingiz joylashgan papkada oching va kiriting:
-
 ```bash
-uzpp ishga-tushirish salom.uzpp
+uzpp ishga-tushirish salom.uzpp;
 ```
 
 Yoki agar VS Code'da bo'lsangiz, oddiy `F5` tugmasini bosing.
 
 **Natija:**
-
 ```
 Salom, dunyo!
 ```
@@ -394,7 +388,6 @@ ba'zi tushunchalar sizga noma'lum bo'lsa — xavotir olmang, biz ularning
 har biriga keyingi boblar bag'ishlaymiz.
 
 #### 1-qator: Izoh
-
 ```cpp
 // salom.uzpp — birinchi uz++ dasturi
 ```
@@ -409,7 +402,6 @@ qilayotganini eslatadi.
 > nima ekan?" demaslik uchun, izohlar yozing.
 
 #### 2-qator: Funksiya e'loni
-
 ```cpp
 butun asosiy() {
 ```
@@ -434,9 +426,8 @@ chaqiradi.
 > emas. `asosiy` funksiyasi — bu sizning dasturingizning eshigi.
 
 #### 3-qator: Konsolga yozish
-
 ```cpp
-    yozish << "Salom, dunyo!" << qator_oxiri
+    yozish << "Salom, dunyo!" << qator_oxiri;
 ```
 
 E'tibor bering — qator boshida 4 ta bo'sh joy bor. Bu **chekinish**
@@ -458,7 +449,6 @@ keyin yangi qatorga o'ting".
 
 `<<` operatorini "kanal" deb tasavvur qiling: ma'lumotlar oqim bo'lib
 bir tomonga oqadi.
-
 ```
 "Salom, dunyo!"  ──┐
                    ├──→  [yozish (konsol)]
@@ -466,9 +456,8 @@ qator_oxiri      ──┘
 ```
 
 #### 4-qator: Qiymat qaytarish
-
 ```cpp
-    qaytarish 0
+    qaytarish 0;
 ```
 
 `qaytarish 0` — funksiyadan **0** raqamini qaytarish degani.
@@ -487,7 +476,6 @@ dasturingizning natijasi haqida xulosa qiladi.
 > kelmoqdaman" (1, 2, va h.k.). `qaytarish 0` shu birinchi holat.
 
 #### 5-qator: Funksiya tanasining yopilishi
-
 ```cpp
 }
 ```
@@ -500,7 +488,7 @@ Qachon biz `uzpp ishga-tushirish salom.uzpp` desak:
 
 1. **Transpilyator** sizning kodingizni o'qiydi va C++ ga aylantiradi:
    ```cpp
-   #include "uzpp_runtime.hpp"
+   ulash "uzpp_runtime.hpp"
    int main() {
        std::cout << "Salom, dunyo!" << std::endl;
        return 0;
@@ -530,22 +518,20 @@ Izohlar — dastur uchun ko'rinmas, lekin _odamlar_ uchun ko'rinadigan
 matn. uz++ da izohlarning ikki turi bor:
 
 ### Bir qatorli izoh
-
 ```cpp
 // bu — bir qatorli izoh
-butun yosh = 25   // o'zgaruvchidan keyin ham yozish mumkin
+butun yosh = 25; // o'zgaruvchidan keyin ham yozish mumkin
 ```
 
 `//` belgisidan keyin satr oxirigacha hamma narsa — izoh.
 
 ### Ko'p qatorli izoh
-
 ```cpp
-/*
-   Bu — ko'p qatorli izoh.
-   U bir necha qatorni egallashi mumkin.
-   Foydali bo'limni tushuntirish uchun kerak bo'lganda.
-*/
+/*;
+   Bu — ko'p qatorli izoh.;
+   U bir necha qatorni egallashi mumkin.;
+   Foydali bo'limni tushuntirish uchun kerak bo'lganda.;
+*/;
 ```
 
 `/*` bilan boshlanib `*/` bilan tugaydi.
@@ -553,18 +539,16 @@ butun yosh = 25   // o'zgaruvchidan keyin ham yozish mumkin
 ### Yaxshi izoh va yomon izoh
 
 Yomon izoh — kodda yozilgan narsani takrorlaydigan izoh:
-
 ```cpp
-butun yosh = 25   // yoshni 25 ga teng qil   ← bu izoh keraksiz!
+butun yosh = 25; // yoshni 25 ga teng qil   ← bu izoh keraksiz!
 ```
 
 Yaxshi izoh — kod _nima qilayotgani_ emas, **nega** shunday qilayotganini
 tushuntiradi:
-
 ```cpp
 // Yoshi 18 dan kichik foydalanuvchilarga ovoz berish ruxsat etilmaydi.
 agar (yosh < 18) {
-    yozish << "Kechirasiz, ovoz bera olmaysiz" << qator_oxiri
+    yozish << "Kechirasiz, ovoz bera olmaysiz" << qator_oxiri;
 }
 ```
 
@@ -580,16 +564,14 @@ agar (yosh < 18) {
 uz++ ning bir o'ziga xosligi — **nuqtali vergullar ixtiyoriy**. C++ da
 har bir ko'rsatma `;` bilan tugashi shart, lekin uz++ siz ularsiz
 yozishingiz mumkin:
-
 ```cpp
-butun a = 5
-butun b = 10
-butun c = a + b
-yozish << c << qator_oxiri
+butun a = 5;
+butun b = 10;
+butun c = a + b;
+yozish << c << qator_oxiri;
 ```
 
 Lekin agar xohlasangiz, vergullarni qo'yishingiz mumkin — xato bo'lmaydi:
-
 ```cpp
 butun a = 5;
 butun b = 10;
@@ -603,9 +585,8 @@ yozish << c << qator_oxiri;
 
 Agar siz bir qatorda bir nechta ko'rsatma yozmoqchi bo'lsangiz,
 ularni `;` bilan ajrating:
-
 ```cpp
-butun x = 5; butun y = 10; butun z = x + y
+butun x = 5; butun y = 10; butun z = x + y;
 ```
 
 Lekin bu uslubdan qochish kerak — kod o'qish qiyin bo'ladi.
@@ -613,13 +594,12 @@ Lekin bu uslubdan qochish kerak — kod o'qish qiyin bo'ladi.
 ### Bloklar — chekinish orqali
 
 uz++ da kod bloklari **chekinish** (indentation) orqali ifodalanadi:
-
 ```cpp
 butun asosiy() {
     agar (rost) {
-        yozish << "ichkari blok" << qator_oxiri
+        yozish << "ichkari blok" << qator_oxiri;
     }
-    yozish << "tashqari blok" << qator_oxiri
+    yozish << "tashqari blok" << qator_oxiri;
 }
 ```
 
@@ -638,43 +618,40 @@ Endi biz dasturni biroz "tirik" qilaylik — foydalanuvchidan ma'lumot
 so'raylik va unga javob beraylik.
 
 ### Kod
-
 ```cpp
 // muloqot.uzpp — foydalanuvchi bilan dastlabki muloqot
 
 butun asosiy() {
-    matn ism
-    butun yosh
+    matn ism;
+    butun yosh;
 
-    yozish << "Ismingiz nima? "
-    kiritish >> ism
+    yozish << "Ismingiz nima? ";
+    kiritish >> ism;
 
-    yozish << "Yoshingiz necha? "
-    kiritish >> yosh
+    yozish << "Yoshingiz necha? ";
+    kiritish >> yosh;
 
-    yozish << qator_oxiri
-    yozish << "Salom, " << ism << "!" << qator_oxiri
-    yozish << "Siz " << yosh << " yoshdasiz." << qator_oxiri
+    yozish << qator_oxiri;
+    yozish << "Salom, " << ism << "!" << qator_oxiri;
+    yozish << "Siz " << yosh << " yoshdasiz." << qator_oxiri;
 
     agar (yosh < 18) {
-        yozish << "Siz hali yoshsiz — kelajak sizniki!" << qator_oxiri
+        yozish << "Siz hali yoshsiz — kelajak sizniki!" << qator_oxiri;
     }
     aks_holda {
-        yozish << "Tajribangizdan foydalanish vaqti keldi." << qator_oxiri
+        yozish << "Tajribangizdan foydalanish vaqti keldi." << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
 ### Ishga tushirish
-
 ```bash
-uzpp ishga-tushirish muloqot.uzpp
+uzpp ishga-tushirish muloqot.uzpp;
 ```
 
 **Natija (misol):**
-
 ```
 Ismingiz nima? Aziza
 Yoshingiz necha? 22
@@ -689,10 +666,9 @@ Tajribangizdan foydalanish vaqti keldi.
 Bu dasturda biz bir necha yangi narsalarni ko'rdik:
 
 #### 1. O'zgaruvchi e'loni
-
 ```cpp
-matn ism
-butun yosh
+matn ism;
+butun yosh;
 ```
 
 **O'zgaruvchi** — bu xotirada saqlash uchun nomlangan joy. Bu yerda:
@@ -704,9 +680,8 @@ Tasavvur qiling, sizda ikkita quti bor: birida "ism" yorlig'i yopishtirilgan
 sonlar uchun).
 
 #### 2. Kiritish (Input)
-
 ```cpp
-kiritish >> ism
+kiritish >> ism;
 ```
 
 `kiritish` — bu klaviaturadan ma'lumot olish vositasi. `>>` operatori
@@ -718,13 +693,12 @@ yo'nalishi yordam beradi:
 - `>>` — "u yerdan keladi" (kiritish)
 
 #### 3. Shart operator
-
 ```cpp
 agar (yosh < 18) {
-    yozish << "Siz hali yoshsiz — kelajak sizniki!" << qator_oxiri
+    yozish << "Siz hali yoshsiz — kelajak sizniki!" << qator_oxiri;
 }
 aks_holda {
-    yozish << "Tajribangizdan foydalanish vaqti keldi." << qator_oxiri
+    yozish << "Tajribangizdan foydalanish vaqti keldi." << qator_oxiri;
 }
 ```
 
@@ -765,15 +739,15 @@ o'rganasiz:
 | `agar` | `if` | Agar shart bajarilsa |
 | `aks_holda` | `else` | Aks holda |
 | `uchun` | `for` | Takrorlash sikli |
-| `davr` | `while` | Shartli takrorlash |
-| `tanlash` | `switch` | Tanlash operatori |
+| `toki` | `while` | Shartli takrorlash (while) |
+| `moslash` | `switch` | Tanlash operatori (switch) |
 | `sinf` | `class` | Klass e'lon qilish |
 | `tuzilma` | `struct` | Tuzilma e'lon qilish |
 | `qaytarish` | `return` | Qiymat qaytarish |
 | `rost` | `true` | Mantiqiy rost qiymat |
 | `yolg'on` | `false` | Mantiqiy yolg'on qiymat |
 | `to'xtatish` | `break` | Sikldan chiqish |
-| `davom_ettirish` | `continue` | Keyingi takrorlashga o'tish |
+| `davom_etish` | `continue` | Keyingi takrorlashga o'tish |
 
 > **Eslatma:** Kalit so'zlar — bu **bron qilingan** so'zlar. Siz ularni
 > o'zgaruvchi nomi sifatida ishlatolmaysiz. Masalan, `butun agar = 5`
@@ -788,8 +762,8 @@ turlar:
 |-----|-----------------|---------|-------|
 | `butun` | `int` | Butun son (32 bit) | `5`, `-100`, `42` |
 | `kasr` | `float` | Haqiqiy son (32 bit) | `3.14`, `0.5` |
-| `ikkilangan` | `double` | Aniq haqiqiy son (64 bit) | `3.14159265` |
-| `mantiq` | `bool` | Rost/yolg'on | `rost`, `yolg'on` |
+| `haqiqiy` | `double` | Haqiqiy son (64 bit) | `3.14159265` |
+| `mantiqiy` | `bool` | Rost/yolg'on (boolean) | `rost`, `yolg'on` |
 | `belgi` | `char` | Bitta belgi | `'A'`, `'b'`, `'!'` |
 | `matn` | `std::string` | Matn satri | `"Salom"`, `"Aziza"` |
 | `bosh` | `void` | Bo'sh (qiymatsiz) | — |
@@ -803,24 +777,23 @@ turlar:
 ### Operatorlar
 
 Operatorlar — bu qiymatlar ustida amallar bajaradigan belgilar:
-
 ```cpp
 // Arifmetik amallar
-butun yigindi = 5 + 3      // 8
-butun farq = 10 - 4         // 6
-butun kopaytma = 6 * 7      // 42
-butun bolinma = 15 / 3      // 5
-butun qoldiq = 17 % 5       // 2 (17 / 5 dan qolgani)
+butun yigindi = 5 + 3; // 8
+butun farq = 10 - 4; // 6
+butun kopaytma = 6 * 7; // 42
+butun bolinma = 15 / 3; // 5
+butun qoldiq = 17 % 5; // 2 (17 / 5 dan qolgani)
 
-// Taqqoslash — natija mantiq turida (rost/yolg'on)
-mantiq teng = (5 == 5)      // rost
-mantiq kichik = (3 < 7)     // rost
-mantiq farqli = (5 != 5)    // yolg'on
+// Taqqoslash — natija mantiqiy turida (rost/yolg'on)
+mantiqiy teng = (5 == 5); // rost
+mantiqiy kichik = (3 < 7); // rost
+mantiqiy farqli = (5 != 5); // yolg'on
 
 // Mantiqiy amallar
-mantiq va = rost && yolg'on    // yolg'on (ikkalasi ham rost bo'lishi kerak)
-mantiq yo = rost || yolg'on    // rost (kamida bittasi rost)
-mantiq inkor = !rost            // yolg'on
+mantiqiy va = rost && yolg'on; // yolg'on (ikkalasi ham rost bo'lishi kerak)
+mantiqiy yo = rost || yolg'on; // rost (kamida bittasi rost)
+mantiqiy inkor = !rost; // yolg'on
 ```
 
 Operatorlarni keyingi bobda batafsil ko'ramiz.
@@ -833,41 +806,36 @@ Yangi boshlovchilar tez-tez bir xil xatolarga duch keladi. Mana ulardan
 eng ko'p tarqalganlari:
 
 ### 1. Qo'shtirnoqlarni unutish
-
 ```cpp
-yozish << Salom, dunyo! << qator_oxiri      // ← XATO
-yozish << "Salom, dunyo!" << qator_oxiri    // ← TO'G'RI
+yozish << Salom, dunyo! << qator_oxiri; // ← XATO
+yozish << "Salom, dunyo!" << qator_oxiri; // ← TO'G'RI
 ```
 
 Matn satrlari har doim qo'shtirnoq (`"..."`) ichida bo'lishi kerak.
 
 ### 2. Operatorni noto'g'ri yo'naltirish
-
 ```cpp
-yozish >> "Salom"     // ← XATO (yozish chiqarish uchun, >> kiritish uchun)
-yozish << "Salom"     // ← TO'G'RI
+yozish >> "Salom"; // ← XATO (yozish chiqarish uchun, >> kiritish uchun)
+yozish << "Salom"; // ← TO'G'RI
 ```
 
 ### 3. Funksiya tanasini yopishni unutish
-
 ```cpp
 butun asosiy() {
-    yozish << "Salom" << qator_oxiri
-    qaytarish 0
+    yozish << "Salom" << qator_oxiri;
+    qaytarish 0;
                        // ← XATO: } yo'q!
 ```
 
 Har bir `{` uchun mos `}` bo'lishi kerak.
 
 ### 4. Tip mosligini buzish
-
 ```cpp
-butun yosh = "yigirma"     // ← XATO: matn `butun` ga sig'maydi
-butun yosh = 20            // ← TO'G'RI
+butun yosh = "yigirma"; // ← XATO: matn `butun` ga sig'maydi
+butun yosh = 20; // ← TO'G'RI
 ```
 
 ### 5. `=` va `==` ni adashtirish
-
 ```cpp
 agar (yosh = 18) { ... }       // ← XATO: `yosh` ga 18 ni saqlamoqda!
 agar (yosh == 18) { ... }      // ← TO'G'RI: 18 ga tengmi?
@@ -911,7 +879,6 @@ breakpoint'larni qo'llab-quvvatlaydi.
 ### Rivojlanish sikli
 
 Dasturchining odatdagi ish kuni shunday ko'rinadi:
-
 ```
    1. Kod yozish (muharrirda)
         │
@@ -961,8 +928,8 @@ ayirmasi, ko'paytmasi va bo'linmasini chiqaring.
 
 **Maslahat:**
 ```cpp
-butun a, b
-kiritish >> a >> b      // ikkita sonni ketma-ket o'qish mumkin
+butun a, b;
+kiritish >> a >> b; // ikkita sonni ketma-ket o'qish mumkin
 ```
 
 **Hushyor bo'ling!** Agar `b` 0 bo'lsa, `a / b` bo'lganda dastur xato

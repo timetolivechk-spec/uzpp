@@ -33,14 +33,14 @@ bo'lsa maxsus belgi qaytaradi.
 ```cpp
 butun bolish(butun a, butun b) {
     agar (b == 0) {
-        qaytarish -1                  // xato belgisi
+        qaytarish -1; // xato belgisi
     }
-    qaytarish a / b
+    qaytarish a / b;
 }
 
-butun n = bolish(10, 0)
+butun n = bolish(10, 0);
 agar (n == -1) {
-    yozish << "Xato: 0 ga bo'lib bo'lmaydi" << qator_oxiri
+    yozish << "Xato: 0 ga bo'lib bo'lmaydi" << qator_oxiri;
 }
 ```
 
@@ -70,21 +70,21 @@ ushlash (xato_turi xato_nomi) {
 ```cpp
 butun bolish(butun a, butun b) {
     agar (b == 0) {
-        irgitish std::runtime_error("0 ga bo'lib bo'lmaydi")
+        irgitish std::runtime_error("0 ga bo'lib bo'lmaydi");
     }
-    qaytarish a / b
+    qaytarish a / b;
 }
 
 butun asosiy() {
     urinish {
-        butun n = bolish(10, 0)
-        yozish << n << qator_oxiri
+        butun n = bolish(10, 0);
+        yozish << n << qator_oxiri;
     }
     ushlash (o'zgarmas std::runtime_error& e) {
-        yozish << "Xato yuz berdi: " << e.what() << qator_oxiri
+        yozish << "Xato yuz berdi: " << e.what() << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -108,13 +108,13 @@ urinish {
     // ...
 }
 ushlash (o'zgarmas std::out_of_range& e) {
-    yozish << "Chegaradan tashqari: " << e.what()
+    yozish << "Chegaradan tashqari: " << e.what();
 }
 ushlash (o'zgarmas std::runtime_error& e) {
-    yozish << "Runtime xato: " << e.what()
+    yozish << "Runtime xato: " << e.what();
 }
 ushlash (...) {                       // hamma boshqa xatolar
-    yozish << "Noma'lum xato"
+    yozish << "Noma'lum xato";
 }
 ```
 
@@ -131,13 +131,13 @@ ushlash (...) {                       // hamma boshqa xatolar
 ### O'zingizning istisno turingiz
 
 ```cpp
-sinf MeningXatom : ochiq std::runtime_error {
+sinf MeningXatom : std::runtime_error {
 ochiq:
     MeningXatom(matn xabar) : std::runtime_error(xabar) {}
 }
 
 bosh xato_yarat() {
-    irgitish MeningXatom("Maxsus xato")
+    irgitish MeningXatom("Maxsus xato");
 }
 ```
 
@@ -167,20 +167,21 @@ Bu — eng zamonaviy va xavfsiz yondashuv. Funksiya **qiymat** yoki
 ```cpp
 Natija<butun, matn> bolish(butun a, butun b) {
     agar (b == 0) {
-        qaytarish std::unexpected("0 ga bo'lib bo'lmaydi")
+        qaytarish Natija<butun, matn>::xato("0 ga bo'lib bo'lmaydi");
     }
-    qaytarish a / b
+    qaytarish Natija<butun, matn>::muvaffaqiyat(a / b);
 }
 
 butun asosiy() {
-    avto natija = bolish(10, 0)
+    o'zgaruvchan natija = bolish(10, 0);
 
     agar (natija) {                   // muvaffaqiyatli?
-        yozish << "Natija: " << *natija
+        yozish << "Natija: " << natija.qiymat();
     }
     aks_holda {
-        yozish << "Xato: " << natija.error()
+        yozish << "Xato: " << natija.xatoMazmun();
     }
+    qaytarish 0;
 }
 ```
 
@@ -199,25 +200,26 @@ Agar qiymat **bo'lishi yoki bo'lmasligi** mumkin bo'lsa, lekin xato
 sababi muhim emas:
 
 ```cpp
-Tanlov<butun> qidirish(vektor<butun>& v, butun maqsad) {
+Tanlov<butun> qidiruv(vektor<butun>& v, butun maqsad) {
     uchun (butun i = 0; i < v.size(); i++) {
         agar (v[i] == maqsad) {
-            qaytarish i
+            qaytarish Tanlov<butun>::bor(i);
         }
     }
-    qaytarish std::nullopt           // topilmadi
+    qaytarish Tanlov<butun>::yoq();
 }
 
 butun asosiy() {
-    vektor<butun> v = {1, 2, 3, 4, 5}
-    avto natija = qidirish(v, 3)
+    vektor<butun> v = {1, 2, 3, 4, 5};
+    o'zgaruvchan natija = qidiruv(v, 3);
 
     agar (natija) {
-        yozish << "Topildi, indeks: " << *natija
+        yozish << "Topildi, indeks: " << natija.qiymat();
     }
     aks_holda {
-        yozish << "Topilmadi"
+        yozish << "Topilmadi";
     }
+    qaytarish 0;
 }
 ```
 
@@ -231,11 +233,11 @@ butun asosiy() {
 uchun. Foydalanuvchi xatolari uchun emas!
 
 ```cpp
-#include <cassert>
+ulash <cassert>
 
 butun yashir_olish(o'zgarmas vektor<butun>& v, butun i) {
-    tasdiqlash(i >= 0 && i < v.size())   // sharti tekshirish
-    qaytarish v[i]
+    tasdiqlash(i >= 0 && i < v.size()); // sharti tekshirish
+    qaytarish v[i];
 }
 ```
 
@@ -270,33 +272,32 @@ ushlash uchun.
 
 ## Amaliy misol: Konfiguratsiya faylini o'qish
 
-```cpp
-#include <fstream>
-#include <string>
+ulash <fstream>;
+ulash <string>;
 
 Natija<matn, matn> faylni_oqish(matn yo'l) {
-    std::ifstream f(yo'l)
+    std::ifstream f(yo'l);
     agar (!f.is_open()) {
-        qaytarish std::unexpected("Fayl ochilmadi: " + yo'l)
+        qaytarish std::unexpected("Fayl ochilmadi: " + yo'l);
     }
 
     matn mazmun((std::istreambuf_iterator<char>(f)),
-                std::istreambuf_iterator<char>())
-    qaytarish mazmun
+                std::istreambuf_iterator<char>());
+    qaytarish Natija<matn, matn>::muvaffaqiyat(mazmun);
 }
 
 butun asosiy() {
-    avto natija = faylni_oqish("config.txt")
+    o'zgaruvchan natija = faylni_oqish("config.txt");
 
     agar (natija) {
-        yozish << "Fayl mazmuni:" << qator_oxiri << *natija
+        yozish << "Fayl mazmuni:" << qator_oxiri << *natija;
     }
     aks_holda {
-        yozish << "Xato: " << natija.error() << qator_oxiri
-        qaytarish 1
+        yozish << "Xato: " << natija.error() << qator_oxiri;
+        qaytarish 1;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -312,7 +313,7 @@ butun asosiy() {
 ```cpp
 // urinish blokisiz, istisno dasturning yuqori darajalariga qadar
 // ko'tariladi va terminate qiladi
-butun n = bolish(10, 0)               // crash!
+butun n = bolish(10, 0); // crash!
 ```
 
 ### 2. Hamma istisnolarni `catch (...)` bilan yutib qo'yish
@@ -328,8 +329,8 @@ Hech bo'lmaganda log qiling yoki qayta tashlang.
 ### 3. Istisno xabarisiz
 
 ```cpp
-irgitish std::runtime_error("")       // foydasiz
-irgitish std::runtime_error("Fayl ochilmadi: " + yo'l)   // foydali
+irgitish std::runtime_error(""); // foydasiz
+irgitish std::runtime_error("Fayl ochilmadi: " + yo'l); // foydali
 ```
 
 ### 4. Destruktorda istisno tashlash
@@ -337,7 +338,7 @@ irgitish std::runtime_error("Fayl ochilmadi: " + yo'l)   // foydali
 ```cpp
 sinf X {
     ~X() {
-        irgitish std::runtime_error("...")    // ← XATO! crash
+        irgitish std::runtime_error("..."); // ← XATO! crash
     }
 }
 ```
@@ -347,11 +348,11 @@ Destruktorda hech qachon istisno tashlamang.
 ### 5. Resource leak
 
 ```cpp
-fayl_ochish()
+fayl_ochish();
 urinish {
     // xato yuz berdi
 }
-fayl_yopish()                          // bajarilmaydi!
+fayl_yopish(); // bajarilmaydi!
 ```
 
 To'g'risi — RAII (Resource Acquisition Is Initialization): destruktor
@@ -363,7 +364,7 @@ fayl yopadi.
 
 ### Mashq 1: Xavfsiz bo'lish (oson)
 
-`Natija<ikkilangan, matn>` qaytaruvchi `xavfsiz_bolish` funksiyasi.
+`Natija<haqiqiy, matn>` qaytaruvchi `xavfsiz_bolish` funksiyasi.
 
 ### Mashq 2: Vektorda qidirish (oson)
 

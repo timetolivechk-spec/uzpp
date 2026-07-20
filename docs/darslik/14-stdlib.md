@@ -30,32 +30,32 @@ Hozirda o'zbeklashtirilgan modullar:
 Matematik funksiyalar va konstantalar.
 
 ```cpp
-#include <matematika>
+ulash "matematika.uzpp"
 
 // Konstantalar
-yozish << matematika::PI                // 3.14159...
-yozish << matematika::E                 // 2.71828...
+yozish << matematika::PI; // 3.14159...
+yozish << matematika::E; // 2.71828...
 
 // Asosiy funksiyalar
-yozish << matematika::ildiz(16)         // 4 (kvadrat ildiz)
-yozish << matematika::quvvat(2, 10)     // 1024 (2^10)
-yozish << matematika::log(100)          // 4.605... (tabiiy logarifm)
-yozish << matematika::log10(1000)       // 3 (o'nlik logarifm)
+yozish << matematika::ildiz(16); // 4 (kvadrat ildiz)
+yozish << matematika::quvvat(2, 10); // 1024 (2^10)
+yozish << matematika::log(100); // 4.605... (tabiiy logarifm)
+yozish << matematika::log10(1000); // 3 (o'nlik logarifm)
 
 // Trigonometriya
-yozish << matematika::sinus(matematika::PI / 2)   // 1.0
-yozish << matematika::kosinus(0)        // 1.0
-yozish << matematika::tangens(matematika::PI / 4) // 1.0
+yozish << matematika::sinus(matematika::PI / 2); // 1.0
+yozish << matematika::kosinus(0); // 1.0
+yozish << matematika::tangens(matematika::PI / 4); // 1.0
 
 // Yaxlitlash
-yozish << matematika::yaxlitla(3.7)     // 4
-yozish << matematika::pastga(3.7)       // 3
-yozish << matematika::yuqoriga(3.2)     // 4
+yozish << matematika::yaxlitla(3.7); // 4
+yozish << matematika::pastga(3.7); // 3
+yozish << matematika::yuqoriga(3.2); // 4
 
 // Min/max/abs
-yozish << matematika::min(3, 7)         // 3
-yozish << matematika::maks(3, 7)        // 7
-yozish << matematika::absolyut(-5)      // 5
+yozish << matematika::min(3, 7); // 3
+yozish << matematika::maks(3, 7); // 7
+yozish << matematika::absolyut(-5); // 5
 ```
 
 ---
@@ -65,30 +65,30 @@ yozish << matematika::absolyut(-5)      // 5
 Vaqt va sana bilan ishlash.
 
 ```cpp
-#include <vaqt>
+ulash "vaqt.uzpp"
 
 // Joriy vaqt
-avto hozir = vaqt::hozir()
-yozish << "Hozir: " << hozir.formatla("%Y-%m-%d %H:%M:%S")
+o'zgaruvchan hozir = uzpp::Vaqt::hozir();
+yozish << "Hozir: " << hozir.formatla("%Y-%m-%d %H:%M:%S");
 
 // Vaqt elementlari
-yozish << "Yil: " << hozir.yil()
-yozish << "Oy: " << hozir.oy()
-yozish << "Kun: " << hozir.kun()
-yozish << "Soat: " << hozir.soat()
+yozish << "Yil: " << hozir.yil();
+yozish << "Oy: " << hozir.oy();
+yozish << "Kun: " << hozir.kun();
+yozish << "Soat: " << hozir.soat();
 
 // Sana yaratish
-avto sana = vaqt::Sana(2026, 5, 21)
+o'zgaruvchan sana = uzpp::Vaqt::Sana(2026, 5, 21);
 
 // Farq
-avto kelajak = sana.qoshish_kun(30)
-yozish << kelajak.formatla("%Y-%m-%d")
+o'zgaruvchan kelajak = sana.qoshish_kun(30);
+yozish << kelajak.formatla("%Y-%m-%d");
 
 // Vaqt o'lchash
-avto bosh = vaqt::hozir()
+o'zgaruvchan bosh = uzpp::Vaqt::hozir();
 // ... biron ish ...
-avto oxir = vaqt::hozir()
-yozish << "O'tdi: " << (oxir - bosh).millisekund() << " ms"
+o'zgaruvchan oxir = uzpp::Vaqt::hozir();
+yozish << "O'tdi: " << (oxir - bosh).millisekund() << " ms";
 ```
 
 ---
@@ -98,24 +98,24 @@ yozish << "O'tdi: " << (oxir - bosh).millisekund() << " ms"
 uz++ da test yozish uchun sodda framework.
 
 ```cpp
-#include <sinov>
+ulash "sinov.uzpp"
 
 @sinov("yigindi to'g'ri ishlashi kerak") {
-    sinov::tekshirish(yigindi(2, 3) == 5)
-    sinov::tekshirish(yigindi(0, 0) == 0)
-    sinov::tekshirish(yigindi(-1, 1) == 0)
+    sinov::tekshirish(yigindi(2, 3) == 5);
+    sinov::tekshirish(yigindi(0, 0) == 0);
+    sinov::tekshirish(yigindi(-1, 1) == 0);
 }
 
 @sinov("matn uzunligini olish") {
-    sinov::tenglik(matn("salom").length(), 5)
-    sinov::tenglik(matn("").length(), 0)
+    sinov::tenglik(matn("salom").length(), 5);
+    sinov::tenglik(matn("").length(), 0);
 }
 ```
 
 Testlarni ishga tushirish:
 
 ```bash
-uzpp sinov
+uzpp sinov;
 ```
 
 Natija:
@@ -132,15 +132,16 @@ Natija:
 Dasturning ishini kuzatish uchun:
 
 ```cpp
-#include <jurnal>
+ulash "jurnal.uzpp"
 
 butun asosiy() {
-    jurnal::malumot("Dastur boshlandi")
-    jurnal::ogohlantirish("Bu — ogohlantirish")
-    jurnal::xato("Xato yuz berdi")
+    uzpp::Jurnal::malumot("Dastur boshlandi");
+    uzpp::Jurnal::ogohlantirish("Bu  ogohlantirish");
+    uzpp::Jurnal::xato("Xato yuz berdi");
 
-    butun yosh = 25
-    jurnal::malumot("Foydalanuvchi yoshi: ", yosh)
+    butun yosh = 25;
+    uzpp::Jurnal::malumot("Foydalanuvchi yoshi: " + std::to_string(yosh));
+    qaytarish 0;
 }
 ```
 
@@ -156,8 +157,8 @@ butun asosiy() {
 Faylga yozish ham mumkin:
 
 ```cpp
-jurnal::fayl("app.log")
-jurnal::malumot("Bu fayl ga yoziladi")
+uzpp::Jurnal::fayl("app.log");
+uzpp::Jurnal::malumot("Bu fayl ga yoziladi");
 ```
 
 ---
@@ -167,19 +168,19 @@ jurnal::malumot("Bu fayl ga yoziladi")
 Hash, shifrlash, parol himoyasi:
 
 ```cpp
-#include <kripto>
+ulash "kripto.uzpp"
 
 // MD5 / SHA-256 hash
-matn s = "Salom, dunyo!"
-yozish << kripto::md5(s)
-yozish << kripto::sha256(s)
+matn s = "Salom, dunyo!";
+yozish << kripto::md5(s);
+yozish << kripto::sha256(s);
 
 // Parolni xavfsiz saqlash
-matn parol = "qiyin_parol_123"
-matn hash = kripto::parol_hash(parol)
+matn parol = "qiyin_parol_123";
+matn hash = kripto::parol_hash(parol);
 
 // Tekshirish
-mantiq togri = kripto::parol_tekshirish("qiyin_parol_123", hash)
+mantiqiy togri = kripto::parol_tekshirish("qiyin_parol_123", hash);
 ```
 
 ---
@@ -189,13 +190,13 @@ mantiq togri = kripto::parol_tekshirish("qiyin_parol_123", hash)
 HTTP so'rovlari, socket'lar:
 
 ```cpp
-#include <tarmoq>
+ulash "tarmoq.uzpp"
 
 // HTTP GET so'rov
-avto javob = tarmoq::http_oluvchi("https://api.example.com/data")
+o'zgaruvchan javob = tarmoq::http_oluvchi("https://api.example.com/data")
 
 agar (javob.holat == 200) {
-    yozish << javob.matn
+    yozish << javob.matn;
 }
 
 // POST so'rov
@@ -209,14 +210,14 @@ tarmoq::http_yuborish("https://api.example.com/post", json_data)
 LLM va AI bilan ishlash:
 
 ```cpp
-#include <suniy_intellekt>
+ulash "suniy_intellekt.uzpp"
 
-avto suxbat = suniy_intellekt::Suhbat()
-suxbat.tizim("Sen foydali yordamchisan")
+o'zgaruvchan suxbat = suniy_intellekt::Suhbat();
+suxbat.tizim("Sen foydali yordamchisan");
 
-matn savol = "C++ da const ko'rsatkich qanday yaratiladi?"
-matn javob = suxbat.sorash(savol)
-yozish << javob
+matn savol = "C++ da const ko'rsatkich qanday yaratiladi?";
+matn javob = suxbat.sorash(savol);
+yozish << javob;
 ```
 
 ---
@@ -228,61 +229,61 @@ Eng ko'p ishlatiladigan modullar:
 ### `<algorithm>` — Algoritmlar
 
 ```cpp
-#include <algorithm>
+ulash <algorithm>
 vektor<butun> v = {3, 1, 4, 1, 5, 9, 2, 6}
 
-std::sort(v.begin(), v.end())
-std::reverse(v.begin(), v.end())
-butun joy = std::count(v.begin(), v.end(), 1)
-avto max_el = std::max_element(v.begin(), v.end())
+std::sort(v.begin(), v.end());
+std::reverse(v.begin(), v.end());
+butun joy = std::count(v.begin(), v.end(), 1);
+o'zgaruvchan max_el = std::max_element(v.begin(), v.end());
 
 // Filtering
-vektor<butun> juft_lar
+vektor<butun> juft_lar;
 std::copy_if(v.begin(), v.end(), std::back_inserter(juft_lar),
-    [](butun x) { qaytarish x % 2 == 0 })
+    [](butun x) { qaytarish x % 2 == 0 });
 
 // Map (transform)
-vektor<butun> kvadratlar
+vektor<butun> kvadratlar;
 std::transform(v.begin(), v.end(), std::back_inserter(kvadratlar),
-    [](butun x) { qaytarish x * x })
+    [](butun x) { qaytarish x * x });
 ```
 
 ### `<random>` — Tasodifiy sonlar
 
 ```cpp
-#include <random>
+ulash <random>
 
-std::random_device rd
-std::mt19937 gen(rd())
-std::uniform_int_distribution<> dist(1, 100)
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_int_distribution<> dist(1, 100);
 
-butun tasodif = dist(gen)              // 1 dan 100 gacha
+butun tasodif = dist(gen); // 1 dan 100 gacha
 ```
 
 ### `<chrono>` — Vaqt o'lchovi
 
 ```cpp
-#include <chrono>
+ulash <chrono>
 
-avto bosh = std::chrono::high_resolution_clock::now()
+o'zgaruvchan bosh = std::chrono::high_resolution_clock::now();
 // ... ish ...
-avto oxir = std::chrono::high_resolution_clock::now()
+o'zgaruvchan oxir = std::chrono::high_resolution_clock::now();
 
-avto millisekund = std::chrono::duration_cast<std::chrono::milliseconds>(oxir - bosh)
-yozish << millisekund.count() << " ms"
+o'zgaruvchan millisekund = std::chrono::duration_cast<std::chrono::milliseconds>(oxir - bosh);
+yozish << millisekund.count() << " ms";
 ```
 
 ### `<regex>` — Regular expressions
 
 ```cpp
-#include <regex>
+ulash <regex>
 
-matn s = "Telefon: +998901234567, email: aziza@example.com"
-std::regex telefon(R"(\+\d{12})")
-std::smatch m
+matn s = "Telefon: +998901234567, email: aziza@example.com";
+std::regex telefon(R"(\+\d{12})");
+std::smatch m;
 
 agar (std::regex_search(s, m, telefon)) {
-    yozish << "Telefon topildi: " << m[0]
+    yozish << "Telefon topildi: " << m[0];
 }
 ```
 
@@ -299,28 +300,29 @@ agar (std::regex_search(s, m, telefon)) {
 ## Amaliy misol: Vaqt hisoblagichi bilan testlash
 
 ```cpp
-#include <vaqt>
-#include <jurnal>
-#include <vector>
-#include <algorithm>
+ulash "vaqt.uzpp"
+ulash "jurnal.uzpp"
+ulash <vector>
+ulash <algorithm>
+ulash <chrono>
 
 butun asosiy() {
-    jurnal::malumot("Test boshlandi")
+    uzpp::Jurnal::malumot("Test boshlandi");
 
-    avto bosh = vaqt::hozir()
+    o'zgaruvchan bosh = std::chrono::high_resolution_clock::now();
 
     // Vazifa: 1 million tasodifiy son yaratib, tartiblash
-    vektor<butun> v(1000000)
-    std::generate(v.begin(), v.end(), []() { qaytarish std::rand() })
+    vektor<butun> v(1000000);
+    std::generate(v.begin(), v.end(), []() { qaytarish std::rand(); });
 
-    std::sort(v.begin(), v.end())
+    std::sort(v.begin(), v.end());
 
-    avto oxir = vaqt::hozir()
-    avto ms = (oxir - bosh).millisekund()
+    o'zgaruvchan oxir = std::chrono::high_resolution_clock::now();
+    o'zgaruvchan ms = std::chrono::duration_cast<std::chrono::milliseconds>(oxir - bosh).count();
 
-    jurnal::malumot("Tartiblash vaqti: ", ms, " ms")
+    uzpp::Jurnal::malumot("Tartiblash vaqti: " + std::to_string(ms) + " ms");
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 

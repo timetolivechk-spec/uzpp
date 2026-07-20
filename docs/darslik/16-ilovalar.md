@@ -11,8 +11,8 @@ uz++ ning barcha kalit so'zlari va ularning C++ ekvivalentlari.
 | `butun` | `int` | Butun son (32 bit) |
 | `uzun` | `long long` | Katta butun son (64 bit) |
 | `kasr` | `float` | Haqiqiy son (32 bit) |
-| `ikkilangan` | `double` | Aniq haqiqiy son (64 bit) |
-| `mantiq` | `bool` | Rost/yolg'on |
+| `haqiqiy` | `double` | Haqiqiy son (64 bit) |
+| `mantiqiy` | `bool` | Rost/yolg'on (boolean) |
 | `belgi` | `char` | Bitta belgi |
 | `matn` | `std::string` | Matn satri |
 | `bosh` | `void` | Bo'sh (qiymatsiz) |
@@ -24,11 +24,11 @@ uz++ ning barcha kalit so'zlari va ularning C++ ekvivalentlari.
 | `vektor` | `std::vector` | Dinamik massiv |
 | `roy'xat` | `std::list` | Bog'langan ro'yxat |
 | `tartiblangan_xarita` | `std::map` | Tartiblangan kalit-qiymat |
-| `xarita` | `std::unordered_map` | Hash xarita |
-| `to'plam` | `std::set` | Takrorlanmas to'plam |
+| `lug'at` | `std::unordered_map` | Hash lug'at (map) |
+| `tartib_to'plam` | `std::set` | Tartiblangan to'plam (set) |
 | `massiv` | `std::array` | Statik massiv |
 | `juftlik` | `std::pair` | Juftlik |
-| `uchlik` | `std::tuple` | Uchlik va undan ko'p |
+| `uchlik` | `std::tuple` | Uchlik |
 
 ### Qo'shimcha turlar
 
@@ -38,7 +38,7 @@ uz++ ning barcha kalit so'zlari va ularning C++ ekvivalentlari.
 | `Natija` | `std::expected` | Qiymat yoki xato |
 | `Tanlov` | `std::optional` | Tanlov |
 | `yagona_korsatkich` | `std::unique_ptr` | Yagona ko'rsatkich |
-| `umumiy` | `std::shared_ptr` | Bo'lishilgan ko'rsatkich |
+| `umumiy_korsatkich` | `std::shared_ptr` | Umumiy ko'rsatkich |
 | `funksiya` | `std::function` | Funksiya obyekti |
 | `kelajak` | `std::future` | Kelajakdagi qiymat |
 | `vada` | `std::promise` | Va'da (promise) |
@@ -52,14 +52,13 @@ uz++ ning barcha kalit so'zlari va ularning C++ ekvivalentlari.
 | `agar` | `if` | Agar |
 | `aks_holda` / `yoki` | `else` | Aks holda |
 | `uchun` | `for` | Takrorlash sikli |
-| `davr` | `while` | Davriy takrorlash |
-| `bajar/davr` | `do/while` | Bajar/davr |
-| `tanlash` | `switch` | Tanlash |
+| `toki` | `while` | Shartli takrorlash (while) |
+| `moslash` | `switch` | Moslash (switch) |
 | `holat` | `case` | Holat |
 | `boshqa` | `default` | Standart |
-| `to'xtatish` | `break` | To'xtatish |
-| `davom_ettirish` | `continue` | Davom ettirish |
-| `qaytarish` | `return` | Qaytarish |
+| `to'xtatish` | `break` | Sikldan chiqish |
+| `davom_etish` | `continue` | Keyingi takrorlashga o'tish |
+| `qaytarish` | `return` | Qiymat qaytarish |
 
 ### Xatolik bilan ishlash
 
@@ -121,7 +120,6 @@ uz++ ning barcha kalit so'zlari va ularning C++ ekvivalentlari.
    Agar yordam matni chiqsa, o'rnatish muvaffaqiyatli.
 
 ### Linux
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/install.sh | bash
 ```
@@ -133,13 +131,11 @@ curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/instal
 - VS Code mavjud bo'lsa, kengaytmani ham o'rnatadi
 
 ### macOS
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/install.sh | bash
 ```
 
 Yoki Homebrew orqali (kelajakda):
-
 ```bash
 brew install uzpp
 ```

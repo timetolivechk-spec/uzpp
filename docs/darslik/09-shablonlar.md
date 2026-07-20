@@ -6,16 +6,16 @@ Tasavvur qiling, sizga eng kattasini topadigan funksiya kerak:
 
 ```cpp
 butun maks(butun a, butun b) {
-    qaytarish (a > b) ? a : b
+    qaytarish (a > b) ? a : b;
 }
 ```
 
-Yaxshi! Lekin endi sizga `ikkilangan` lar uchun ham kerak bo'ldi.
+Yaxshi! Lekin endi sizga `haqiqiy` lar uchun ham kerak bo'ldi.
 Yana yozasiz:
 
 ```cpp
-ikkilangan maks(ikkilangan a, ikkilangan b) {
-    qaytarish (a > b) ? a : b
+haqiqiy maks(haqiqiy a, haqiqiy b) {
+    qaytarish (a > b) ? a : b;
 }
 ```
 
@@ -27,14 +27,14 @@ kerak bo'lsa — barchasini o'zgartirish kerak.
 uchun avtomatik versiyani yaratadi.
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T maks(T a, T b) {
-    qaytarish (a > b) ? a : b
+    qaytarish (a > b) ? a : b;
 }
 
-butun x = maks(5, 3)              // butun versiya
-ikkilangan y = maks(2.5, 3.7)      // ikkilangan versiya
-matn z = maks("alma", "anor")      // matn versiya
+butun x = maks(5, 3); // butun versiya
+haqiqiy y = maks(2.5, 3.7); // haqiqiy versiya
+matn z = maks("alma", "anor"); // matn versiya
 ```
 
 Bitta funksiya — har xil turlarda ishlaydi!
@@ -47,7 +47,7 @@ o'tadi:
 
 ```cpp
 butun maks(butun a, butun b)         { qaytarish (a > b) ? a : b }
-ikkilangan maks(ikkilangan a, ikkilangan b) { qaytarish (a > b) ? a : b }
+haqiqiy maks(haqiqiy a, haqiqiy b) { qaytarish (a > b) ? a : b }
 matn maks(matn a, matn b)            { qaytarish (a > b) ? a : b }
 ```
 
@@ -61,7 +61,7 @@ ish jarayonida sekinlashtirmaydi — har bir versiya **alohida tezkor**.
 ### Sintaksis
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T funksiya_nomi(T parametr) {
     // ... T turida ishlash
 }
@@ -76,13 +76,13 @@ mumkin: `butun`, `matn`, `Talaba`, va h.k.
 ### Bir nechta shablon parametri
 
 ```cpp
-shablon<turdash T, turdash U>
+shablon<tur T, tur U>
 bosh chiqarish(T a, U b) {
-    yozish << a << " " << b << qator_oxiri
+    yozish << a << " " << b << qator_oxiri;
 }
 
-chiqarish(5, "salom")               // T=butun, U=matn
-chiqarish(3.14, rost)               // T=ikkilangan, U=mantiq
+chiqarish(5, "salom"); // T=butun, U=matn
+chiqarish(3.14, rost); // T=haqiqiy, U=mantiqiy
 ```
 
 ### Aniq chaqirish
@@ -91,33 +91,33 @@ Ba'zan kompilyator turini aniqlay olmaydi — bu holda aniq aytishingiz
 mumkin:
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T defolt() {
-    qaytarish T()                    // T ning default qiymati
+    qaytarish T(); // T ning default qiymati
 }
 
-butun a = defolt<butun>()            // 0
-ikkilangan b = defolt<ikkilangan>()  // 0.0
-matn c = defolt<matn>()              // ""
+butun a = defolt<butun>(); // 0
+haqiqiy b = defolt<haqiqiy>(); // 0.0
+matn c = defolt<matn>(); // ""
 ```
 
 ### Misol: vektorning yig'indisi
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T vektor_yigindi(o'zgarmas vektor<T>& v) {
-    T natija = T()                   // 0 yoki ""
+    T natija = T(); // 0 yoki ""
     uchun (o'zgarmas T& element : v) {
-        natija += element
+        natija += element;
     }
-    qaytarish natija
+    qaytarish natija;
 }
 
 vektor<butun> sonlar = {1, 2, 3, 4, 5}
-yozish << vektor_yigindi(sonlar)     // 15
+yozish << vektor_yigindi(sonlar); // 15
 
 vektor<matn> sozlar = {"a", "b", "c"}
-yozish << vektor_yigindi(sozlar)     // "abc"
+yozish << vektor_yigindi(sozlar); // "abc"
 ```
 
 Bitta funksiya, ikki xil ishlatish.
@@ -131,32 +131,32 @@ Sinflarni ham shablon qilish mumkin. Bu juda kuchli.
 ### Misol — qutilar
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 sinf Quti {
 yopiq:
-    T element
+    T element;
 
 ochiq:
     Quti(T qiymat) : element(qiymat) {}
 
     T olish() o'zgarmas {
-        qaytarish element
+        qaytarish element;
     }
 
     bosh qoyish(T yangi_qiymat) {
-        element = yangi_qiymat
+        element = yangi_qiymat;
     }
 }
 
 butun asosiy() {
-    Quti<butun> quti1(42)
-    yozish << quti1.olish()           // 42
+    Quti<butun> quti1(42);
+    yozish << quti1.olish(); // 42
 
-    Quti<matn> quti2("Salom")
-    yozish << quti2.olish()           // Salom
+    Quti<matn> quti2("Salom");
+    yozish << quti2.olish(); // Salom
 
-    Quti<ikkilangan> quti3(3.14)
-    yozish << quti3.olish()           // 3.14
+    Quti<haqiqiy> quti3(3.14);
+    yozish << quti3.olish(); // 3.14
 }
 ```
 
@@ -166,9 +166,9 @@ Aslida `vektor<T>`, `std::map<K, V>`, `std::pair<A, B>` — barchasi
 shablonlar:
 
 ```cpp
-vektor<butun>                          // vektor<T> ning butun versiyasi
-vektor<matn>                           // vektor<T> ning matn versiyasi
-std::map<matn, butun>                  // std::map<K, V> ning matn-butun versiyasi
+vektor<butun>; // vektor<T> ning butun versiyasi
+vektor<matn>; // vektor<T> ning matn versiyasi
+std::map<matn, butun>; // std::map<K, V> ning matn-butun versiyasi
 ```
 
 ---
@@ -194,15 +194,15 @@ shablonlarning katta to'plami:
 ### Algoritmlar
 
 ```cpp
-#include <algorithm>
+ulash <algorithm>
 
 vektor<butun> v = {3, 1, 4, 1, 5, 9, 2, 6}
 
-std::sort(v.begin(), v.end())         // tartiblash
-std::reverse(v.begin(), v.end())      // teskari
-butun yigindi = std::accumulate(v.begin(), v.end(), 0)
-butun max_el = *std::max_element(v.begin(), v.end())
-butun joy = std::count(v.begin(), v.end(), 1)
+std::sort(v.begin(), v.end()); // tartiblash
+std::reverse(v.begin(), v.end()); // teskari
+butun yigindi = std::accumulate(v.begin(), v.end(), 0);
+butun max_el = *std::max_element(v.begin(), v.end());
+butun joy = std::count(v.begin(), v.end(), 1);
 ```
 
 Hammasi shablon orqali, har xil tur bilan ishlay oladi.
@@ -215,14 +215,14 @@ Zamonaviy C++ da shablon parametrlarini cheklash mumkin. Masalan,
 "faqat sonli turlar" deb cheklash:
 
 ```cpp
-shablon<turdash T>
-talab std::integral<T>                // T butun bo'lishi kerak
+shablon<tur T>
+talab std::integral<T>; // T butun bo'lishi kerak
 T kvadrat(T x) {
-    qaytarish x * x
+    qaytarish x * x;
 }
 
-kvadrat(5)                            // OK
-kvadrat(3.14)                         // ← XATO: ikkilangan butun emas
+kvadrat(5); // OK
+kvadrat(3.14); // ← XATO: haqiqiy butun emas
 ```
 
 Concepts — qadimgi shablonlarning xatolik xabarlarini soddalashtiradi.
@@ -234,22 +234,22 @@ Concepts — qadimgi shablonlarning xatolik xabarlarini soddalashtiradi.
 Shablonni ba'zan sekin yoki keraksiz ishlatish mumkin. Misol:
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 T qoshish(T a, T b) { qaytarish a + b }
 ```
 
 Bu yaxshi. Lekin agar siz `matn + butun` ni qo'shmoqchi bo'lsangiz:
 
 ```cpp
-qoshish("Yosh: ", 25)                 // ← XATO! Matn va butun bir xil tur emas
+qoshish("Yosh: ", 25); // ← XATO! Matn va butun bir xil tur emas
 ```
 
 Yechim — ikki shablon parametri:
 
 ```cpp
-shablon<turdash T, turdash U>
+shablon<tur T, tur U>
 avto qoshish(T a, U b) {
-    qaytarish a + b
+    qaytarish a + b;
 }
 ```
 
@@ -263,51 +263,53 @@ Stack — bu LIFO (Last In, First Out) ma'lumotlar tuzilmasi. Mantar
 qutisi kabi: oxirgi qo'yilgan birinchi olinadi.
 
 ```cpp
-shablon<turdash T>
+shablon<tur T>
 sinf Stack {
 yopiq:
-    vektor<T> ma'lumotlar
+    vektor<T> ma'lumotlar;
 
 ochiq:
     bosh push(T qiymat) {
-        ma'lumotlar.push_back(qiymat)
+        ma'lumotlar.push_back(qiymat);
     }
 
     T pop() {
         agar (ma'lumotlar.empty()) {
-            qaytarish T()
+            qaytarish T();
         }
-        T natija = ma'lumotlar.back()
-        ma'lumotlar.pop_back()
-        qaytarish natija
+        T natija = ma'lumotlar.back();
+        ma'lumotlar.pop_back();
+        qaytarish natija;
     }
 
     T top() o'zgarmas {
-        qaytarish ma'lumotlar.back()
+        qaytarish ma'lumotlar.back();
     }
 
     butun olchami() o'zgarmas {
-        qaytarish ma'lumotlar.size()
+        qaytarish ma'lumotlar.size();
     }
 
-    mantiq bosh() o'zgarmas {
-        qaytarish ma'lumotlar.empty()
+    mantiqiy bo'sh() o'zgarmas {
+        qaytarish ma'lumotlar.empty();
     }
 }
 
 butun asosiy() {
-    Stack<butun> s
-    s.push(1)
-    s.push(2)
-    s.push(3)
-    yozish << s.pop() << qator_oxiri   // 3
-    yozish << s.pop() << qator_oxiri   // 2
-    yozish << s.pop() << qator_oxiri   // 1
+    Stack<butun> s;
+    s.push(1);
+    s.push(2);
+    s.push(3);
+    yozish << s.pop() << qator_oxiri; // 3
+    yozish << s.pop() << qator_oxiri; // 2
+    yozish << s.pop() << qator_oxiri; // 1
 
-    Stack<matn> matnlar
-    matnlar.push("a")
-    matnlar.push("b")
-    yozish << matnlar.pop()             // "b"
+    Stack<matn> matnlar;
+    matnlar.push("a");
+    matnlar.push("b");
+    yozish << matnlar.pop(); // "b"
+
+    qaytarish 0;
 }
 ```
 
@@ -325,12 +327,12 @@ ular **header**da to'liq yozilishi kerak — `.cpp` faylida emas.
 ### 2. Turlarni adashtirish
 
 ```cpp
-shablon<turdash T> T maks(T a, T b)
+shablon<tur T> T maks(T a, T b)
 
-maks(5, 3.14)                        // ← XATO: 5 — butun, 3.14 — ikkilangan
+maks(5, 3.14); // ← XATO: 5 — butun, 3.14 — haqiqiy
 ```
 
-To'g'risi: `maks<ikkilangan>(5, 3.14)` yoki aniq tur belgilash.
+To'g'risi: `maks<haqiqiy>(5, 3.14)` yoki aniq tur belgilash.
 
 ### 3. Cheksiz instantsiyalash
 

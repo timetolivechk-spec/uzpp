@@ -44,15 +44,33 @@ bilan, lekin barchasi bir xil sxemaga binoan.
 ```cpp
 sinf Talaba {
 ochiq:
-    matn ism
-    butun yoshi
-    ikkilangan ortacha_baho
+    matn ism;
+    butun yoshi;
+    haqiqiy ortacha_baho;
 
     bosh malumotni_chiqarish() {
-        yozish << "Ism: " << ism << qator_oxiri
-        yozish << "Yoshi: " << yoshi << qator_oxiri
-        yozish << "O'rtacha: " << ortacha_baho << qator_oxiri
+        yozish << "Ism: " << ism << qator_oxiri;
+        yozish << "Yoshi: " << yoshi << qator_oxiri;
+        yozish << "O'rtacha: " << ortacha_baho << qator_oxiri;
     }
+}
+
+butun asosiy() {
+    Talaba t1;
+    t1.ism = "Aziza";
+    t1.yoshi = 22;
+    t1.ortacha_baho = 4.7;
+
+    t1.malumotni_chiqarish();
+
+    Talaba t2;
+    t2.ism = "Bobur";
+    t2.yoshi = 21;
+    t2.ortacha_baho = 4.2;
+
+    t2.malumotni_chiqarish();
+
+    qaytarish 0;
 }
 ```
 
@@ -64,25 +82,7 @@ Tahlil:
 
 ### Obyekt yaratish va ishlatish
 
-```cpp
-butun asosiy() {
-    Talaba t1
-    t1.ism = "Aziza"
-    t1.yoshi = 22
-    t1.ortacha_baho = 4.7
-
-    t1.malumotni_chiqarish()
-
-    Talaba t2
-    t2.ism = "Bobur"
-    t2.yoshi = 21
-    t2.ortacha_baho = 4.2
-
-    t2.malumotni_chiqarish()
-
-    qaytarish 0
-}
-```
+Поскольку объявление класса и функция `asosiy()` теперь объединены в одном блоке, код полностью работоспособен.
 
 **Natija:**
 
@@ -103,8 +103,8 @@ ma'lumotlari bilan.
 `.` (nuqta) operatori — obyektning maydoni yoki metodiga kirish uchun:
 
 ```cpp
-t1.ism                        // maydon
-t1.malumotni_chiqarish()      // metod
+t1.ism; // maydon
+t1.malumotni_chiqarish(); // metod
 ```
 
 ---
@@ -121,26 +121,26 @@ Klassda ikki xil ko'rinish darajasi:
 ```cpp
 sinf BankHisobi {
 yopiq:
-    butun balans = 0
+    butun balans = 0;
 
 ochiq:
     bosh pul_qoyish(butun miqdor) {
         agar (miqdor > 0) {
-            balans += miqdor
+            balans += miqdor;
         }
     }
 
     bosh pul_olish(butun miqdor) {
         agar (miqdor > 0 && miqdor <= balans) {
-            balans -= miqdor
+            balans -= miqdor;
         }
         aks_holda {
-            yozish << "Yetarli mablag' yo'q!" << qator_oxiri
+            yozish << "Yetarli mablag' yo'q!" << qator_oxiri;
         }
     }
 
     butun joriy_balans() {
-        qaytarish balans
+        qaytarish balans;
     }
 }
 ```
@@ -148,12 +148,12 @@ ochiq:
 Endi:
 
 ```cpp
-BankHisobi hisob
-hisob.pul_qoyish(1000)
-hisob.pul_olish(500)
-yozish << hisob.joriy_balans()    // 500
+BankHisobi hisob;
+hisob.pul_qoyish(1000);
+hisob.pul_olish(500);
+yozish << hisob.joriy_balans(); // 500
 
-hisob.balans = 1000000             // ← XATO: yopiq
+hisob.balans = 1000000; // ← XATO: yopiq
 ```
 
 Foydalanuvchi `balans` ga **to'g'ridan-to'g'ri** kira olmaydi. Faqat
@@ -165,8 +165,8 @@ Tasavvur qiling, bank dasturida `balans` ochiq bo'lsa, har qanday kod
 uni o'zgartira oladi:
 
 ```cpp
-hisob.balans = -1000              // manfiy balans?
-hisob.balans = 999999999          // oddiy foydalanuvchida million?
+hisob.balans = -1000; // manfiy balans?
+hisob.balans = 999999999; // oddiy foydalanuvchida million?
 ```
 
 `yopiq` bilan — **biz qoidalarni nazorat qilamiz**. Faqat `pul_qoyish`
@@ -189,21 +189,21 @@ metod. Maydonlarni boshlang'ich qiymat bilan to'ldirish uchun.
 ```cpp
 sinf Talaba {
 ochiq:
-    matn ism
-    butun yoshi
+    matn ism;
+    butun yoshi;
 
     // Konstruktor — sinf nomi bilan bir xil, qaytarish turi yo'q
     Talaba(matn yangi_ism, butun yangi_yoshi) {
-        ism = yangi_ism
-        yoshi = yangi_yoshi
+        ism = yangi_ism;
+        yoshi = yangi_yoshi;
     }
 }
 
 butun asosiy() {
-    Talaba t1("Aziza", 22)             // konstruktor chaqirildi
-    Talaba t2("Bobur", 21)
+    Talaba t1("Aziza", 22); // konstruktor chaqirildi
+    Talaba t2("Bobur", 21);
 
-    yozish << t1.ism << " " << t1.yoshi
+    yozish << t1.ism << " " << t1.yoshi;
 }
 ```
 
@@ -219,18 +219,18 @@ ham siz yozishingiz kerak:
 sinf Talaba {
 ochiq:
     Talaba() {                        // bo'sh, default
-        ism = ""
-        yoshi = 0
+        ism = "";
+        yoshi = 0;
     }
 
     Talaba(matn yangi_ism, butun yangi_yoshi) {   // parametrli
-        ism = yangi_ism
-        yoshi = yangi_yoshi
+        ism = yangi_ism;
+        yoshi = yangi_yoshi;
     }
 }
 
-Talaba t1                            // standart konstruktor
-Talaba t2("Aziza", 22)               // parametrli
+Talaba t1; // standart konstruktor
+Talaba t2("Aziza", 22); // parametrli
 ```
 
 ### Initialization list
@@ -240,12 +240,10 @@ Maydonlarni qiymat bilan ishga tushirish samaraliroq usul:
 ```cpp
 sinf Talaba {
 ochiq:
-    matn ism
-    butun yoshi
+    matn ism;
+    butun yoshi;
 
-    Talaba(matn yangi_ism, butun yangi_yoshi)
-        : ism(yangi_ism), yoshi(yangi_yoshi)
-    { }
+    Talaba(matn yangi_ism, butun yangi_yoshi) : ism(yangi_ism), yoshi(yangi_yoshi) {}
 }
 ```
 
@@ -260,20 +258,20 @@ Tozalash uchun:
 ```cpp
 sinf Fayl {
 yopiq:
-    matn nom
+    matn nom;
 
 ochiq:
     Fayl(matn n) : nom(n) {
-        yozish << "Faylni ochildi: " << nom << qator_oxiri
+        yozish << "Faylni ochildi: " << nom << qator_oxiri;
     }
 
     ~Fayl() {                         // destruktor — ~ bilan
-        yozish << "Faylni yopildi: " << nom << qator_oxiri
+        yozish << "Faylni yopildi: " << nom << qator_oxiri;
     }
 }
 
 butun asosiy() {
-    Fayl f("ma'lumot.txt")
+    Fayl f("ma'lumot.txt");
     // ... ish bilan ...
 }                                    // bu yerda destruktor chaqiriladi
 ```
@@ -300,26 +298,26 @@ ota-sinfning hamma xususiyatlarini oladi va o'zinikini qo'shadi.
 ```cpp
 sinf Hayvon {
 ochiq:
-    matn ism
-    butun yoshi
+    matn ism;
+    butun yoshi;
 
     bosh nafas_olish() {
-        yozish << ism << " nafas oladi" << qator_oxiri
+        yozish << ism << " nafas oladi" << qator_oxiri;
     }
 }
 
-sinf It : ochiq Hayvon {              // : ochiq — meros olish
+sinf It : Hayvon {              // : — meros olish
 ochiq:
     bosh hurish() {
-        yozish << ism << " huriydi: Vov-vov!" << qator_oxiri
+        yozish << ism << " huriydi: Vov-vov!" << qator_oxiri;
     }
 }
 
 butun asosiy() {
-    It mening_itim
-    mening_itim.ism = "Rex"
-    mening_itim.nafas_olish()         // Hayvondan meros
-    mening_itim.hurish()              // It ning o'zi
+    It mening_itim;
+    mening_itim.ism = "Rex";
+    mening_itim.nafas_olish(); // Hayvondan meros
+    mening_itim.hurish(); // It ning o'zi
 }
 ```
 
@@ -337,11 +335,11 @@ Rex huriydi: Vov-vov!
 ```cpp
 sinf Hayvon {
 ochiq:
-    matn ism
+    matn ism;
     Hayvon(matn n) : ism(n) {}
 }
 
-sinf It : ochiq Hayvon {
+sinf It : Hayvon {
 ochiq:
     It(matn n) : Hayvon(n) {           // ota konstruktorini chaqirish
         // ...
@@ -357,13 +355,13 @@ chiqaring:
 ```cpp
 sinf Transport {
 ochiq:
-    butun tezlik
+    butun tezlik;
     bosh yurish() { ... }
 }
 
-sinf Mashina : ochiq Transport { ... }
-sinf Motosikl : ochiq Transport { ... }
-sinf Velosiped : ochiq Transport { ... }
+sinf Mashina : Transport { ... }
+sinf Motosikl : Transport { ... }
+sinf Velosiped : Transport { ... }
 ```
 
 Hammasi `tezlik` va `yurish` ni `Transport` dan oladi. Faqat o'ziga
@@ -379,21 +377,21 @@ xos qismini yozadi.
 sinf Hayvon {
 ochiq:
     bosh ovoz() {
-        yozish << "Qandaydir ovoz" << qator_oxiri
+        yozish << "Qandaydir ovoz" << qator_oxiri;
     }
 }
 
-sinf It : ochiq Hayvon {
+sinf It : Hayvon {
 ochiq:
     bosh ovoz() {                     // override
-        yozish << "Vov-vov!" << qator_oxiri
+        yozish << "Vov-vov!" << qator_oxiri;
     }
 }
 
 butun asosiy() {
-    It mening_itim
-    Hayvon* h = &mening_itim
-    h->ovoz()                          // "Qandaydir ovoz" — XATO!
+    It mening_itim;
+    Hayvon* h = &mening_itim;
+    h->ovoz(); // "Qandaydir ovoz" — XATO!
 }
 ```
 
@@ -403,35 +401,35 @@ Biz `It` ning ovozini xohlardik, lekin `Hayvon` ovozi chiqdi. Buni
 ```cpp
 sinf Hayvon {
 ochiq:
-    virtual bosh ovoz() {              // virtual qiling!
-        yozish << "Qandaydir ovoz" << qator_oxiri
+    mavhum bosh ovoz() {              // virtual qiling!
+        yozish << "Qandaydir ovoz" << qator_oxiri;
     }
 }
 
-sinf It : ochiq Hayvon {
+sinf It : Hayvon {
 ochiq:
     bosh ovoz() ustidan_yozish {       // override deb belgilang
-        yozish << "Vov-vov!" << qator_oxiri
+        yozish << "Vov-vov!" << qator_oxiri;
     }
 }
 
 butun asosiy() {
-    It mening_itim
-    Hayvon* h = &mening_itim
-    h->ovoz()                          // "Vov-vov!" — TO'G'RI
+    It mening_itim;
+    Hayvon* h = &mening_itim;
+    h->ovoz(); // "Vov-vov!" — TO'G'RI
 }
 ```
 
 ### Bu nima uchun kuchli?
 
 ```cpp
-vektor<Hayvon*> hayvonlar
-hayvonlar.push_back(yangi It())
-hayvonlar.push_back(yangi Mushuk())
-hayvonlar.push_back(yangi Ot())
+vektor<Hayvon*> hayvonlar;
+hayvonlar.push_back(yangi It());
+hayvonlar.push_back(yangi Mushuk());
+hayvonlar.push_back(yangi Ot());
 
 uchun (Hayvon* h : hayvonlar) {
-    h->ovoz()                          // har biri o'zinikini aytadi!
+    h->ovoz(); // har biri o'zinikini aytadi!
 }
 ```
 
@@ -458,12 +456,20 @@ hayvon" yo'q.
 ```cpp
 sinf Hayvon {
 ochiq:
-    virtual bosh ovoz() = 0           // = 0 — pure virtual
+    mavhum bosh ovoz() = 0; // = 0 — pure virtual
+}
+
+sinf It : Hayvon {
+ochiq:
+    bosh ovoz() ustidan_yozish {
+        yozish << "Vov-vov!" << qator_oxiri;
+    }
 }
 
 butun asosiy() {
-    Hayvon h                           // ← XATO: abstrakt sinfdan obyekt yaratib bo'lmaydi
-    It mening_itim                     // TO'G'RI
+    // Hayvon h; // ← XATO: abstrakt sinfdan obyekt yaratib bo'lmaydi
+    It mening_itim; // TO'G'RI
+    qaytarish 0;
 }
 ```
 
@@ -479,21 +485,22 @@ Sinflar uchun operatorlarni o'z xohlagancha aniqlay olasiz:
 ```cpp
 sinf Vektor2D {
 ochiq:
-    ikkilangan x, y
+    haqiqiy x;
+    haqiqiy y;
 
-    Vektor2D(ikkilangan a, ikkilangan b) : x(a), y(b) {}
+    Vektor2D(haqiqiy a, haqiqiy b) : x(a), y(b) {}
 
     // + operatorini qayta yuklaymiz
     Vektor2D operator+(o'zgarmas Vektor2D& boshqa) {
-        qaytarish Vektor2D(x + boshqa.x, y + boshqa.y)
+        qaytarish Vektor2D(x + boshqa.x, y + boshqa.y);
     }
 }
 
 butun asosiy() {
-    Vektor2D a(1.0, 2.0)
-    Vektor2D b(3.0, 4.0)
-    Vektor2D c = a + b                 // qayta yuklash ishlaydi!
-    yozish << c.x << " " << c.y        // 4.0 5.0
+    Vektor2D a(1.0, 2.0);
+    Vektor2D b(3.0, 4.0);
+    Vektor2D c = a + b; // qayta yuklash ishlaydi!
+    yozish << c.x << " " << c.y; // 4.0 5.0
 }
 ```
 
@@ -508,22 +515,21 @@ Sinf bo'yicha umumiy a'zo (har bir obyektda emas, sinfning o'zida):
 ```cpp
 sinf Talaba {
 ochiq:
-    static butun jami_talaba             // umumiy
-    matn ism
+    statik butun jami_talaba = 0; // umumiy_korsatkich
+    matn ism;
 
     Talaba(matn n) : ism(n) {
-        jami_talaba++
+        jami_talaba++;
     }
 }
 
-butun Talaba::jami_talaba = 0            // initsializatsiya
-
 butun asosiy() {
-    Talaba t1("Aziza")
-    Talaba t2("Bobur")
-    Talaba t3("Karim")
+    Talaba t1("Aziza");
+    Talaba t2("Bobur");
+    Talaba t3("Karim");
 
-    yozish << Talaba::jami_talaba         // 3
+    yozish << Talaba::jami_talaba; // 3
+    qaytarish 0;
 }
 ```
 
@@ -539,13 +545,13 @@ beradi:
 ```cpp
 sinf Hisob {
 yopiq:
-    butun balans
+    butun balans;
 
-    dost bosh balansni_chiqarish(Hisob& h)
+    dost bosh balansni_chiqarish(Hisob& h);
 }
 
 bosh balansni_chiqarish(Hisob& h) {
-    yozish << h.balans                    // yopiq ga kira oladi!
+    yozish << h.balans; // yopiq ga kira oladi!
 }
 ```
 
@@ -558,50 +564,47 @@ Ehtiyot bo'lib ishlating — inkapsulyatsiyani buzadi.
 ```cpp
 sinf Hisob {
 yopiq:
-    matn egasi
-    butun raqami
-    ikkilangan balans
+    matn egasi;
+    butun raqami;
+    haqiqiy balans;
 
 ochiq:
     Hisob(matn ism, butun n) : egasi(ism), raqami(n), balans(0) {}
 
-    bosh qoyish(ikkilangan miqdor) {
+    bosh qoyish(haqiqiy miqdor) {
         agar (miqdor > 0) {
-            balans += miqdor
-            yozish << miqdor << " so'm qo'yildi. "
-                   << "Yangi balans: " << balans << qator_oxiri
+            balans += miqdor;
+            yozish << miqdor << " so'm qo'yildi. Yangi balans: " << balans << qator_oxiri;
         }
     }
 
-    mantiq olish(ikkilangan miqdor) {
+    mantiqiy olish(haqiqiy miqdor) {
         agar (miqdor > 0 && miqdor <= balans) {
-            balans -= miqdor
-            yozish << miqdor << " so'm olindi. "
-                   << "Yangi balans: " << balans << qator_oxiri
-            qaytarish rost
+            balans -= miqdor;
+            yozish << miqdor << " so'm olindi. Yangi balans: " << balans << qator_oxiri;
+            qaytarish rost;
         }
-        yozish << "Yetarli mablag' yo'q!" << qator_oxiri
-        qaytarish yolg'on
+        yozish << "Yetarli mablag' yo'q!" << qator_oxiri;
+        qaytarish yolg'on;
     }
 
-    ikkilangan joriy_balans() o'zgarmas {
-        qaytarish balans
+    haqiqiy joriy_balans() o'zgarmas {
+        qaytarish balans;
     }
 
     bosh malumot() o'zgarmas {
-        yozish << "Hisob #" << raqami << " (egasi: " << egasi << ")"
-               << ", balans: " << balans << qator_oxiri
+        yozish << "Hisob #" << raqami << " (egasi: " << egasi << "), balans: " << balans << qator_oxiri;
     }
 }
 
 butun asosiy() {
-    Hisob h("Aziza Karimova", 12345)
-    h.qoyish(1000000)
-    h.olish(250000)
-    h.olish(2000000)              // mablag' yetmaydi
-    h.malumot()
+    Hisob h("Aziza Karimova", 12345);
+    h.qoyish(1000000);
+    h.olish(250000);
+    h.olish(2000000); // mablag' yetmaydi
+    h.malumot();
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
@@ -622,8 +625,8 @@ Hisob #12345 (egasi: Aziza Karimova), balans: 750000
 
 ```cpp
 sinf X { yopiq: butun a }
-X x
-x.a = 5                          // ← XATO
+X x;
+x.a = 5; // ← XATO
 ```
 
 ### 2. Konstruktorda `qaytarish` qilish
@@ -632,7 +635,7 @@ x.a = 5                          // ← XATO
 sinf X {
 ochiq:
     X() {
-        qaytarish 5              // ← XATO: konstruktor qaytarmaydi
+        qaytarish 5; // ← XATO: konstruktor qaytarmaydi
     }
 }
 ```
@@ -641,25 +644,25 @@ ochiq:
 
 ```cpp
 sinf Ota { ochiq: ~Ota() {} }    // virtual emas
-sinf Voris : ochiq Ota { ... }
+sinf Voris : Ota { ... }
 
-Ota* p = yangi Voris()
-o'chirish p                       // ← XATO: Voris destruktori chaqirilmaydi
+Ota* p = yangi Voris();
+o'chirish p; // ← XATO: Voris destruktori chaqirilmaydi
 ```
 
-To'g'risi: `virtual ~Ota() {}`.
+To'g'risi: `mavhum ~Ota() {}`.
 
 ### 4. Slicing
 
 ```cpp
-Voris v
-Ota o = v                         // Ota qismi nusxalandi, Voris qismi yo'qoldi!
+Voris v;
+Ota o = v; // Ota qismi nusxalandi, Voris qismi yo'qoldi!
 ```
 
 Polimorfizm uchun ko'rsatkich yoki havola ishlating:
 
 ```cpp
-Ota& o = v                        // havola — slicing yo'q
+Ota& o = v; // havola — slicing yo'q
 ```
 
 ### 5. Memory leak — destruktorda `o'chirish` qilmaslik
@@ -667,7 +670,7 @@ Ota& o = v                        // havola — slicing yo'q
 ```cpp
 sinf X {
 ochiq:
-    butun* p
+    butun* p;
     X() { p = yangi butun(0) }
     // destruktorda p ni o'chirish kerak!
     ~X() { o'chirish p }

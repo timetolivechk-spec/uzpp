@@ -45,19 +45,19 @@ Bu — to'rt baravar tezroq (yoki shunchaga yaqin).
 ## `std::thread` — birinchi oqim
 
 ```cpp
-#include <thread>
-#include <iostream>
+ulash <thread>
+
 
 bosh salom() {
-    yozish << "Salom oqimdan!" << qator_oxiri
+    yozish << "Salom oqimdan!" << qator_oxiri;
 }
 
 butun asosiy() {
-    std::thread t(salom)              // yangi oqim yaratish va ishga tushirish
-    t.join()                          // u tugashini kutish
+    oqim t(salom); // yangi oqim yaratish va ishga tushirish
+    t.kutish(); // u tugashini kutish
 
-    yozish << "Asosiyda" << qator_oxiri
-    qaytarish 0
+    yozish << "Asosiyda" << qator_oxiri;
+    qaytarish 0;
 }
 ```
 
@@ -71,36 +71,37 @@ butun asosiy() {
 ```cpp
 bosh chiqarish(matn xabar, butun marta) {
     uchun (butun i = 0; i < marta; i++) {
-        yozish << xabar << qator_oxiri
+        yozish << xabar << qator_oxiri;
     }
 }
 
-std::thread t(chiqarish, "Salom", 3)
-t.join()
+oqim t(chiqarish, "Salom", 3);
+t.kutish();
 ```
 
 ### Lambda bilan
 
 ```cpp
-std::thread t([](butun n) {
+oqim t([](butun n) {
     uchun (butun i = 0; i < n; i++) {
-        yozish << i << qator_oxiri
+        yozish << i << qator_oxiri;
     }
-}, 5)
-t.join()
+}, 5);
+t.kutish();
 ```
 
 ### Bir necha oqim
 
 ```cpp
 butun asosiy() {
-    std::thread t1([]{ yozish << "Oqim 1" << qator_oxiri })
-    std::thread t2([]{ yozish << "Oqim 2" << qator_oxiri })
-    std::thread t3([]{ yozish << "Oqim 3" << qator_oxiri })
+    oqim t1([]() { yozish << "Oqim 1" << qator_oxiri });
+    oqim t2([]() { yozish << "Oqim 2" << qator_oxiri });
+    oqim t3([]() { yozish << "Oqim 3" << qator_oxiri });
 
-    t1.join()
-    t2.join()
-    t3.join()
+    t1.kutish();
+    t2.kutish();
+    t3.kutish();
+    qaytarish 0;
 }
 ```
 
@@ -129,24 +130,24 @@ Yuqoridagi muammoning yechimi — **mutex** (mutual exclusion).
 "Hech kim bir vaqtda kira olmaydi" qoidasi.
 
 ```cpp
-#include <mutex>
+ulash <mutex>
 
-std::mutex qulf
+qulf qulf;
 
 bosh xavfsiz_yozish(matn xabar) {
-    qulf.lock()
-    yozish << xabar << qator_oxiri
-    qulf.unlock()
+    qulf.lock();
+    yozish << xabar << qator_oxiri;
+    qulf.unlock();
 }
 ```
 
 Endi:
 
 ```cpp
-std::thread t1([]{ xavfsiz_yozish("Oqim 1") })
-std::thread t2([]{ xavfsiz_yozish("Oqim 2") })
-t1.join()
-t2.join()
+oqim t1([]() { xavfsiz_yozish("Oqim 1") });
+oqim t2([]() { xavfsiz_yozish("Oqim 2") });
+t1.kutish();
+t2.kutish();
 ```
 
 Natija — har doim toza:
@@ -166,8 +167,8 @@ istisno yuz bersa, `unlock()` chaqirilmaydi.
 
 ```cpp
 bosh xavfsiz_yozish(matn xabar) {
-    std::lock_guard<std::mutex> lg(qulf)
-    yozish << xabar << qator_oxiri
+    std::lock_guard<qulf> lg(qulf);
+    yozish << xabar << qator_oxiri;
     // lg destruktori avtomatik unlock qiladi
 }
 ```
@@ -177,20 +178,21 @@ bosh xavfsiz_yozish(matn xabar) {
 Quyidagi kodda muammo bor:
 
 ```cpp
-butun hisoblagich = 0
+butun hisoblagich = 0;
 
 bosh oshirish() {
     uchun (butun i = 0; i < 100000; i++) {
-        hisoblagich++
+        hisoblagich++;
     }
 }
 
 butun asosiy() {
-    std::thread t1(oshirish)
-    std::thread t2(oshirish)
-    t1.join()
-    t2.join()
-    yozish << hisoblagich              // 200000 deb kutiladi, lekin...
+    oqim t1(oshirish);
+    oqim t2(oshirish);
+    t1.kutish();
+    t2.kutish();
+    yozish << hisoblagich; // 200000 deb kutiladi, lekin...
+    qaytarish 0;
 }
 ```
 
@@ -207,13 +209,13 @@ ham 2 ga oshiradi, lekin aslida 3 bo'lishi kerak edi.
 **Yechim:**
 
 ```cpp
-std::mutex m
-butun hisoblagich = 0
+qulf m;
+butun hisoblagich = 0;
 
 bosh oshirish() {
     uchun (butun i = 0; i < 100000; i++) {
-        std::lock_guard<std::mutex> lg(m)
-        hisoblagich++
+        std::lock_guard<qulf> lg(m);
+        hisoblagich++;
     }
 }
 ```
@@ -227,18 +229,18 @@ Endi har bir `hisoblagich++` atomar — boshqa oqim aralasholmaydi.
 Mutex sekin. Ba'zan `std::atomic` tezroq:
 
 ```cpp
-#include <atomic>
+ulash <atomic>
 
-std::atomic<butun> hisoblagich = 0
+atomik<butun> hisoblagich = 0;
 
 bosh oshirish() {
     uchun (butun i = 0; i < 100000; i++) {
-        hisoblagich++                  // atomar amal
+        hisoblagich++; // atomar amal
     }
 }
 ```
 
-`atomic` oddiy turlar uchun (butun, ko'rsatkich, mantiq) — protsessor
+`atomic` oddiy turlar uchun (butun, ko'rsatkich, mantiqiy) — protsessor
 darajasidagi sinxronizatsiya. Mutex'dan tez.
 
 ---
@@ -248,24 +250,25 @@ darajasidagi sinxronizatsiya. Mutex'dan tez.
 Oqim ochib, uning natijasini olish:
 
 ```cpp
-#include <future>
+ulash <future>
 
 butun katta_hisob() {
-    butun yigindi = 0
+    butun yigindi = 0;
     uchun (butun i = 0; i < 1000000; i++) {
-        yigindi += i
+        yigindi += i;
     }
-    qaytarish yigindi
+    qaytarish yigindi;
 }
 
 butun asosiy() {
-    std::future<butun> f = std::async(std::launch::async, katta_hisob)
+    kelajak<butun> f = oqim_boshla(std::launch::async, katta_hisob);
 
     // Boshqa ish qilish ...
-    yozish << "Hisobni kutyapmiz" << qator_oxiri
+    yozish << "Hisobni kutyapmiz" << qator_oxiri;
 
-    butun natija = f.get()             // natijani olamiz (kutamiz agar tayyor bo'lmasa)
-    yozish << "Natija: " << natija
+    butun natija = f.get(); // natijani olamiz (kutamiz agar tayyor bo'lmasa)
+    yozish << "Natija: " << natija;
+    qaytarish 0;
 }
 ```
 
@@ -279,16 +282,16 @@ qaytaradi. `future.get()` orqali natijani olamiz.
 Oqimlar o'rtasida ma'lumot uzatish:
 
 ```cpp
-std::promise<butun> p
-std::future<butun> f = p.get_future()
+std::promise<butun> p;
+kelajak<butun> f = p.get_future();
 
-std::thread t([&p]() {
-    butun natija = 42
-    p.set_value(natija)
-})
+oqim t([&p]() {
+    butun natija = 42;
+    p.set_value(natija);
+});
 
-butun n = f.get()                      // 42
-t.join()
+butun n = f.get(); // 42
+t.kutish();
 ```
 
 `promise` — ma'lumot yuborgich.
@@ -304,19 +307,19 @@ yaratilgan oqimlar to'plami. Vazifalar navbatga qo'yiladi.
 uz++ da `uzpp::OqimHavzasi` mavjud (yoki o'zingiz yaratishingiz mumkin).
 
 ```cpp
-#include <vector>
-#include <thread>
+ulash <vector>
+ulash <thread>
 
 sinf OqimHavzasi {
 yopiq:
-    vektor<std::thread> oqimlar
+    vektor<oqim> oqimlar;
 
 ochiq:
     OqimHavzasi(butun n) {
         uchun (butun i = 0; i < n; i++) {
             oqimlar.emplace_back([]() {
                 // har bir oqim navbatdan vazifa olib bajaradi
-            })
+            });
         }
     }
     // ...
@@ -344,31 +347,32 @@ Bu murakkab mavzu — bu yerda faqat tushuncha berdik.
 ## Amaliy misol: Parallel massiv qayta ishlash
 
 ```cpp
-#include <vector>
-#include <thread>
-#include <numeric>
+ulash <vector>
+ulash <thread>
+ulash <numeric>
 
 butun yigindi_qism(o'zgarmas vektor<butun>& v, butun bosh, butun oxir) {
-    qaytarish std::accumulate(v.begin() + bosh, v.begin() + oxir, 0)
+    qaytarish std::accumulate(v.begin() + bosh, v.begin() + oxir, 0);
 }
 
 butun asosiy() {
-    vektor<butun> v(1000000, 1)        // million ta 1
+    vektor<butun> v(1000000, 1); // million ta 1
 
     // Bitta oqimda
-    butun y1 = std::accumulate(v.begin(), v.end(), 0)
-    yozish << "Bitta oqim: " << y1 << qator_oxiri
+    butun y1 = std::accumulate(v.begin(), v.end(), 0);
+    yozish << "Bitta oqim: " << y1 << qator_oxiri;
 
     // To'rtta oqimda
-    butun n = v.size()
-    butun qism = n / 4
-    std::future<butun> f1 = std::async(yigindi_qism, std::ref(v), 0,       qism)
-    std::future<butun> f2 = std::async(yigindi_qism, std::ref(v), qism,    qism*2)
-    std::future<butun> f3 = std::async(yigindi_qism, std::ref(v), qism*2,  qism*3)
-    std::future<butun> f4 = std::async(yigindi_qism, std::ref(v), qism*3,  n)
+    butun n = v.size();
+    butun qism = n / 4;
+    kelajak<butun> f1 = oqim_boshla(yigindi_qism, std::ref(v), 0,       qism);
+    kelajak<butun> f2 = oqim_boshla(yigindi_qism, std::ref(v), qism,    qism*2);
+    kelajak<butun> f3 = oqim_boshla(yigindi_qism, std::ref(v), qism*2,  qism*3);
+    kelajak<butun> f4 = oqim_boshla(yigindi_qism, std::ref(v), qism*3,  n);
 
-    butun y2 = f1.get() + f2.get() + f3.get() + f4.get()
-    yozish << "To'rt oqim: " << y2 << qator_oxiri
+    butun y2 = f1.get() + f2.get() + f3.get() + f4.get();
+    yozish << "To'rt oqim: " << y2 << qator_oxiri;
+    qaytarish 0;
 }
 ```
 
@@ -381,8 +385,8 @@ Katta ma'lumotlar uchun — to'rtta oqim ~4 marta tezroq.
 ### 1. `join()` qilishni unutish
 
 ```cpp
-std::thread t(salom)
-// t.join() yo'q — dastur tugaganda crash
+oqim t(salom);
+// t.kutish() yo'q — dastur tugaganda crash
 ```
 
 ### 2. Race condition
@@ -394,17 +398,17 @@ Mutex'siz birgalikda o'zgartirilgan o'zgaruvchilar.
 Ikki oqim bir-birini kutadi va hech qachon ozod bo'lmaydi:
 
 ```cpp
-std::mutex m1, m2
+qulf m1, m2;
 
 void f1() {
-    m1.lock()
-    m2.lock()
+    m1.lock();
+    m2.lock();
     // ...
 }
 
 void f2() {
-    m2.lock()                          // teskari tartib!
-    m1.lock()
+    m2.lock(); // teskari tartib!
+    m1.lock();
     // ...
 }
 ```
@@ -419,10 +423,10 @@ void f2() {
 ```cpp
 {
     std::vector<int> v = {1, 2, 3}
-    std::thread t([&v]() {
+    oqim t([&v]() {
         // ...v ni ishlatish...
-    })
-    t.detach()
+    });
+    t.detach();
 }                                      // v yo'qoldi, lekin oqim hali ishlaydi!
 ```
 
@@ -430,8 +434,8 @@ void f2() {
 
 ```cpp
 uchun (butun i = 0; i < 1000000; i++) {
-    std::thread t([]() { /* kichik ish */ })
-    t.join()
+    oqim t([]() { /* kichik ish */ });
+    t.kutish();
 }
 ```
 

@@ -14,19 +14,19 @@ bir yangi narsa (taom — qiymat) beradi.
 Kodda:
 
 ```cpp
-5 + 3                       // ifoda, qiymati 8
-yosh > 18                   // ifoda, qiymati rost yoki yolg'on
-(a + b) * c                 // murakkab ifoda
-yozish << "Salom"           // bu ham ifoda!
+5 + 3; // ifoda, qiymati 8
+yosh > 18; // ifoda, qiymati rost yoki yolg'on
+(a + b) * c; // murakkab ifoda
+yozish << "Salom"; // bu ham ifoda!
 ```
 
 Har bir ifoda **bitta qiymat** beradi. Bu qiymatni siz o'zgaruvchiga
 saqlashingiz, taqqoslashingiz yoki boshqa ifodaga qo'shishingiz mumkin.
 
 ```cpp
-butun a = 5 + 3            // 8 qiymati a ga saqlandi
-mantiq katta = (a > 5)     // rost qiymati katta ga saqlandi
-butun b = (a + 3) * 2      // 22 qiymati b ga saqlandi
+butun a = 5 + 3; // 8 qiymati a ga saqlandi
+mantiqiy katta = (a > 5); // rost qiymati katta ga saqlandi
+butun b = (a + 3) * 2; // 22 qiymati b ga saqlandi
 ```
 
 > **Operator va operand:** Bu yerda kichik atamalar bor.
@@ -71,28 +71,28 @@ Misollar:
 
 ```cpp
 agar (son % 2 == 0) {
-    yozish << "Juft son" << qator_oxiri
+    yozish << "Juft son" << qator_oxiri;
 }
 aks_holda {
-    yozish << "Toq son" << qator_oxiri
+    yozish << "Toq son" << qator_oxiri;
 }
 ```
 
 #### 2. Aylanish (circular indexing)
 
 ```cpp
-butun kun = 10
+butun kun = 10;
 matn hafta_kunlari[7] = {"Dush", "Sesh", "Chor", "Pay", "Jum", "Shan", "Yak"}
-matn bugun = hafta_kunlari[kun % 7]   // har 7 kunda aylanadi
+matn bugun = hafta_kunlari[kun % 7]; // har 7 kunda aylanadi
 ```
 
 #### 3. Bir necha raqamga ajratish
 
 ```cpp
-butun son = 12345
-butun birlar = son % 10           // 5
-butun onliklar = (son / 10) % 10  // 4
-butun yuzliklar = (son / 100) % 10 // 3
+butun son = 12345;
+butun birlar = son % 10; // 5
+butun onliklar = (son / 10) % 10; // 4
+butun yuzliklar = (son / 100) % 10; // 3
 ```
 
 > **Hayotiy misol:** Soat 24 soatlik ko'rsatkichdan 12 soatlikga
@@ -105,30 +105,30 @@ Avvalgi bobda ko'rganimizdek, `butun / butun = butun`. Kasr qismi
 yo'qoladi:
 
 ```cpp
-butun a = 7 / 2              // 3 (3.5 emas!)
-ikkilangan b = 7.0 / 2       // 3.5
-ikkilangan c = 7 / 2.0       // 3.5
-ikkilangan d = 7.0 / 2.0     // 3.5
+butun a = 7 / 2; // 3 (3.5 emas!)
+haqiqiy b = 7.0 / 2; // 3.5
+haqiqiy c = 7 / 2.0; // 3.5
+haqiqiy d = 7.0 / 2.0; // 3.5
 ```
 
 **Eng muhim qoida:** Agar siz kasr natija olishni xohlasangiz, **kamida
-bittasi operand `ikkilangan` (yoki `kasr`) bo'lishi kerak**.
+bittasi operand `haqiqiy` (yoki `kasr`) bo'lishi kerak**.
 
 ### Bir operandli minus (`-`)
 
 `-` ikki holatda ishlatiladi:
 
 ```cpp
-butun a = 5 - 3              // ikki operandli ayirish
-butun b = -7                 // bir operandli — manfiy belgi
-butun c = -a                 // -5 ga teng
+butun a = 5 - 3; // ikki operandli ayirish
+butun b = -7; // bir operandli — manfiy belgi
+butun c = -a; // -5 ga teng
 ```
 
 ---
 
 ## Taqqoslash operatorlari
 
-Bular ikkita qiymatni solishtiradi. Natija har doim **`mantiq`** turida
+Bular ikkita qiymatni solishtiradi. Natija har doim **`mantiqiy`** turida
 (`rost` yoki `yolg'on`).
 
 | Operator | Ma'nosi | Misol | Natija |
@@ -148,14 +148,14 @@ Bu ikkisini farqlash juda muhim:
 - `==` — **tenglikni tekshirish**. `a == 5` — `a` 5 ga tengmi?
 
 ```cpp
-butun yosh = 18
+butun yosh = 18;
 
 agar (yosh = 21) {           // ← XATO: yosh ga 21 ni saqlamoqda
     // Bu blok HAR DOIM bajariladi!
 }
 
 agar (yosh == 21) {          // TO'G'RI: solishtirmoqda
-    yozish << "Bu yoshda" << qator_oxiri
+    yozish << "Bu yoshda" << qator_oxiri;
 }
 ```
 
@@ -167,16 +167,16 @@ beradi), lekin siz e'tiborli bo'ling.
 `matn` turi bilan ham `==` va `!=` ishlaydi:
 
 ```cpp
-matn ism1 = "Aziza"
-matn ism2 = "Aziza"
-matn ism3 = "Bobur"
+matn ism1 = "Aziza";
+matn ism2 = "Aziza";
+matn ism3 = "Bobur";
 
 agar (ism1 == ism2) {
-    yozish << "Bir xil" << qator_oxiri    // ← chiqadi
+    yozish << "Bir xil" << qator_oxiri; // ← chiqadi
 }
 
 agar (ism1 != ism3) {
-    yozish << "Farqli" << qator_oxiri     // ← chiqadi
+    yozish << "Farqli" << qator_oxiri; // ← chiqadi
 }
 ```
 
@@ -184,7 +184,7 @@ agar (ism1 != ism3) {
 
 ```cpp
 agar ("Aziza" < "Bobur") {
-    yozish << "A B dan oldin" << qator_oxiri
+    yozish << "A B dan oldin" << qator_oxiri;
 }
 ```
 
@@ -193,7 +193,7 @@ agar ("Aziza" < "Bobur") {
 ## Mantiqiy operatorlar
 
 Bularning yordamida bir nechta shartni birlashtirish mumkin. Faqat
-**`mantiq`** turidagi qiymatlar bilan ishlaydi.
+**`mantiqiy`** turidagi qiymatlar bilan ishlaydi.
 
 | Operator | Ma'nosi | Misol |
 |----------|---------|-------|
@@ -213,20 +213,20 @@ Bularning yordamida bir nechta shartni birlashtirish mumkin. Faqat
 ### Misollar
 
 ```cpp
-butun yosh = 25
-mantiq talaba = rost
-mantiq stipendiyada = yolg'on
+butun yosh = 25;
+mantiqiy talaba = rost;
+mantiqiy stipendiyada = yolg'on;
 
 agar (yosh >= 18 && yosh <= 25) {
-    yozish << "Yosh — talaba" << qator_oxiri
+    yozish << "Yosh — talaba" << qator_oxiri;
 }
 
 agar (talaba || stipendiyada) {
-    yozish << "Imtiyozli" << qator_oxiri
+    yozish << "Imtiyozli" << qator_oxiri;
 }
 
 agar (!stipendiyada) {
-    yozish << "Stipendiya yo'q" << qator_oxiri
+    yozish << "Stipendiya yo'q" << qator_oxiri;
 }
 ```
 
@@ -238,7 +238,7 @@ Ovoz berishga ruxsat berish sharti:
 - Royhatdan o'tgan
 
 ```cpp
-mantiq ruxsat = (yosh >= 18) && (fuqaro == "O'zbekiston") && royxatda
+mantiqiy ruxsat = (yosh >= 18) && (fuqaro == "O'zbekiston") && royxatda;
 ```
 
 ### Qisqa baholash (short-circuit evaluation)
@@ -303,7 +303,7 @@ Har bir bit pozitsiyasini alohida AND amal:
 ```
 
 ```cpp
-butun a = 5 & 3              // 1
+butun a = 5 & 3; // 1
 ```
 
 ### Bit OR (`|`)
@@ -316,7 +316,7 @@ butun a = 5 & 3              // 1
 ```
 
 ```cpp
-butun a = 5 | 3              // 7
+butun a = 5 | 3; // 7
 ```
 
 ### Bit XOR (`^`)
@@ -336,17 +336,17 @@ XOR (eksklyuziv yoki) — agar bitlar **farqli** bo'lsa 1, aks holda 0:
 ko'paytirish bilan teng**:
 
 ```cpp
-butun a = 5 << 1             // 10 (5 × 2)
-butun b = 5 << 2             // 20 (5 × 4)
-butun c = 5 << 3             // 40 (5 × 8)
+butun a = 5 << 1; // 10 (5 × 2)
+butun b = 5 << 2; // 20 (5 × 4)
+butun c = 5 << 3; // 40 (5 × 8)
 ```
 
 `a >> n` — `a` ning bitlari `n` ta o'ng tomonga siljiydi. Bu **2 ga
 bo'lish bilan teng**:
 
 ```cpp
-butun a = 20 >> 1            // 10 (20 / 2)
-butun b = 20 >> 2            // 5
+butun a = 20 >> 1; // 10 (20 / 2)
+butun b = 20 >> 2; // 5
 ```
 
 > **Diqqat!** `<<` va `>>` bit operatorlari, lekin biz ularni `yozish
@@ -361,21 +361,21 @@ Tasavvur qiling, foydalanuvchi sifatlari mavjud: o'qiy oladi, yoza
 oladi, administrator. Har birini bitta bit bilan ifodalaymiz:
 
 ```cpp
-o'zgarmas butun OQISH = 1          // 001
-o'zgarmas butun YOZISH = 2         // 010
-o'zgarmas butun ADMIN = 4          // 100
+o'zgarmas butun OQISH = 1; // 001
+o'zgarmas butun YOZISH = 2; // 010
+o'zgarmas butun ADMIN = 4; // 100
 
 // Foydalanuvchi o'qiy oladi VA yoza oladi
-butun sifatlar = OQISH | YOZISH    // 011 = 3
+butun sifatlar = OQISH | YOZISH; // 011 = 3
 
 // O'qiy oladimi?
 agar (sifatlar & OQISH) {
-    yozish << "O'qiy oladi" << qator_oxiri
+    yozish << "O'qiy oladi" << qator_oxiri;
 }
 
 // Yoza oladimi?
 agar (sifatlar & YOZISH) {
-    yozish << "Yoza oladi" << qator_oxiri
+    yozish << "Yoza oladi" << qator_oxiri;
 }
 ```
 
@@ -405,11 +405,11 @@ hali ham koddni qisqaroq qiladi.
 | `<<=` | Chap siljitib berish | `a = a << b` |
 
 ```cpp
-butun a = 10
-a += 5                       // a = 15
-a *= 2                       // a = 30
-a %= 7                       // a = 2 (30 % 7)
-a <<= 3                      // a = 16 (2 × 8)
+butun a = 10;
+a += 5; // a = 15
+a *= 2; // a = 30
+a %= 7; // a = 2 (30 % 7)
+a <<= 3; // a = 16 (2 × 8)
 ```
 
 ---
@@ -419,23 +419,23 @@ a <<= 3                      // a = 16 (2 × 8)
 ### Inkrement (`++`) va dekrement (`--`)
 
 ```cpp
-butun a = 5
-a++                          // a = 6 (post-increment)
-++a                          // a = 7 (pre-increment)
-a--                          // a = 6
---a                          // a = 5
+butun a = 5;
+a++; // a = 6 (post-increment)
+++a; // a = 7 (pre-increment)
+a--; // a = 6
+--a; // a = 5
 ```
 
 `++a` va `a++` ifoda ichida farqli ishlaydi:
 
 ```cpp
-butun a = 5
-butun x = a++                // x = 5 (oldin oldi, keyin oshirdi)
-yozish << a                  // 6
+butun a = 5;
+butun x = a++; // x = 5 (oldin oldi, keyin oshirdi)
+yozish << a; // 6
 
-butun b = 5
-butun y = ++b                // y = 6 (oldin oshirdi, keyin oldi)
-yozish << b                  // 6
+butun b = 5;
+butun y = ++b; // y = 6 (oldin oshirdi, keyin oldi)
+yozish << b; // 6
 ```
 
 ### Uchlik operator (`?:`)
@@ -443,18 +443,18 @@ yozish << b                  // 6
 Bu — qisqartirilgan `agar/aks_holda`:
 
 ```cpp
-butun yosh = 20
-matn natija = (yosh >= 18) ? "Voyaga yetgan" : "Voyaga yetmagan"
+butun yosh = 20;
+matn natija = (yosh >= 18) ? "Voyaga yetgan" : "Voyaga yetmagan";
 ```
 
 Ya'ni:
 ```cpp
-matn natija
+matn natija;
 agar (yosh >= 18) {
-    natija = "Voyaga yetgan"
+    natija = "Voyaga yetgan";
 }
 aks_holda {
-    natija = "Voyaga yetmagan"
+    natija = "Voyaga yetmagan";
 }
 ```
 
@@ -469,9 +469,9 @@ Sintaksis: `shart ? agar_rost_qiymat : agar_yolg'on_qiymat`
 Bu turning xotirada qancha bayt egallashini qaytaradi:
 
 ```cpp
-yozish << sizeof(butun) << qator_oxiri        // 4
-yozish << sizeof(ikkilangan) << qator_oxiri   // 8
-yozish << sizeof(belgi) << qator_oxiri        // 1
+yozish << sizeof(butun) << qator_oxiri; // 4
+yozish << sizeof(haqiqiy) << qator_oxiri; // 8
+yozish << sizeof(belgi) << qator_oxiri; // 1
 ```
 
 ---
@@ -484,8 +484,8 @@ bajariladi?
 Matematikadagi kabi: birinchi `*` va `/`, keyin `+` va `-`.
 
 ```cpp
-butun a = 2 + 3 * 4          // 14, not 20 (3*4 oldin)
-butun b = (2 + 3) * 4        // 20
+butun a = 2 + 3 * 4; // 14, not 20 (3*4 oldin)
+butun b = (2 + 3) * 4; // 20
 ```
 
 ### To'liq jadval
@@ -513,10 +513,10 @@ butun b = (2 + 3) * 4        // 20
 
    ```cpp
    // Yomon — ustunlikka tayanish
-   butun natija = a + b * c << 2
+   butun natija = a + b * c << 2;
 
    // Yaxshi — aniq ifoda
-   butun natija = (a + (b * c)) << 2
+   butun natija = (a + (b * c)) << 2;
    ```
 
 2. **Kod o'qish kerakliroq ekanligini eslang.** Sizning kodingizni
@@ -529,46 +529,44 @@ butun b = (2 + 3) * 4        // 20
 
 `ax² + bx + c = 0` ko'rinishidagi tenglamani yechish. Diskriminant:
 `D = b² - 4ac`.
-
 ```cpp
 // kvadrat_tenglama.uzpp
 
 butun asosiy() {
     // Koeffitsiyentlarni kiritish
-    ikkilangan a, b, c
-    yozish << "a koeffitsiyent: "
-    kiritish >> a
-    yozish << "b koeffitsiyent: "
-    kiritish >> b
-    yozish << "c koeffitsiyent: "
-    kiritish >> c
+    haqiqiy a, b, c;
+    yozish << "a koeffitsiyent: ";
+    kiritish >> a;
+    yozish << "b koeffitsiyent: ";
+    kiritish >> b;
+    yozish << "c koeffitsiyent: ";
+    kiritish >> c;
 
     // Diskriminant
-    ikkilangan D = b * b - 4 * a * c
-    yozish << "Diskriminant D = " << D << qator_oxiri
+    haqiqiy D = b * b - 4 * a * c;
+    yozish << "Diskriminant D = " << D << qator_oxiri;
 
     // Yechimlarni hisoblash
     agar (D > 0) {
-        ikkilangan x1 = (-b + std::sqrt(D)) / (2 * a)
-        ikkilangan x2 = (-b - std::sqrt(D)) / (2 * a)
-        yozish << "Ikkita haqiqiy ildiz:" << qator_oxiri
-        yozish << "  x_1 = " << x1 << qator_oxiri
-        yozish << "  x_2 = " << x2 << qator_oxiri
+        haqiqiy x1 = (-b + std::sqrt(D)) / (2 * a);
+        haqiqiy x2 = (-b - std::sqrt(D)) / (2 * a);
+        yozish << "Ikkita haqiqiy ildiz:" << qator_oxiri;
+        yozish << "  x_1 = " << x1 << qator_oxiri;
+        yozish << "  x_2 = " << x2 << qator_oxiri;
     }
     aks_holda agar (D == 0) {
-        ikkilangan x = -b / (2 * a)
-        yozish << "Bitta haqiqiy ildiz: x = " << x << qator_oxiri
+        haqiqiy x = -b / (2 * a);
+        yozish << "Bitta haqiqiy ildiz: x = " << x << qator_oxiri;
     }
     aks_holda {
-        yozish << "Haqiqiy ildizlar mavjud emas." << qator_oxiri
+        yozish << "Haqiqiy ildizlar mavjud emas." << qator_oxiri;
     }
 
-    qaytarish 0
+    qaytarish 0;
 }
 ```
 
 **Natija** (kiritilgan: `a=1, b=-5, c=6`):
-
 ```
 Diskriminant D = 1
 Ikkita haqiqiy ildiz:
@@ -578,7 +576,7 @@ Ikkita haqiqiy ildiz:
 
 ### Bu dasturda nima kechdi?
 
-1. **`ikkilangan` turi** — koeffitsiyentlar va natijalar kasr
+1. **`haqiqiy` turi** — koeffitsiyentlar va natijalar kasr
    bo'lishi mumkin.
 2. **`std::sqrt(D)`** — kvadrat ildiz funksiyasi. 8-bobda funksiyalar
    haqida o'rganganimizda batafsil ko'ramiz.
@@ -592,52 +590,46 @@ Ikkita haqiqiy ildiz:
 ## Eng ko'p uchraydigan xatolar
 
 ### 1. `=` va `==` ni adashtirish
-
 ```cpp
 agar (yosh = 18) { ... }     // ← XATO: 18 ni saqlamoqda
 agar (yosh == 18) { ... }    // TO'G'RI
 ```
 
 ### 2. Butun bo'lish kutilmagan natija beradi
-
 ```cpp
-ikkilangan ortacha = (1 + 2 + 3) / 3    // 2 (2.0 emas!)
-ikkilangan ortacha = (1 + 2 + 3) / 3.0  // 2.0
+haqiqiy ortacha = (1 + 2 + 3) / 3; // 2 (2.0 emas!)
+haqiqiy ortacha = (1 + 2 + 3) / 3.0; // 2.0
 ```
 
 ### 3. Operatorlar ustunligini noto'g'ri tushunish
-
 ```cpp
-agar (a == 5 || b == 5 && c == 5)
+agar (a == 5 || b == 5 && c == 5);
 // Bu aslida: a == 5 || (b == 5 && c == 5)
 // Sizning niyatingiz boshqa edimi? Qavs qo'ying!
-agar ((a == 5 || b == 5) && c == 5)
+agar ((a == 5 || b == 5) && c == 5);
 ```
 
 ### 4. Sonni 0 ga bo'lish
-
 ```cpp
-butun a = 10
-butun b = 0
-butun c = a / b              // ← XATO: dastur to'xtaydi (crash)
+butun a = 10;
+butun b = 0;
+butun c = a / b; // ← XATO: dastur to'xtaydi (crash)
 ```
 
 Tekshiring:
-
 ```cpp
 agar (b != 0) {
-    butun c = a / b
+    butun c = a / b;
 }
 aks_holda {
-    yozish << "0 ga bo'lib bo'lmaydi" << qator_oxiri
+    yozish << "0 ga bo'lib bo'lmaydi" << qator_oxiri;
 }
 ```
 
 ### 5. `&&` va `&` ni adashtirish
-
 ```cpp
-agar (a > 5 & b < 10)        // bit AND — yomon, lekin ishlaydi
-agar (a > 5 && b < 10)       // mantiqiy AND — TO'G'RI
+agar (a > 5 & b < 10); // bit AND — yomon, lekin ishlaydi
+agar (a > 5 && b < 10); // mantiqiy AND — TO'G'RI
 ```
 
 Mantiqiy operatorlar uchun har doim **ikki belgi** (`&&`, `||`).
@@ -667,7 +659,7 @@ Foydalanuvchidan yil so'rang va kabisami yoki yo'qligini aniqlang.
 
 **Maslahat:**
 ```cpp
-mantiq kabisa = (yil % 4 == 0 && yil % 100 != 0) || (yil % 400 == 0)
+mantiqiy kabisa = (yil % 4 == 0 && yil % 100 != 0) || (yil % 400 == 0);
 ```
 
 ### Mashq 4: Sonning raqamlari yig'indisi (o'rta)
@@ -684,9 +676,9 @@ Masalan, 3725 sekund → 1:02:05.
 
 **Maslahat:**
 ```cpp
-butun soat = sekundlar / 3600
-butun daqiqa = (sekundlar % 3600) / 60
-butun sekund = sekundlar % 60
+butun soat = sekundlar / 3600;
+butun daqiqa = (sekundlar % 3600) / 60;
+butun sekund = sekundlar % 60;
 ```
 
 ### Mashq 6: Bayroqlar (qiyinroq)

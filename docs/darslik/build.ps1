@@ -7,8 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Pandoc = "c:\Users\MSN\uz++\build\pandoc.exe"
-$XeLaTeX = "C:\Users\MSN\AppData\Local\Programs\MiKTeX\miktex\bin\x64\xelatex.exe"
+$Pandoc = "pandoc"
+$XeLaTeX = "xelatex"
 
 # Boblarni tartib bo'yicha birlashtirish
 $chapters = @(
