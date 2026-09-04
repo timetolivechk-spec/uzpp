@@ -46,7 +46,7 @@ done
 
 echo
 echo "============================================="
-echo " Salbiy testlar | Negative tests"
+echo " Salbiy testlar"
 echo "  caught (xatolik aniqlandi):  ${caught}"
 echo "  missed (regression!):        ${missed}"
 echo "============================================="
