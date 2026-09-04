@@ -36,6 +36,11 @@ haqiqiy kompilyator bilan solishtirish natijasida topilgan.
   sinf nomlarini chaqirardi.
 - **`uzpp bench` (@bench) uchun stdlib da sinf yo'q edi** — `BenchTo'plami`
   qo'shildi (isitish chaqiruvi, ns/amal o'lchov).
+- **`OqimHovuz::kutish()` abadiy osilib qolardi** — u ishchi oqimlarni
+  `join` qilardi, ishchilar esa `toxtatish()` chaqirilmaguncha
+  aylanaveradi. `misollar/09_kop_oqimlilik.uzpp` oxirigacha yetib
+  bormasdi. Endi `kutish()` navbat bo'shashini kutadi va havzani
+  to'xtatmaydi.
 
 ### Tur tekshiruvchi
 - Shablon funksiyasi `-> T` qaytarsa, chaqiruv joyida soxta
