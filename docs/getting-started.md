@@ -125,11 +125,11 @@ butun asosiy() {
     mantiqiy noto  = yolg'on;      // bool (false)
 
     // Avtomatik tur (auto)
-    ozgaruvchan x = 100;
-    ozgaruvchan s = "Salom";
+    o'zgaruvchan x = 100;
+    o'zgaruvchan s = "Salom";
 
     // O'zgarmas (const auto)
-    ozgarmas PI = 3.14159265;
+    o'zgarmas PI = 3.14159265;
 
     yozish << ism << ": " << son << qator_oxiri;
     yozish << "PI = " << PI << qator_oxiri;
@@ -160,8 +160,10 @@ butun asosiy() {
     }
 
     // Ternary operator
-    matn holat = ball >= 60 ? "O'tdi" : "Qoldi";
-    yozish << holat << qator_oxiri;
+    // DIQQAT: `holat` — kalit so'z (`moslash` ichida `case`), shuning uchun
+    // o'zgaruvchini boshqacha nomlaymiz.
+    matn natija = ball >= 60 ? "O'tdi" : "Qoldi";
+    yozish << natija << qator_oxiri;
 
     // Mantiqiy operatorlar
     mantiqiy a = rost, b = yolg'on;
@@ -229,14 +231,14 @@ butun asosiy() {
     yozish << "7! = " << faktorial(7) << qator_oxiri;
 
     // Lambda
-    ozgaruvchan qosh = [](butun a, butun b) -> butun {
+    o'zgaruvchan qosh = [](butun a, butun b) -> butun {
         qaytarish a + b;
     };
     yozish << "3 + 4 = " << qosh(3, 4) << qator_oxiri;
 
     // Yopiq o'zgaruvchi bilan lambda
     butun asos = 10;
-    ozgaruvchan kopayt = [asos](butun x) -> butun {
+    o'zgaruvchan kopayt = [asos](butun x) -> butun {
         qaytarish x * asos;
     };
     yozish << "5 * 10 = " << kopayt(5) << qator_oxiri;
@@ -269,7 +271,7 @@ butun asosiy() {
     yoshlar["Vali"] = 30;
     yoshlar["Gani"] = 28;
 
-    uchun (ozgaruvchan& juft : yoshlar) {
+    uchun (o'zgaruvchan& juft : yoshlar) {
         yozish << juft.first << ": " << juft.second << qator_oxiri;
     }
 
@@ -366,7 +368,7 @@ uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
 }
 
 butun asosiy() {
-    ozgaruvchan r = xavfsiz_bolish(10.0, 2.0);
+    o'zgaruvchan r = xavfsiz_bolish(10.0, 2.0);
     agar (r.yaroqliMi()) {
         yozish << "Natija: " << r.qiymat() << qator_oxiri;
     } aks_holda {
@@ -374,7 +376,7 @@ butun asosiy() {
     }
 
     // Nolga bolish
-    ozgaruvchan r2 = xavfsiz_bolish(10.0, 0.0);
+    o'zgaruvchan r2 = xavfsiz_bolish(10.0, 0.0);
     agar (!r2.yaroqliMi()) {
         yozish << r2.xatoMazmun() << qator_oxiri;
     }
@@ -432,7 +434,7 @@ yopiq:
 ochiq:
     bosh qo'sh(T qiymat) { ma'lumot.push_back(qiymat); }
     T olish() {
-        ozgaruvchan yuqori = ma'lumot.back();
+        o'zgaruvchan yuqori = ma'lumot.back();
         ma'lumot.pop_back();
         qaytarish yuqori;
     }
@@ -469,8 +471,8 @@ butun uzoq_hisob(butun n) {
 
 butun asosiy() {
     // Parallel vazifalar
-    ozgaruvchan v1 = std::async(std::launch::async, uzoq_hisob, 1000);
-    ozgaruvchan v2 = std::async(std::launch::async, uzoq_hisob, 2000);
+    o'zgaruvchan v1 = std::async(std::launch::async, uzoq_hisob, 1000);
+    o'zgaruvchan v2 = std::async(std::launch::async, uzoq_hisob, 2000);
 
     yozish << "1000 ning yig'indisi: " << v1.get() << qator_oxiri;
     yozish << "2000 ning yig'indisi: " << v2.get() << qator_oxiri;

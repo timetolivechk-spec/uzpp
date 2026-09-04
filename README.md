@@ -115,13 +115,17 @@ butun asosiy() {
 butun asosiy() {
     butun x = 5;
     moslash (x) {
-        holat 0: yozish << "nol"; to'xtatish;
-        holat 1: yozish << "bir"; to'xtatish;
-        boshqa:  yozish << "boshqa son";
+        holat 0:    yozish << "nol" << qator_oxiri;
+        holat 1, 2: yozish << "bir yoki ikki" << qator_oxiri;
+        boshqa:     yozish << "boshqa son" << qator_oxiri;
     }
     qaytarish 0;
 }
 ```
+
+`moslash` — bu C++ `switch` emas: har bir `holat` avtomatik tugaydi,
+`to'xtatish` (`break`) yozish shart emas. Bir nechta qiymatni vergul
+bilan sanang.
 
 Yana 15 ta misol — [`misollar/`](misollar/) papkasida.
 

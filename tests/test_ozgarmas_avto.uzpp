@@ -1,0 +1,31 @@
+// `o'zgarmas NOM = qiymat;` — turi ko'rsatilmagan o'zgarmas (const auto).
+// Ilgari parser `PI` ni TUR deb o'qib, `=` ni NOM deb olardi va
+// `const PI =;` degan buzuq C++ chiqarardi.
+//
+// Shu bilan birga: katta harf bilan boshlanadigan nomlar ham
+// "ishlatilgan" deb hisoblanishi kerak (soxta ogohlantirish bo'lmasin).
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    o'zgarmas PI = 3.14159265;
+    o'zgarmas SALOM = "Assalomu alaykum";
+    o'zgarmas MAX_SON = 100;
+
+    o'zgarmas haqiqiy ANIQ_PI = 3.14159265358979;
+    o'zgaruvchan radius = 2.0;
+
+    haqiqiy yuza = PI * radius * radius;
+
+    yozish << SALOM << qator_oxiri;
+    yozish << "Yuza: " << yuza << qator_oxiri;
+    yozish << "Maksimum: " << MAX_SON << qator_oxiri;
+    yozish << "Aniqroq PI: " << ANIQ_PI << qator_oxiri;
+
+    agar (yuza > 12.5 && yuza < 12.6 && MAX_SON == 100 && ANIQ_PI > 3.14) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

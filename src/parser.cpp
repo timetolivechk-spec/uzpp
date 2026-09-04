@@ -1964,6 +1964,23 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         }
 
         std::string typeName = parseTypeString();
+
+        // `o'zgarmas PI = 3.14;` — tur ko'rsatilmagan, ya'ni `const auto`.
+        // parseTypeString() `PI` ni TUR deb o'qib qo'ygan; keyingi token `=`
+        // bo'lsa, aslida u NOM edi. Ilgari bu holda `=` o'zgaruvchi nomi
+        // bo'lib qolardi va `const PI =;` degan buzuq C++ chiqardi.
+        if (isConst && !isAtEnd() && peek().type == TokenType::Symbol &&
+            (peek().value == "=" || peek().value == "{") &&
+            typeName.find(' ') == std::string::npos) {
+            const std::string inferredName = typeName;
+            auto varDecl = parseVariableDeclaration("o'zgarmas o'zgaruvchan", inferredName);
+            if (isConstExpr) varDecl->setConstExpr(true);
+            if (isConstInit) varDecl->setConstInit(true);
+            if (isStaticLocal) varDecl->setStaticLocal(true);
+            if (isInlineVar) varDecl->setInline(true);
+            return varDecl;
+        }
+
         if (isConst) typeName = "o'zgarmas " + typeName;
         std::string name = advance().value;
         auto varDecl = parseVariableDeclaration(typeName, name);
@@ -2393,6 +2410,8 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                 std::size_t peekPos = current_ + 1; // skip '('
                 int parenDepth = 1;
                 bool foundBrace = false;
+                std::size_t bodyBraceIndex = std::string::npos;
+                const std::size_t posAfterName = current_;
                 
                 while (peekPos < tokens_.size() && parenDepth > 0) {
                     if (tokens_[peekPos].value == "(") parenDepth++;
@@ -2442,6 +2461,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                             }
                             if (afterParen < tokens_.size() && tokens_[afterParen].value == "{") {
                                 foundBrace = true;
+                                bodyBraceIndex = afterParen;
                             }
                             break;
                         }
@@ -2463,7 +2483,19 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                     if (isDeprecated) func->setDeprecated(true);
                         return func;
                     } catch (const ParseError&) {
-                        // Fall through to variable declaration with constructor
+                        // MUHIM: agar xatolik funksiya TANASI ichida yuz bergan
+                        // bo'lsa, uni yutib yubormaymiz. Ilgari bu `catch` har
+                        // qanday xatoni bosib, keyin o'zgaruvchi e'loni sifatida
+                        // qayta urinardi — natijada foydalanuvchi haqiqiy sabab
+                        // ("`holat` kalit so'z") o'rniga faylning oxiridagi
+                        // ma'nosiz "Noto'g'ri ifoda" xabarini ko'rardi.
+                        // Fall-through faqat sarlavha o'qilayotganda mantiqiy.
+                        if (bodyBraceIndex != std::string::npos && current_ > bodyBraceIndex) {
+                            throw;
+                        }
+                        // Aks holda: o'zgaruvchi e'loni sifatida qayta urinamiz —
+                        // holatni nomdan keyingi joyga tiklaymiz.
+                        current_ = posAfterName;
                     }
                 }
 
@@ -2632,7 +2664,12 @@ std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std:
         if (varName == kw) { isShadowable = true; break; }
     }
     if (!isShadowable && isUzbekKeyword(varName)) {
-        throw ParseError("Kalit so'z o'zgaruvchi nomi sifatida ishlatilishi mumkin emas: `" + varName + "`");
+        // Ko'p kalit so'zlar kundalik o'zbekcha so'zlar (`holat`, `boshqa`,
+        // `va`, `yoki`, `bosh`). Foydalanuvchi ularni tabiiy ravishda
+        // o'zgaruvchi nomi qilib tanlaydi — shuning uchun yechim ham aytiladi.
+        throw ParseError("Kalit so'z o'zgaruvchi nomi sifatida ishlatilishi mumkin emas: `" +
+                         varName + "`. Boshqa nom tanlang, masalan `" + varName + "_qiymat`" +
+                         " " + formatLocation(peek()));
     }
 
     Token token;

@@ -1831,6 +1831,14 @@ private:
                     "noexcept", "static_assert", "throw"
                 };
                 if (cppOperators.contains(name)) break;
+
+                // Har qanday nomni "ishlatilgan" deb belgilaymiz — katta harf
+                // bilan boshlanadiganlarini ham. Ilgari `isDeclared` faqat
+                // kichik harfli nomlar uchun chaqirilardi, shuning uchun
+                // `o'zgarmas haqiqiy PI = 3.14; yozish << PI;` da PI
+                // "e'lon qilingan, lekin ishlatilmagan" deb ogohlantirilardi.
+                markUsed(name);
+
                 // Ogohlantirish faqat kichik harf bilan boshlangan va "::" qatnashmagan noma'lum o'zgaruvchilarga
                 if (!name.empty() && std::islower(name[0]) && name.find("::") == std::string::npos && !isDeclared(name)) {
                     reportWarning("Noma'lum o'zgaruvchi ishlatilmoqda -> " + name, id->getSourceToken());
