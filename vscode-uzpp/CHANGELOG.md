@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.3.1] — 2026-09-04
+
+### Tuzatildi
+- Kengaytma `uzpp formatlah` deb chaqirardi (imlo xatosi) — endi
+  `uzpp formatlash`.
+- Formatlagich faylni o'zgartirmasa, endi SABAB ko'rsatiladi. Kompilyator
+  natijani asl kod bilan solishtiradi va farq bo'lsa faylni tegmaydi;
+  ilgari kengaytma faqat "Command failed" deb yozardi.
+- **Sintaksis bo'yash (`syntax highlighting`) jiddiy yangilandi.**
+  Grammatikada mavjud bo'lmagan so'zlar bor edi (`holda`, `tuxta`,
+  `siklni_tuxtat`, `keyingi`, `virtual`, `shaxsiy`), eng asosiylari esa
+  yo'q edi — jumladan `toki` (while) va `bajar` (do). `ozgaruvchan` /
+  `ozgarmas` — Phase 2.5 da olib tashlangan apostrofsiz shakllar —
+  kanonik `o'zgaruvchan` / `o'zgarmas` ga almashtirildi. Kalit so'zlar
+  va turlar ro'yxati endi kompilyator manbasidan olingan.
+
+### Kompilyator tomonidagi muhim tuzatishlar (v2.3.1)
+- **Sintaksis xatoliklari muharrirda yana ko'rinadi.** v2.3.0 dan beri
+  parser istisno tashlash o'rniga xatoliklarni yig'ardi, LSP esa hamon
+  `catch` ga tayanardi — natijada sintaksis xatosi UMUMAN
+  ko'rsatilmasdi.
+- **Hujjat keshi buzilmaydi.** LSP `"text":"` dan keyingi BIRINCHI
+  qo'shtirnoqqacha qirqib olardi — ya'ni `yozish << "salom"` bor har
+  qanday fayl keshda yarim yo'lda kesilardi va diagnostika, hover,
+  semantik ranglar noto'g'ri ishlardi.
+- macOS da kompilyatsiya endi ishlaydi (Apple Clang uchun bayroqlar).
+
+## [2.3.0] — 2026-05-22
+
+- Kompilyator v2.3.0: overload resolution, kechiktirilgan shablonlar,
+  konstanta hisoblash, ko'p xatolikli parser, modullar.
+- Sinonim tozalash (Phase 2.5): har bir C++ tushunchasi uchun bitta
+  uz++ so'z.
+
 ## [2.2.1] — 2026-05-20
 
 ### Loyiha tuzilmasi va hujjatlar
