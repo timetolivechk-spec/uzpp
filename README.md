@@ -169,7 +169,8 @@ butun asosiy() {
 `to'xtatish` (`break`) yozish shart emas. Bir nechta qiymatni vergul
 bilan sanang.
 
-Yana 15 ta misol — [`misollar/`](misollar/) papkasida.
+Yana 15 ta misol — [`misollar/`](misollar/) papkasida, har biriga
+izoh bilan: [misollar/README.md](misollar/README.md).
 
 ## Standart kutubxona
 
