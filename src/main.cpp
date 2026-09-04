@@ -1362,7 +1362,8 @@ CliOptions parseArguments(int argc, char* argv[]) {
         return options;
     }
 
-    throw std::runtime_error("Noma'lum buyruq: " + first);
+    throw std::runtime_error("Noma'lum buyruq: " + first +
+                             "\n  Mavjud buyruqlar ro'yxati uchun: uzpp --yordam");
 }
 
 fs::path defaultBuildDirectory(const std::optional<ProjectContext>& project) {
