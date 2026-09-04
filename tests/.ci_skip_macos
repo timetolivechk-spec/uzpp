@@ -1,0 +1,18 @@
+# macOS CI da o'tkazib yuboriladigan testlar (bitta fayl nomi bir qatorda, # — izoh).
+#
+# 15_oyna.uzpp — CopperSpice/Qt GUI demosi. `--bare` rejimida quriladi va
+# tizimda o'rnatilgan Qt ni talab qiladi. CI runnerida Qt yo'q.
+15_oyna.uzpp
+
+# test_coyield.uzpp — `#include <generator>` (C++23 korutina kutubxonasi).
+# Apple Clang ning libc++ sida `<generator>` hali yo'q (LLVM 19 da ham
+# to'liq emas). GCC-15 da bor, shuning uchun Windows/Linux da ishlaydi.
+test_coyield.uzpp
+
+# test_deducing_this.uzpp — C++23 "deducing this" (P0847R7). Apple Clang 15
+# (macos-14 runner) uni to'liq qo'llab-quvvatlamaydi.
+test_deducing_this.uzpp
+
+# test_threads.uzpp / test_asinxron.uzpp — jstop_token/jthread. Apple Clang
+# libc++ da `std::jthread` uzoq vaqt eksperimental bo'lgan; runner
+# versiyasiga qarab uchmasligi mumkin. Zarur bo'lsa ro'yxatdan olib tashlang.

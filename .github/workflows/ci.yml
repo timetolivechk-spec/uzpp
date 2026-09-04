@@ -101,11 +101,117 @@ jobs:
             exit 1
           fi
 
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp.exe
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: uzpp-windows-x64
           path: build/uzpp.exe
+
+  # ──────────────────────────────────────────────────────────
+  # macOS build (Apple Silicon, Apple Clang)
+  #
+  # This job exists because macOS breaks in ways no other platform reproduces:
+  #   * `g++` on macOS is Apple Clang, which rejects `-fmodules-ts`;
+  #   * the Mach-O linker has no `--gc-sections` (it is `-dead_strip`);
+  #   * `/proc/self/exe` does not exist, so the executable path needs Darwin's
+  #     own `_NSGetExecutablePath`;
+  #   * unsigned binaries are killed outright on Apple Silicon.
+  # All four were live bugs. Without CI on macOS they come back silently.
+  # ──────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS (Apple Silicon / Apple Clang)
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install cmake ninja
+
+      - name: Configure
+        run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run C++ unit tests
+        run: ./build/uzpp_frontend_tests
+
+      - name: Verify the binary is signed and runs
+        run: |
+          # On Apple Silicon an unsigned binary is killed by the kernel before
+          # main() runs, so this check is not cosmetic.
+          codesign --verify --verbose build/uzpp
+          ./build/uzpp --version
+
+      - name: End-to-end — build and run a real program with Apple Clang
+        run: |
+          mkdir -p smoke && cd smoke
+          cat > salom.uzpp <<'UZPP'
+          ulash "uzpp_runtime.hpp"
+
+          butun asosiy() {
+              yozish << "Salom, dunyo!" << qator_oxiri;
+              qaytarish 0;
+          }
+          UZPP
+          ../build/uzpp ishga-tushirish salom.uzpp | tee out.txt
+          grep -q "Salom, dunyo!" out.txt
+
+      - name: Run misollar/ integration tests
+        run: |
+          set +e
+          SKIP=$(grep -vE '^[[:space:]]*(#|$)' tests/.ci_skip_macos 2>/dev/null | tr '\n' '|' | sed 's/|$//')
+          PASS=0; FAIL=0; FAILED_LIST=""
+          for f in misollar/*.uzpp; do
+            bn=$(basename "$f")
+            if [ -n "$SKIP" ] && echo "$bn" | grep -qE "^($SKIP)$"; then
+              echo "SKIP $bn (in tests/.ci_skip_macos)"; continue
+            fi
+            echo "--- Testing: $f ---"
+            if ./build/uzpp ishga-tushirish "$f" >/dev/null 2>&1; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST $bn"
+            fi
+          done
+          echo "misollar: $PASS passed, $FAIL failed"
+          if [ $FAIL -ne 0 ]; then echo "FAILED:$FAILED_LIST"; exit 1; fi
+
+      - name: Run tests/ regression suite (all *.uzpp)
+        run: |
+          set +e
+          SKIP=$(grep -vE '^[[:space:]]*(#|$)' tests/.ci_skip_macos 2>/dev/null | tr '\n' '|' | sed 's/|$//')
+          PASS=0; FAIL=0; SKIPPED=0; FAILED_LIST=""
+          for f in tests/*.uzpp; do
+            bn=$(basename "$f")
+            if [ -n "$SKIP" ] && echo "$bn" | grep -qE "^($SKIP)$"; then
+              SKIPPED=$((SKIPPED+1)); echo "SKIP $bn (in tests/.ci_skip_macos)"; continue
+            fi
+            OUT=$(./build/uzpp qurish "$f" 2>&1)
+            if echo "$OUT" | grep -q "MUVAFFAQIYAT: Dastur tayyor"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST $bn"
+              echo "::group::FAIL $bn"
+              echo "$OUT" | tail -60
+              echo "::endgroup::"
+            fi
+          done
+          echo "tests/ regression: $PASS passed, $FAIL failed, $SKIPPED skipped"
+          if [ $FAIL -ne 0 ]; then echo "FAILED tests:$FAILED_LIST"; exit 1; fi
+
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-macos-arm64
+          path: build/uzpp
 
   # ──────────────────────────────────────────────────────────
   # Linux build (Ubuntu 24.04 / GCC-15 / C++23)
@@ -215,6 +321,9 @@ jobs:
             echo "FAILED tests:$FAILED_LIST"
             exit 1
           fi
+
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
