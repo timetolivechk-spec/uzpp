@@ -237,14 +237,19 @@ async function cmdFormatFile(context) {
     const compiler = findCompilerPath(context);
     const file = editor.document.uri.fsPath;
     try {
-        let cmd = `"${compiler}" formatlah "${file}"`;
+        let cmd = `"${compiler}" formatlash "${file}"`;
         if (process.platform === 'win32' && compiler.endsWith('.bat')) {
             cmd = `cmd /c ${cmd}`;
         }
-        execSync(cmd, { timeout: 10000 });
+        execSync(cmd, { timeout: 10000, stdio: 'pipe' });
         vscode.window.showInformationMessage('Fayl formatlandi.');
     } catch (e) {
-        vscode.window.showErrorMessage(`Format xatosi: ${e.message}`);
+        // Formatlagich natija asl kodga teng bo'lmasa faylni O'ZGARTIRMAYDI
+        // va sababni stderr ga yozadi. Foydalanuvchi shu sababni ko'rishi
+        // kerak — `e.message` faqat "Command failed" deydi.
+        const detail = (e.stderr && e.stderr.toString().trim()) || e.message;
+        const firstLine = detail.split("\n")[0].trim();
+        vscode.window.showWarningMessage(`Formatlanmadi (fayl o'zgartirilmadi): ${firstLine}`);
     }
 }
 
