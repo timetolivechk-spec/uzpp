@@ -181,11 +181,15 @@ Agar funksiya qiymat qaytarmasa, qaytarish turi **`bosh`** (C++ da
 `void`) bo'ladi:
 
 ```cpp
-bosh chiqarish(matn xabar) {
+bosh xabar_yoz(matn xabar) {
     yozish << xabar << qator_oxiri;
     // qaytarish yo'q
 }
 ```
+
+> **Diqqat — `chiqarish` nomini ishlatmang.** U `yozish` ning eskirgan
+> sinonimi va kompilyator uni rad etadi. Bitta C++ tushunchasi uchun
+> uz++ da bitta so'z bor: konsolga chiqarish — bu `yozish`.
 
 `bosh` funksiyalarda `qaytarish` ni yozish shart emas, lekin yozish
 mumkin (faqat qiymatsiz):
@@ -301,6 +305,7 @@ salom_ber("Aziza"); // "Salom, Aziza!"
 
 Standart qiymatli parametrlar **oxirida** bo'lishi kerak:
 
+<!-- darslik:skip -->
 ```cpp
 bosh f(butun a, butun b = 0, butun c = 0); // TO'G'RI
 bosh f(butun a = 0, butun b, butun c); // XATO
@@ -565,12 +570,13 @@ butun yigindi(butun a, butun b) {
 
 ### 3. Parametr berish unutilgan
 
+<!-- darslik:skip -->
 ```cpp
 butun yigindi(butun a, butun b) {
     qaytarish a + b;
 }
 
-yigindi(5); // ← XATO: ikkita parametr kerak
+yigindi(5); // ← XATO: ikkita parametr kerak — kompilyator rad etadi
 ```
 
 ### 4. Cheksiz rekursiya

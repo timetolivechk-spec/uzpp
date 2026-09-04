@@ -1,0 +1,26 @@
+// O'zgarmas ko'rsatkichlarning uchala shakli:
+//   o'zgarmas butun* p            → const int* p   (qiymat o'zgarmas)
+//   butun* o'zgarmas p            → int* const p   (ko'rsatkich o'zgarmas)
+//   o'zgarmas butun* o'zgarmas p  → const int* const p (ikkalasi ham)
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    butun a = 10;
+    butun b = 20;
+
+    o'zgarmas butun* p1 = &a;            // *p1 = ... — mumkin emas
+    butun* o'zgarmas p2 = &a;            // p2 = &b  — mumkin emas
+    o'zgarmas butun* o'zgarmas p3 = &a;  // ikkalasi ham mumkin emas
+
+    p1 = &b;  // OK: p1 boshqa manzilga qarashi mumkin
+
+    yozish << *p1 << " " << *p2 << " " << *p3 << qator_oxiri;
+
+    agar (*p1 == 20 && *p2 == 10 && *p3 == 10) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

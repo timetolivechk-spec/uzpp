@@ -1,0 +1,24 @@
+# Matn fayllari uchun avtomatik aniqlash.
+* text=auto
+
+# Shell skriptlari HAR DOIM LF bilan. `install.sh` reliz artefakti sifatida
+# yuklanadi va `curl ... | bash` orqali ishlatiladi — CRLF bo'lsa bash
+# "bad interpreter: /usr/bin/env bash^M" deb yiqiladi.
+*.sh    text eol=lf
+
+# Unix tomonda ishlaydigan boshqa fayllar.
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# uz++ manba fayllari — UTF-8, satr oxiri platformaga qarab.
+*.uzpp  text
+
+# Binar fayllar — tegmaslik.
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.pdf   binary
+*.docx  binary
+*.exe   binary
+*.zip   binary
+*.gz    binary

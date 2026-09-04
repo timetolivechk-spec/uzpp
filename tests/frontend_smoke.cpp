@@ -124,18 +124,91 @@ int main() {
     }
 
     {
-        bool thrown = false;
-        try {
-            uzpp::Lexer lexer("butun asosiy( {");
-            const auto tokens = lexer.tokenize();
-            uzpp::Parser parser(tokens);
-            auto program = parser.parse();
-            (void)program;
-        } catch (const uzpp::ParseError&) {
-            thrown = true;
-        }
+        // Phase 12 dan beri `Parser::parse()` istisno tashlamaydi — u xatoliklarni
+        // yig'adi va chaqiruvchi `hasErrors()` orqali tekshiradi. Har bir
+        // chaqiruvchi (CLI, LSP) shu shartnomaga tayanadi.
+        uzpp::Lexer lexer("butun asosiy( {");
+        const auto tokens = lexer.tokenize();
+        uzpp::Parser parser(tokens);
+        auto program = parser.parse();
+        (void)program;
 
-        assert(thrown);
+        assert(parser.hasErrors());
+        assert(!parser.getErrors().empty());
+
+        // Joylashuv xabarda ROSA BIR MARTA bo'lishi kerak — `recordError`
+        // ilgari o'z ichida joylashuv bor xabarga yana bittasini qo'shardi.
+        const std::string& first = parser.getErrors().front();
+        const std::size_t firstPos = first.find("qator:");
+        if (firstPos != std::string::npos) {
+            assert(first.find("qator:", firstPos + 1) == std::string::npos);
+        }
+    }
+
+    {
+        // `<<=` / `>>=` — siljitish bilan o'zlashtirish.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun a = 1; a <<= 3; a >>= 1; qaytarish a; }");
+        assert(cpp.find("<<=") != std::string::npos);
+        assert(cpp.find(">>=") != std::string::npos);
+    }
+
+    {
+        // Siljitish darajasi qo'shishdan PAST: `yozish << a + b` →
+        // `std::cout << (a + b)`, `(std::cout << a) + b` EMAS.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun a = 1; butun b = 2; yozish << a + b; qaytarish 0; }");
+        assert(cpp.find("(a + b)") != std::string::npos);
+    }
+
+    {
+        // `bajar { ... } toki (shart);` → do/while.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun i = 0; bajar { i++; } toki (i < 3); qaytarish 0; }");
+        assert(cpp.find("do") != std::string::npos);
+        assert(cpp.find("while") != std::string::npos);
+    }
+
+    {
+        // Guruhlangan `holat` yorliqlari `||` ga birlashadi (C `switch` kabi).
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun o = 1;"
+            " moslash (o) { holat 12: holat 1: holat 2: yozish << 1; boshqa: yozish << 2; }"
+            " qaytarish 0; }");
+        assert(cpp.find("||") != std::string::npos);
+    }
+
+    {
+        // `holat 1, 2, 3:` — vergul bilan ajratilgan naqshlar.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy() { butun o = 1;"
+            " moslash (o) { holat 1, 2, 3: yozish << 1; boshqa: yozish << 2; }"
+            " qaytarish 0; }");
+        assert(cpp.find("||") != std::string::npos);
+    }
+
+    {
+        // Massiv parametri: `belgi* argv[]` → `char**`.
+        const std::string cpp = transpileSnippet(
+            "butun asosiy(butun argc, belgi* argv[]) { qaytarish 0; }");
+        assert(cpp.find("char**") != std::string::npos ||
+               cpp.find("char* *") != std::string::npos ||
+               cpp.find("char **") != std::string::npos);
+    }
+
+    {
+        // `moslash` ichidagi `to'xtatish` — aniq, o'rgatuvchi xabar.
+        std::vector<uzpp::SemanticError> errors;
+        typecheckSnippet(
+            "butun asosiy() { butun k = 1;"
+            " moslash (k) { holat 1: yozish << 1; to'xtatish; boshqa: yozish << 2; }"
+            " qaytarish 0; }",
+            &errors);
+        bool found = false;
+        for (const auto& e : errors) {
+            if (e.message.find("moslash") != std::string::npos) found = true;
+        }
+        assert(found);
     }
 
     {
@@ -302,7 +375,7 @@ int main() {
     {
         // Lambda with explicit return type
         const std::string cpp = transpileSnippet(
-            "butun asosiy() { ozgaruvchan f = [](butun a, butun b) -> butun { qaytarish a + b; }; qaytarish f(1, 2); }");
+            "butun asosiy() { o'zgaruvchan f = [](butun a, butun b) -> butun { qaytarish a + b; }; qaytarish f(1, 2); }");
         assert(cpp.find("[](") != std::string::npos);
         assert(cpp.find("-> int") != std::string::npos || cpp.find("->int") != std::string::npos);
     }

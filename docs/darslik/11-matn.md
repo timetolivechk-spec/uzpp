@@ -161,19 +161,27 @@ a == b; // yolg'on (S va s farqli)
 ### Katta-kichik harfsiz taqqoslash
 
 ```cpp
+ulash "uzpp_runtime.hpp"
 ulash <algorithm>
 ulash <cctype>
 
 bosh kichiklash(matn& s) {
     std::transform(s.begin(), s.end(), s.begin(),
-        [](belgi c) { qaytarish std::tolower(c) });
+        [](belgi c) { qaytarish std::tolower(c); });
 }
 
-matn a = "Salom", b = "SALOM";
-kichiklash(a);
-kichiklash(b);
-agar (a == b) {
-    yozish << "Bir xil";
+butun asosiy() {
+    matn a = "Salom";
+    matn b = "SALOM";
+
+    kichiklash(a);
+    kichiklash(b);
+
+    agar (a == b) {
+        yozish << "Bir xil" << qator_oxiri;
+    }
+
+    qaytarish 0;
 }
 ```
 
@@ -281,12 +289,12 @@ std::wstring s = L"O'zbekiston"; // L — wide
 `std::string_view` — matnga **ko'rinish** beradi, nusxa olmaydi:
 
 ```cpp
-bosh chiqarish(std::string_view sv) {
-    yozish << sv;
+bosh korsat(std::string_view sv) {
+    yozish << sv << qator_oxiri;
 }
 
-chiqarish("Salom"); // nusxa olmaydi — tez!
-chiqarish(matn("Salom, dunyo!")); // nusxa olmaydi
+korsat("Salom");                  // nusxa olmaydi — tez!
+korsat(matn("Salom, dunyo!"));    // nusxa olmaydi
 ```
 
 Funksiya parametrlari uchun — afzal usul (nusxa olmaslik).

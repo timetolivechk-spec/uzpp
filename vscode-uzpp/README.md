@@ -40,7 +40,7 @@ Skript:
 - `uzpp` ni `/usr/local/bin/` ga, stdlib ni `/usr/local/lib/uzpp/` ga o'rnatadi.
 - Smoke-test: `uzpp --version`.
 
-Pin qilingan versiya kerak bo'lsa: `UZPP_VERSION=v2.2.0 ./install.sh` (yoki `$HOME` ga: `UZPP_PREFIX=$HOME ./install.sh`).
+Pin qilingan versiya kerak bo'lsa: `UZPP_VERSION=v2.3.1 ./install.sh` (yoki `$HOME` ga: `UZPP_PREFIX=$HOME ./install.sh`).
 
 ---
 

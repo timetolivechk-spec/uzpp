@@ -30,6 +30,7 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
 
       - name: Configure
         run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
@@ -46,9 +47,12 @@ jobs:
           for f in misollar/01_salom_dunyo.uzpp \
                    misollar/02_fizzbuzz.uzpp \
                    misollar/03_rekursiya.uzpp \
+                   misollar/04_sinflar.uzpp \
                    misollar/05_kolleksiyalar.uzpp \
+                   misollar/06_xatolik_boshqaruvi.uzpp \
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
+                   misollar/09_kop_oqimlilik.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp.exe ishga-tushirish "$f"; then
@@ -101,11 +105,158 @@ jobs:
             exit 1
           fi
 
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          # `@sinov` / `@bench` glue lives in codegen and references stdlib class
+          # names by hand. It broke silently once (wrong class name) and nothing
+          # caught it, because `qurish` does not exercise that path.
+          ./build/uzpp.exe sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp.exe bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python tests/darslik_tekshir.py build/uzpp.exe
+          python tests/darslik_tekshir.py build/uzpp.exe --qurish
+
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp.exe
+
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp.exe
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: uzpp-windows-x64
           path: build/uzpp.exe
+
+  # ──────────────────────────────────────────────────────────
+  # macOS build (Apple Silicon, Apple Clang)
+  #
+  # This job exists because macOS breaks in ways no other platform reproduces:
+  #   * `g++` on macOS is Apple Clang, which rejects `-fmodules-ts`;
+  #   * the Mach-O linker has no `--gc-sections` (it is `-dead_strip`);
+  #   * `/proc/self/exe` does not exist, so the executable path needs Darwin's
+  #     own `_NSGetExecutablePath`;
+  #   * unsigned binaries are killed outright on Apple Silicon.
+  # All four were live bugs. Without CI on macOS they come back silently.
+  # ──────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS (Apple Silicon / Apple Clang)
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install cmake ninja
+
+      - name: Configure
+        run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run C++ unit tests
+        run: ./build/uzpp_frontend_tests
+
+      - name: Verify the binary is signed and runs
+        run: |
+          # On Apple Silicon an unsigned binary is killed by the kernel before
+          # main() runs, so this check is not cosmetic.
+          codesign --verify --verbose build/uzpp
+          ./build/uzpp --version
+
+      - name: End-to-end — build and run a real program with Apple Clang
+        run: |
+          mkdir -p smoke && cd smoke
+          cat > salom.uzpp <<'UZPP'
+          ulash "uzpp_runtime.hpp"
+
+          butun asosiy() {
+              yozish << "Salom, dunyo!" << qator_oxiri;
+              qaytarish 0;
+          }
+          UZPP
+          ../build/uzpp ishga-tushirish salom.uzpp | tee out.txt
+          grep -q "Salom, dunyo!" out.txt
+
+      - name: Run misollar/ integration tests
+        run: |
+          set +e
+          SKIP=$(grep -vE '^[[:space:]]*(#|$)' tests/.ci_skip_macos 2>/dev/null | tr '\n' '|' | sed 's/|$//')
+          PASS=0; FAIL=0; FAILED_LIST=""
+          for f in misollar/*.uzpp; do
+            bn=$(basename "$f")
+            if [ -n "$SKIP" ] && echo "$bn" | grep -qE "^($SKIP)$"; then
+              echo "SKIP $bn (in tests/.ci_skip_macos)"; continue
+            fi
+            echo "--- Testing: $f ---"
+            if ./build/uzpp ishga-tushirish "$f" >/dev/null 2>&1; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST $bn"
+            fi
+          done
+          echo "misollar: $PASS passed, $FAIL failed"
+          if [ $FAIL -ne 0 ]; then echo "FAILED:$FAILED_LIST"; exit 1; fi
+
+      - name: Run tests/ regression suite (all *.uzpp)
+        run: |
+          set +e
+          SKIP=$(grep -vE '^[[:space:]]*(#|$)' tests/.ci_skip_macos 2>/dev/null | tr '\n' '|' | sed 's/|$//')
+          PASS=0; FAIL=0; SKIPPED=0; FAILED_LIST=""
+          for f in tests/*.uzpp; do
+            bn=$(basename "$f")
+            if [ -n "$SKIP" ] && echo "$bn" | grep -qE "^($SKIP)$"; then
+              SKIPPED=$((SKIPPED+1)); echo "SKIP $bn (in tests/.ci_skip_macos)"; continue
+            fi
+            OUT=$(./build/uzpp qurish "$f" 2>&1)
+            if echo "$OUT" | grep -q "MUVAFFAQIYAT: Dastur tayyor"; then
+              PASS=$((PASS+1))
+            else
+              FAIL=$((FAIL+1)); FAILED_LIST="$FAILED_LIST $bn"
+              echo "::group::FAIL $bn"
+              echo "$OUT" | tail -60
+              echo "::endgroup::"
+            fi
+          done
+          echo "tests/ regression: $PASS passed, $FAIL failed, $SKIPPED skipped"
+          if [ $FAIL -ne 0 ]; then echo "FAILED tests:$FAILED_LIST"; exit 1; fi
+
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          ./build/uzpp sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python3 tests/darslik_tekshir.py build/uzpp
+          python3 tests/darslik_tekshir.py build/uzpp --qurish
+
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp
+
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uzpp-macos-arm64
+          path: build/uzpp
 
   # ──────────────────────────────────────────────────────────
   # Linux build (Ubuntu 24.04 / GCC-15 / C++23)
@@ -122,7 +273,13 @@ jobs:
 
       - name: Install dependencies (GCC-15 via toolchain PPA)
         run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          # Launchpad vaqti-vaqti bilan HTTP 500 qaytaradi va butun ish
+          # yiqiladi. Bir necha marta urinamiz.
+          for attempt in 1 2 3; do
+            if sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; then break; fi
+            echo "add-apt-repository urinish $attempt muvaffaqiyatsiz, qayta urinamiz..."
+            sleep 15
+          done
           sudo apt-get update -qq
           # libstdc++-15-dev is required for <generator> (C++23 coroutines)
           # — gcc-15 ships the compiler but the matching libstdc++ headers
@@ -153,9 +310,12 @@ jobs:
           for f in misollar/01_salom_dunyo.uzpp \
                    misollar/02_fizzbuzz.uzpp \
                    misollar/03_rekursiya.uzpp \
+                   misollar/04_sinflar.uzpp \
                    misollar/05_kolleksiyalar.uzpp \
+                   misollar/06_xatolik_boshqaruvi.uzpp \
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
+                   misollar/09_kop_oqimlilik.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp ishga-tushirish "$f"; then
@@ -215,6 +375,28 @@ jobs:
             echo "FAILED tests:$FAILED_LIST"
             exit 1
           fi
+
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          ./build/uzpp sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python3 tests/darslik_tekshir.py build/uzpp
+          python3 tests/darslik_tekshir.py build/uzpp --qurish
+
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp
+
+      - name: Negative tests
+        run: bash tests/negative/run.sh build/uzpp
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

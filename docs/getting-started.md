@@ -9,9 +9,9 @@
 ### 🪟 Windows — tavsiya etiladi
 
 **Eng oson yo'l:** [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe)
-ni yuklab oling va ishga tushiring (~115 MB).
+ni yuklab oling va ishga tushiring (~150 MB).
 
-Ichida MinGW GCC 14.2 ham bor — boshqa hech narsa o'rnatish kerak emas. Admin
+Ichida MinGW GCC 15.2 ham bor — boshqa hech narsa o'rnatish kerak emas. Admin
 huquqlari talab qilinmaydi. Default joy:
 `%LOCALAPPDATA%\Programs\uzpp\`. PATH ga avtomatik qo'shiladi.
 
@@ -27,6 +27,15 @@ Bir-qatorli o'rnatuvchi (rasmiy):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/installer/unix/install.sh | bash
+```
+
+macOS da skript karantin belgisini (`com.apple.quarantine`) olib tashlaydi va
+ad-hoc imzo qo'yadi — Gatekeeper ning "ishlab chiquvchini tekshirib bo'lmadi"
+xatosi shundan. Arxivni qo'lda ochsangiz, shu ikki buyruqni o'zingiz bajaring:
+
+```bash
+sudo xattr -dr com.apple.quarantine /usr/local/bin/uzpp
+sudo codesign --force --sign - /usr/local/bin/uzpp
 ```
 
 Yoki manba koddan qurish (~3 daqiqa):
@@ -125,11 +134,11 @@ butun asosiy() {
     mantiqiy noto  = yolg'on;      // bool (false)
 
     // Avtomatik tur (auto)
-    ozgaruvchan x = 100;
-    ozgaruvchan s = "Salom";
+    o'zgaruvchan x = 100;
+    o'zgaruvchan s = "Salom";
 
     // O'zgarmas (const auto)
-    ozgarmas PI = 3.14159265;
+    o'zgarmas PI = 3.14159265;
 
     yozish << ism << ": " << son << qator_oxiri;
     yozish << "PI = " << PI << qator_oxiri;
@@ -160,8 +169,10 @@ butun asosiy() {
     }
 
     // Ternary operator
-    matn holat = ball >= 60 ? "O'tdi" : "Qoldi";
-    yozish << holat << qator_oxiri;
+    // DIQQAT: `holat` — kalit so'z (`moslash` ichida `case`), shuning uchun
+    // o'zgaruvchini boshqacha nomlaymiz.
+    matn natija = ball >= 60 ? "O'tdi" : "Qoldi";
+    yozish << natija << qator_oxiri;
 
     // Mantiqiy operatorlar
     mantiqiy a = rost, b = yolg'on;
@@ -229,14 +240,14 @@ butun asosiy() {
     yozish << "7! = " << faktorial(7) << qator_oxiri;
 
     // Lambda
-    ozgaruvchan qosh = [](butun a, butun b) -> butun {
+    o'zgaruvchan qosh = [](butun a, butun b) -> butun {
         qaytarish a + b;
     };
     yozish << "3 + 4 = " << qosh(3, 4) << qator_oxiri;
 
     // Yopiq o'zgaruvchi bilan lambda
     butun asos = 10;
-    ozgaruvchan kopayt = [asos](butun x) -> butun {
+    o'zgaruvchan kopayt = [asos](butun x) -> butun {
         qaytarish x * asos;
     };
     yozish << "5 * 10 = " << kopayt(5) << qator_oxiri;
@@ -269,7 +280,7 @@ butun asosiy() {
     yoshlar["Vali"] = 30;
     yoshlar["Gani"] = 28;
 
-    uchun (ozgaruvchan& juft : yoshlar) {
+    uchun (o'zgaruvchan& juft : yoshlar) {
         yozish << juft.first << ": " << juft.second << qator_oxiri;
     }
 
@@ -366,7 +377,7 @@ uzpp::Natija<haqiqiy> xavfsiz_bolish(haqiqiy a, haqiqiy b) {
 }
 
 butun asosiy() {
-    ozgaruvchan r = xavfsiz_bolish(10.0, 2.0);
+    o'zgaruvchan r = xavfsiz_bolish(10.0, 2.0);
     agar (r.yaroqliMi()) {
         yozish << "Natija: " << r.qiymat() << qator_oxiri;
     } aks_holda {
@@ -374,7 +385,7 @@ butun asosiy() {
     }
 
     // Nolga bolish
-    ozgaruvchan r2 = xavfsiz_bolish(10.0, 0.0);
+    o'zgaruvchan r2 = xavfsiz_bolish(10.0, 0.0);
     agar (!r2.yaroqliMi()) {
         yozish << r2.xatoMazmun() << qator_oxiri;
     }
@@ -432,7 +443,7 @@ yopiq:
 ochiq:
     bosh qo'sh(T qiymat) { ma'lumot.push_back(qiymat); }
     T olish() {
-        ozgaruvchan yuqori = ma'lumot.back();
+        o'zgaruvchan yuqori = ma'lumot.back();
         ma'lumot.pop_back();
         qaytarish yuqori;
     }
@@ -469,8 +480,8 @@ butun uzoq_hisob(butun n) {
 
 butun asosiy() {
     // Parallel vazifalar
-    ozgaruvchan v1 = std::async(std::launch::async, uzoq_hisob, 1000);
-    ozgaruvchan v2 = std::async(std::launch::async, uzoq_hisob, 2000);
+    o'zgaruvchan v1 = std::async(std::launch::async, uzoq_hisob, 1000);
+    o'zgaruvchan v2 = std::async(std::launch::async, uzoq_hisob, 2000);
 
     yozish << "1000 ning yig'indisi: " << v1.get() << qator_oxiri;
     yozish << "2000 ning yig'indisi: " << v2.get() << qator_oxiri;
@@ -485,17 +496,29 @@ butun asosiy() {
 
 | Buyruq | Tavsif |
 |--------|--------|
-| `uzpp qurish fayl.uzpp` | Kompilyatsiya qilish |
-| `uzpp ishga-tushirish fayl.uzpp` | Kompilyatsiya va ishga tushirish |
-| `uzpp format fayl.uzpp` | Kodni formatlash |
-| `uzpp lsp` | LSP serverini ishga tushirish (editor uchun) |
+| `uzpp ishga-tushirish fayl.uzpp` | Kompilyatsiya va darhol ishga tushirish |
+| `uzpp qurish fayl.uzpp` | Faqat kompilyatsiya → `build/<nom>` |
+| `uzpp tekshirish fayl.uzpp` | Faqat tekshirish, hech narsa qurmaydi (lint) |
+| `uzpp transpile fayl.uzpp --show-cpp` | uz++ va hosil bo'lgan C++ ni yonma-yon ko'rsatish |
+| `uzpp sinov fayl.uzpp` | `@sinov` funksiyalarini yugurtirish |
+| `uzpp bench fayl.uzpp` | `@bench` funksiyalari tezligini o'lchash |
+| `uzpp formatlash fayl.uzpp` | Kodni formatlash |
+| `uzpp init <nom>` | Yangi loyiha skeleti yaratish |
+| `uzpp lsp` | LSP serverini ishga tushirish (muharrir uchun) |
 | `uzpp --version` | Versiyani ko'rish |
+| `uzpp --yordam` | To'liq ro'yxat va izohlar |
+
+Loyiha ichida (`uzpp.toml` bor papkada) fayl nomini yozish shart emas —
+`uzpp ishga-tushirish` yetarli.
 
 ---
 
 ## Keyingi qadamlar
 
-- `misollar/` papkasidagi 15 ta misolni ko'ring
-- `tests/` papkasidagi regression testlarni o'rganing
+- [To'liq darslik](darslik/00-mundarija.md) — 16 bob, noldan boshlab
+  ([PDF](darslik/uzpp-darslik.pdf))
+- [`misollar/`](../misollar/README.md) — 15 ta izohlangan misol
+- `tests/` papkasidagi 89 ta kichik dastur — har biri bitta til
+  imkoniyatini ko'rsatadi
 - [CONTRIBUTING.md](../CONTRIBUTING.md) orqali hissa qo'shing
 - [GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) da savol bering

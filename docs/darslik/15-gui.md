@@ -17,13 +17,25 @@ GUI dasturlar:
 uz++ da GUI yaratish uchun biz **CopperSpice** kutubxonasidan
 foydalanamiz. Bu Qt'ning ochiq versiyasi.
 
-> **Diqqat:** Bu bob faqat tushuncha berish uchun. CopperSpice'ni
-> o'rnatish va sozlash alohida hujjatlarda batafsil bayon etilgan.
+> **Diqqat:** Bu bobdagi misollar CopperSpice (yoki Qt) tizimda
+> o'rnatilgan bo'lishini talab qiladi — ular boshqa boblardagi kabi
+> `uzpp ishga-tushirish` bilan darhol ishlamaydi. Kutubxona
+> o'rnatilgach, GUI dasturlar `--bare` rejimida quriladi:
+>
+> ```bash
+> uzpp qurish salom_oyna.uzpp --bare -I/usr/include/copperspice -lCsCore -lCsGui
+> ```
+>
+> `--bare` — uz++ ning standart runtime'ini o'chiradi (u konsol
+> dasturlari uchun mo'ljallangan), `-I` va `-l` esa kutubxona
+> yo'llarini kompilyatorga uzatadi. Tayyor namuna:
+> [`misollar/15_oyna.uzpp`](../../misollar/15_oyna.uzpp).
 
 ---
 
 ## Birinchi GUI dastur
 
+<!-- darslik:skip -->
 ```cpp
 // salom_oyna.uzpp
 ulash <QApplication>
@@ -79,6 +91,7 @@ Vidjetlarni oynaga joylashish — _layout_ orqali:
 
 ### Vertikal va gorizontal
 
+<!-- darslik:skip -->
 ```cpp
 QVBoxLayout; // vertikal
 QHBoxLayout; // gorizontal
@@ -86,6 +99,7 @@ QHBoxLayout; // gorizontal
 
 ### Grid (panjara)
 
+<!-- darslik:skip -->
 ```cpp
 QGridLayout* maket = new QGridLayout();
 maket->addWidget(vidjet1, 0, 0); // qator 0, ustun 0
@@ -95,6 +109,7 @@ maket->addWidget(vidjet3, 1, 0); // qator 1, ustun 0
 
 ### Forma
 
+<!-- darslik:skip -->
 ```cpp
 QFormLayout* maket = new QFormLayout();
 maket->addRow("Ism:", new QLineEdit());
@@ -108,6 +123,7 @@ maket->addRow("Yosh:", new QSpinBox());
 CopperSpice'ning eng kuchli xususiyati — **signal-slot** tizimi.
 Tugma bosilganda biror funksiyani chaqirish uchun:
 
+<!-- darslik:skip -->
 ```cpp
 QPushButton* tugma = new QPushButton("Bosing!");
 
@@ -128,6 +144,7 @@ Slot — funksiya "men buni qabul qilaman" deydi.
 
 ### Misol: Hisoblagich
 
+<!-- darslik:skip -->
 ```cpp
 butun hisoblagich = 0;
 QLabel* yorliq = new QLabel("0");
@@ -163,6 +180,7 @@ Har safar tugma bosilganda — hisoblagich oshadi va yorliqda yangilanadi.
 
 ### Misol: matn maydonidan o'qish
 
+<!-- darslik:skip -->
 ```cpp
 QLineEdit* matn_maydoni = new QLineEdit();
 QPushButton* tugma = new QPushButton("Tasdiqlash");
@@ -177,6 +195,7 @@ QObject::connect(tugma, &QPushButton::clicked, [matn_maydoni]() {
 
 ## Menyu va status qatori
 
+<!-- darslik:skip -->
 ```cpp
 QMainWindow oyna;
 
@@ -195,6 +214,7 @@ oyna.statusBar()->showMessage("Tayyor");
 
 ## To'liq misol: Mini matn muharriri
 
+<!-- darslik:skip -->
 ```cpp
 ulash <QApplication>
 ulash <QMainWindow>

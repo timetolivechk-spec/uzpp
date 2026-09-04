@@ -1,15 +1,11 @@
-# Salbiy testlar | Negative tests
+# Salbiy testlar
 
 Bu papkadagi har bir `.uzpp` fayli **kompilyatsiya jarayonida xatoga olib kelishi
 kerak**. Agar `uzpp qurish` ulardan biri uchun muvaffaqiyatli yakunlanadi
 (exit code = 0), bu — kompilyatorda xato yoki kerakli tekshiruv yo'qligini
 bildiradi.
 
-Each `.uzpp` file in this directory **must fail to compile**. If `uzpp qurish`
-returns exit code 0 for any of them, that means the compiler missed an error
-check — a regression.
-
-## Ishga tushirish | Running
+## Ishga tushirish
 
 ```bash
 # POSIX shell
@@ -31,7 +27,7 @@ ko'rsatadi:
 // XATOLIK_KUTILMOQDA: <category>: <short description>
 ```
 
-Tasniflash | Categories:
+Tasniflash:
 - `path_traversal` — `ulash` orqali xavfli yo'l (Phase 1 himoyasi)
 - `parse` — parser xatosi (ochiq qavslar, noto'g'ri sintaksis)
 - `lexer` — leksema darajasidagi xato (yopilmagan satr, va h.k.)
@@ -40,14 +36,13 @@ Tasniflash | Categories:
 - `cpp_level` — uz++ qabul qiladi, ammo C++ kompilyatori rad etadi
 - `unknown_var` — noma'lum o'zgaruvchi (hozir faqat ogohlantirish)
 
-## Bilingan kamchiliklar | Known compiler gaps
+## Bilingan kamchiliklar
 
-Hozirgi `TypeChecker` ba'zi tip xatolarini faqat `ogohlantirish` (warning) deb
-chiqaradi va exit code 0 qaytaradi. Bunday testlar
-[`tests/negative/pending/`](pending/) papkasida saqlanadi va asosiy runner
-ulardan o'tib ketadi. Tegishli kamchilik tuzatilganidan keyin, fayl yuqori
-darajaga ko'chiriladi.
+Hozircha "kutilayotgan" testlar yo'q — barcha salbiy testlar asosiy
+runner tomonidan bajariladi va hammasi xatoni tutadi (59/59).
 
-Tests for known compiler gaps live in [`pending/`](pending/) and are skipped
-by the main runner. When the underlying bug is fixed, move the file back up
-into the top-level `tests/negative/` directory.
+Agar `TypeChecker` biror xatoni faqat `ogohlantirish` deb chiqarsa va
+exit code 0 qaytarsa, test hozircha o'tib ketadi. Bunday holatda testni
+`tests/negative/` da qoldiring, lekin birinchi qatorda sababni yozib
+qo'ying — runner qaysi fayl xatoni TUTMAGANINI "missed (regression!)"
+sifatida ko'rsatadi va bu son 0 bo'lishi shart.

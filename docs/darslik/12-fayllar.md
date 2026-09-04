@@ -22,7 +22,9 @@ Bu bobda uz++ orqali fayllar bilan ishlashni o'rganamiz.
 
 ### Asosiy yo'l: `std::ofstream`
 
-ulash <fstream>;
+```cpp
+ulash "uzpp_runtime.hpp"
+ulash <fstream>
 
 butun asosiy() {
     std::ofstream fayl("salom.txt");
@@ -59,8 +61,10 @@ fayl << "Yangi qator" << qator_oxiri;
 
 ### `std::ifstream`
 
-ulash <fstream>;
-ulash <string>;
+```cpp
+ulash "uzpp_runtime.hpp"
+ulash <fstream>
+ulash <string>
 
 butun asosiy() {
     std::ifstream fayl("salom.txt");
@@ -178,9 +182,16 @@ hammasi JSON.
 
 ### `nlohmann/json` kutubxonasi
 
+> **Diqqat:** bu bo'limdagi misollar tizimda `nlohmann/json` o'rnatilgan
+> bo'lishini talab qiladi — ular boshqa boblardagi kabi darhol ishlamaydi.
+> Tashqi kutubxonasiz JSON bilan ishlash uchun uz++ ning o'z moduli bor:
+> `ulash "json.hpp"` (`uzpp::Json`), namunasi —
+> [`misollar/08_json_ishlash.uzpp`](../../misollar/08_json_ishlash.uzpp).
+
 uz++ standart kutubxonasida JSON modullari mavjud. Eng mashhur kutubxona
 `nlohmann/json` (yoki uz++ ning o'z `json` moduli).
 
+<!-- darslik:skip -->
 ```cpp
 ulash <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -280,10 +291,11 @@ fs::copy("manba.txt", "nusxa.txt");
 
 ## Amaliy misol: Talabalar ma'lumotlar bazasi (JSON)
 
+<!-- darslik:skip -->
 ```cpp
-ulash <fstream>;
-ulash <vector>;
-ulash "nlohmann/json.hpp";
+ulash <fstream>
+ulash <vector>
+ulash "nlohmann/json.hpp"
 
 tuzilma Talaba {
     matn ism;

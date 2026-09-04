@@ -55,6 +55,7 @@ private:
     std::unique_ptr<Expression> parseBitwiseAndExpression();
     std::unique_ptr<Expression> parseEqualityExpression();
     std::unique_ptr<Expression> parseRelationalExpression();
+    std::unique_ptr<Expression> parseShiftExpression();
     std::unique_ptr<Expression> parseAdditiveExpression();
     std::unique_ptr<Expression> parseMultiplicativeExpression();
     std::unique_ptr<Expression> parseUnaryExpression();
@@ -69,6 +70,7 @@ private:
     bool isLogicalAndOperator(const std::string& text) const;
     bool isEqualityOperator(const std::string& text) const;
     bool isRelationalOperator(const std::string& text) const;
+    bool isShiftOperator(const std::string& text) const;
     bool isAdditiveOperator(const std::string& text) const;
     bool isMultiplicativeOperator(const std::string& text) const;
     bool isUnaryOperator(const std::string& text) const;
@@ -80,6 +82,8 @@ private:
     std::unique_ptr<MatchStatement> parseMatchStatement();
     std::unique_ptr<IfStatement> parseIfStatement();
     std::unique_ptr<WhileStatement> parseWhileStatement();
+    std::unique_ptr<WhileStatement> parseDoWhileStatement();
+    std::string parseBaseClassName();
     std::unique_ptr<Statement> parseForStatement();
     std::unique_ptr<ReturnStatement> parseReturnStatement();
     std::unique_ptr<BreakStatement> parseBreakStatement();

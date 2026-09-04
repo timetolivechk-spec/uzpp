@@ -100,15 +100,18 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
         emitRawToken("int main(int argc, char* argv[]) {");
         emitNewline();
         indentMore();
-        emitRawToken("uzpp::Sinov::SinovlarToplami runner;");
+        // DIQQAT: sinf nomi stdlib/sinov.uzpp dagi `TestTo'plami` dan keladi va
+        // apostrof C++ da U+02BC ga aylanadi (gotcha #16). Aynan shu belgini
+        // chiqarish kerak — universal-character-name orqali, manba fayl ASCII
+        // qolishi uchun. Ilgari bu yerda mavjud bo'lmagan `SinovlarToplami`
+        // yozilgan edi, ya'ni @sinov umuman kompilyatsiya bo'lmasdi.
+        emitRawToken("uzpp::Sinov::TestTo\u02BCplami runner(\"uz++ sinovlari\");");
         emitNewline();
         for (const auto& func : testFunctions_) {
-            emitRawToken("runner.testQoshish(\"" + func + "\", " + func + ");");
+            emitRawToken("runner.test_qoshish(\"" + func + "\", " + func + ");");
             emitNewline();
         }
-        emitRawToken("runner.ishgaTushirish();");
-        emitNewline();
-        emitRawToken("return 0;");
+        emitRawToken("return runner.ishga_tushirish();");
         emitNewline();
         indentLess();
         emitRawToken("}");
@@ -120,15 +123,13 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
         emitRawToken("int main(int argc, char* argv[]) {");
         emitNewline();
         indentMore();
-        emitRawToken("uzpp::Sinov::BenchToplami runner;");
+        emitRawToken("uzpp::Sinov::BenchTo\u02BCplami runner;");
         emitNewline();
         for (const auto& func : benchFunctions_) {
-            emitRawToken("runner.benchQoshish(\"" + func + "\", " + func + ");");
+            emitRawToken("runner.bench_qoshish(\"" + func + "\", " + func + ");");
             emitNewline();
         }
-        emitRawToken("runner.ishgaTushirish();");
-        emitNewline();
-        emitRawToken("return 0;");
+        emitRawToken("return runner.ishga_tushirish();");
         emitNewline();
         indentLess();
         emitRawToken("}");
@@ -697,6 +698,12 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         if (!result.empty()) return result;
     }
 
+    // Qo'shimchadagi o'zgarmas: `butun* o'zgarmas` → `int* const`
+    // (ko'rsatkichning o'zi o'zgarmas, ko'rsatilayotgan qiymat emas).
+    if (uzppType.ends_with(" o'zgarmas")) {
+        return getCppType(uzppType.substr(0, uzppType.size() - 10), depth + 1) + " const";
+    }
+
     // Strip trailing reference/pointer/ellipsis qualifiers, translate base, reattach
     {
         std::string suffix;
@@ -1068,6 +1075,19 @@ void CodeGen::visitIdentifierExpression(const IdentifierExpression* expr) {
 
 void CodeGen::visitFunctionCall(const FunctionCall* expr) {
     if (expr == nullptr || expr->getCallee() == nullptr) return;
+
+    // `Tur{a, b}` — qavsli initsializatsiya (`yangi Tur{...}` dan keladi).
+    if (expr->usesBraceInit()) {
+        visitExpression(expr->getCallee());
+        emitRawToken("{");
+        const auto& args = expr->getArguments();
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (i > 0) emitRawToken(",");
+            visitExpression(args[i].get());
+        }
+        emitRawToken("}");
+        return;
+    }
     
     if (expr->getCallee()->getType() == ASTNodeType::IdentifierExpression) {
         const auto* idExpr = static_cast<const IdentifierExpression*>(expr->getCallee());
@@ -1423,7 +1443,26 @@ void CodeGen::visitTryStatement(const TryStatement* stmt) {
 
 void CodeGen::visitWhileStatement(const WhileStatement* stmt) {
     if (stmt == nullptr) return;
-    
+
+    if (stmt->isDoWhile()) {
+        writeIndentIfNeeded();
+        emitRawToken("do");
+        emitNewline();
+
+        indentMore();
+        visitStatement(stmt->getBody());
+        indentLess();
+
+        writeIndentIfNeeded();
+        emitRawToken("while");
+        emitRawToken("(");
+        visitExpression(stmt->getCondition());
+        emitRawToken(")");
+        emitRawToken(";");
+        emitNewline();
+        return;
+    }
+
     writeIndentIfNeeded();
     emitRawToken("while");
     emitRawToken("(");
@@ -1476,6 +1515,11 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                     emitRawToken("=");
                     visitExpression(varDecl->getInitializer());
                 }
+            } else if (stmt->getInit()->getType() == ASTNodeType::ExpressionStatement) {
+                // `uchun (j = 0; ...)` — e'lon emas, oddiy ifoda.
+                // visitStatement o'zi ';' va yangi qator chiqaradi — bu yerda
+                // ular ortiqcha edi — natijada `for` da to'rtta bo'lak chiqardi.
+                visitExpression(static_cast<const ExpressionStatement*>(stmt->getInit())->getExpression());
             } else {
                 visitStatement(stmt->getInit());
             }
@@ -1557,6 +1601,12 @@ void CodeGen::visitMatchStatement(const MatchStatement* stmt) {
             emitRawToken(matchVar);
             emitRawToken("==");
             visitExpression(matchCase->pattern.get());
+            for (const auto& extra : matchCase->extraPatterns) {
+                emitRawToken("||");
+                emitRawToken(matchVar);
+                emitRawToken("==");
+                visitExpression(extra.get());
+            }
             emitRawToken(")");
             emitNewline();
         } else {
@@ -1912,6 +1962,12 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
             if (!member.bitWidth.empty()) {
                 emitRawToken(":");
                 emitRawToken(member.bitWidth);
+            }
+            // Standart qiymat (C++11 non-static data member initializer).
+            // Bit-maydonlar uchun ham amal qiladi (C++20).
+            if (member.defaultValue) {
+                emitRawToken("=");
+                visitExpression(member.defaultValue.get());
             }
             emitRawToken(";");
             emitNewline();

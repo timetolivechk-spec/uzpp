@@ -233,6 +233,22 @@ std::string Parser::parseTypeString() {
            (peek().value == "&" || peek().value == "*" || peek().value == "&&" || peek().value == "...")) {
         typeStr += advance().value;
     }
+
+    // O'zgarmas ko'rsatkich: `butun* o'zgarmas p` → `int* const p`.
+    // (Ko'rsatkichning O'ZI o'zgarmas; `o'zgarmas butun* p` esa —
+    //  ko'rsatilayotgan QIYMAT o'zgarmas.) Faqat `*` dan keyin qabul
+    //  qilamiz — aks holda `butun x; o'zgarmas butun y;` ketma-ketligi
+    //  bilan chalkashib ketardi.
+    while (!typeStr.empty() && typeStr.back() == '*' &&
+           !isAtEnd() && peek().type == TokenType::Identifier && peek().value == "o'zgarmas") {
+        advance();
+        typeStr += " o'zgarmas";
+        while (!isAtEnd() && peek().type == TokenType::Symbol &&
+               (peek().value == "*" || peek().value == "&" || peek().value == "&&")) {
+            typeStr += advance().value;
+        }
+    }
+
     return typeStr;
 }
 
@@ -282,7 +298,7 @@ std::unique_ptr<GroupNode> Parser::parseGroup() {
 bool Parser::isUzbekKeyword(const std::string& text) const {
     static const std::vector<std::string> uzbekKeywords{
         // Asosiy boshqarish oqimi — har C++ tushunchasi uchun bitta uz++ so'z
-        "agar", "aks_holda", "uchun", "toki", "qaytarish",
+        "agar", "aks_holda", "uchun", "toki", "bajar", "qaytarish",
         "to'xtatish", "davom_etish",
         // O'zgaruvchilar (faqat kanonik apostrofli shakllar)
         "o'zgaruvchan", "o'zgarmas",
@@ -371,7 +387,8 @@ bool Parser::matchKeyword(const std::string& keyword) {
 
 bool Parser::isAssignmentOperator(const std::string& text) const {
     return text == "=" || text == "+=" || text == "-=" || text == "*=" || 
-           text == "/=" || text == "%=" || text == "&=" || text == "|=" || text == "^=" || text == "??" "=";
+           text == "/=" || text == "%=" || text == "&=" || text == "|=" || text == "^=" ||
+           text == "<<=" || text == ">>=" || text == "?" "?=";
 }
 
 bool Parser::isNullCoalescingOperator(const std::string& text) const {
@@ -394,8 +411,15 @@ bool Parser::isRelationalOperator(const std::string& text) const {
     return text == "<" || text == ">" || text == "<=" || text == ">=" || text == "<=>";
 }
 
+// C++ da siljitish (`<<`, `>>`) qo'shishdan PAST, taqqoslashdan YUQORI
+// darajada turadi. Ilgari ular `isAdditiveOperator` ichida edi — natijada
+// `yozish << a + b` noto'g'ri `(yozish << a) + b` bo'lib tahlil qilinardi.
+bool Parser::isShiftOperator(const std::string& text) const {
+    return text == "<<" || text == ">>";
+}
+
 bool Parser::isAdditiveOperator(const std::string& text) const {
-    return text == "+" || text == "-" || text == "<<" || text == ">>";
+    return text == "+" || text == "-";
 }
 
 bool Parser::isMultiplicativeOperator(const std::string& text) const {
@@ -536,14 +560,26 @@ std::unique_ptr<Expression> Parser::parseEqualityExpression() {
 }
 
 std::unique_ptr<Expression> Parser::parseRelationalExpression() {
-    auto left = parseAdditiveExpression();
+    auto left = parseShiftExpression();
     
     while (!isAtEnd() && peek().type == TokenType::Symbol && isRelationalOperator(peek().value)) {
+        const Token opToken = advance();
+        auto right = parseShiftExpression();
+        left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
+    }
+    
+    return left;
+}
+
+std::unique_ptr<Expression> Parser::parseShiftExpression() {
+    auto left = parseAdditiveExpression();
+
+    while (!isAtEnd() && peek().type == TokenType::Symbol && isShiftOperator(peek().value)) {
         const Token opToken = advance();
         auto right = parseAdditiveExpression();
         left = std::make_unique<BinaryExpression>(std::move(left), opToken.value, std::move(right), opToken);
     }
-    
+
     return left;
 }
 
@@ -598,6 +634,39 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
             (nxt.type == TokenType::Symbol && nxt.value == "(");
         if (looksLikeNew) {
             const Token opToken = advance(); // consume 'yangi'
+
+            // `yangi Tur{a, b}` — qavsli initsializatsiya. Turdan keyin `{`
+            // kelsa, uni shu yerda o'zimiz o'qiymiz: `parsePostfixExpression`
+            // umumiy holda `Identifier {` ni tutolmaydi (bu `agar (x) {` bilan
+            // chalkashadi), shuning uchun faqat `yangi` kontekstida.
+            if (peek().type == TokenType::Identifier) {
+                const std::size_t save = current_;
+                const Token typeToken = peek();
+                std::string typeName = parseTypeString();
+                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "{") {
+                    const Token braceToken = advance(); // '{'
+                    std::vector<std::unique_ptr<Expression>> args;
+                    while (!isAtEnd() && peek().value != "}") {
+                        args.push_back(parseExpression());
+                        if (!isAtEnd() && peek().value == ",") {
+                            advance();
+                            continue;
+                        }
+                        break;
+                    }
+                    if (isAtEnd() || peek().value != "}") {
+                        throw ParseError("Kutilgan '}' `yangi` qavsli initsializatsiyasida " + formatLocation(peek()));
+                    }
+                    advance(); // '}'
+
+                    auto callee = std::make_unique<IdentifierExpression>(typeName, typeToken);
+                    auto call = std::make_unique<FunctionCall>(std::move(callee), std::move(args), braceToken);
+                    call->setBraceInit(true);
+                    return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(call), opToken, true);
+                }
+                current_ = save; // `{` yo'q — odatdagi yo'lga qaytamiz
+            }
+
             auto expr = parseUnaryExpression();
             return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(expr), opToken, true);
         }
@@ -1359,6 +1428,16 @@ std::unique_ptr<Statement> Parser::parseStatement() {
     if (checkKeyword("toki")) {
         return parseWhileStatement();
     }
+
+    if (checkKeyword("bajar")) {
+        return parseDoWhileStatement();
+    }
+
+    // Bo'sh gap: `;` yolg'iz o'zi (masalan `uchun (...);` — tanasiz sikl).
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ";") {
+        advance();
+        return std::make_unique<Block>(std::vector<std::unique_ptr<Statement>>{});
+    }
     
     if (checkKeyword("uchun")) {
         return parseForStatement();
@@ -1439,6 +1518,11 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
         if (checkKeyword("holat")) {
             advance(); // consume 'holat'
             matchCase->pattern = parseExpression();
+            // `holat 1, 2, 3:` — bir nechta qiymat bitta tanaga.
+            while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
+                advance(); // ','
+                matchCase->extraPatterns.push_back(parseExpression());
+            }
             if (isAtEnd() || peek().value != ":") {
                 throw ParseError("Kutilgan ':' holatdan keyin " + formatLocation(peek()));
             }
@@ -1473,6 +1557,52 @@ std::unique_ptr<MatchStatement> Parser::parseMatchStatement() {
     
     if (cases.empty()) {
         throw ParseError("Moslash kamida bitta 'holat' yoki 'boshqa' talab qiladi " + formatLocation(matchToken));
+    }
+
+    // C uslubidagi guruhlangan yorliqlar:
+    //     holat 12:
+    //     holat 1:
+    //     holat 2:
+    //         yozish << "Qish" << qator_oxiri;
+    // Tanasi bo'sh `holat` o'zidan keyingi holatning muqobil naqshiga
+    // aylanadi — `switch` dagi "fallthrough" bilan bir xil natija.
+    {
+        std::vector<std::unique_ptr<MatchStatement::MatchCase>> merged;
+        std::vector<std::unique_ptr<Expression>> pending;
+        for (auto& mc : cases) {
+            const bool emptyBody =
+                mc->body == nullptr ||
+                (mc->body->getType() == ASTNodeType::Block &&
+                 static_cast<const Block*>(mc->body.get())->getStatements().empty());
+            const bool isLast = (mc.get() == cases.back().get());
+
+            if (mc->pattern != nullptr && emptyBody && !isLast) {
+                pending.push_back(std::move(mc->pattern));
+                for (auto& ep : mc->extraPatterns) pending.push_back(std::move(ep));
+                continue;
+            }
+
+            if (!pending.empty() && mc->pattern != nullptr) {
+                // Yig'ilgan naqshlar birinchi bo'ladi, joriy naqsh qo'shimcha.
+                auto first = std::move(pending.front());
+                std::vector<std::unique_ptr<Expression>> extras;
+                for (std::size_t i = 1; i < pending.size(); ++i) extras.push_back(std::move(pending[i]));
+                extras.push_back(std::move(mc->pattern));
+                for (auto& ep : mc->extraPatterns) extras.push_back(std::move(ep));
+                mc->pattern = std::move(first);
+                mc->extraPatterns = std::move(extras);
+                pending.clear();
+            }
+            merged.push_back(std::move(mc));
+        }
+        // Oxirida osilib qolgan bo'sh yorliqlar — o'z holicha qoldiramiz.
+        for (auto& pat : pending) {
+            auto mc = std::make_unique<MatchStatement::MatchCase>();
+            mc->pattern = std::move(pat);
+            mc->body = std::make_unique<Block>(std::vector<std::unique_ptr<Statement>>{});
+            merged.push_back(std::move(mc));
+        }
+        cases = std::move(merged);
     }
     
     if (isAtEnd() || peek().value != "}") {
@@ -1517,7 +1647,7 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     }
 
     // C++20 branch hints on the then-branch: agar (cond) @bashqarib { ... }
-    // (@bashqarib = "обычно/чаще всего" → [[likely]], @kamdan_kam = "редко" → [[unlikely]])
+    // (@bashqarib = "odatda" → [[likely]], @kamdan_kam = "kamdan-kam" → [[unlikely]])
     auto parseBranchHint = [&](bool& likely, bool& unlikely) {
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "@") {
             std::size_t saved = current_;
@@ -1592,6 +1722,34 @@ std::unique_ptr<WhileStatement> Parser::parseWhileStatement() {
     auto body = parseStatement();
     
     return std::make_unique<WhileStatement>(std::move(condition), std::move(body), whileToken);
+}
+
+std::unique_ptr<WhileStatement> Parser::parseDoWhileStatement() {
+    const Token doToken = advance(); // 'bajar'
+
+    auto body = parseStatement();
+
+    if (!checkKeyword("toki")) {
+        throw ParseError("Kutilgan 'toki' `bajar` tanasidan keyin " + formatLocation(peek()));
+    }
+    advance(); // 'toki'
+
+    if (isAtEnd() || peek().value != "(") {
+        throw ParseError("Kutilgan '(' toki ifodasidan keyin " + formatLocation(peek()));
+    }
+    advance(); // '('
+    auto condition = parseExpression();
+
+    if (isAtEnd() || peek().value != ")") {
+        throw ParseError("Kutilgan ')' " + formatLocation(peek()));
+    }
+    advance(); // ')'
+
+    if (!isAtEnd() && peek().value == ";") advance(); // ixtiyoriy ';'
+
+    auto stmt = std::make_unique<WhileStatement>(std::move(condition), std::move(body), doToken);
+    stmt->setDoWhile(true);
+    return stmt;
 }
 
 std::unique_ptr<Statement> Parser::parseForStatement() {
@@ -1806,6 +1964,23 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         }
 
         std::string typeName = parseTypeString();
+
+        // `o'zgarmas PI = 3.14;` — tur ko'rsatilmagan, ya'ni `const auto`.
+        // parseTypeString() `PI` ni TUR deb o'qib qo'ygan; keyingi token `=`
+        // bo'lsa, aslida u NOM edi. Ilgari bu holda `=` o'zgaruvchi nomi
+        // bo'lib qolardi va `const PI =;` degan buzuq C++ chiqardi.
+        if (isConst && !isAtEnd() && peek().type == TokenType::Symbol &&
+            (peek().value == "=" || peek().value == "{") &&
+            typeName.find(' ') == std::string::npos) {
+            const std::string inferredName = typeName;
+            auto varDecl = parseVariableDeclaration("o'zgarmas o'zgaruvchan", inferredName);
+            if (isConstExpr) varDecl->setConstExpr(true);
+            if (isConstInit) varDecl->setConstInit(true);
+            if (isStaticLocal) varDecl->setStaticLocal(true);
+            if (isInlineVar) varDecl->setInline(true);
+            return varDecl;
+        }
+
         if (isConst) typeName = "o'zgarmas " + typeName;
         std::string name = advance().value;
         auto varDecl = parseVariableDeclaration(typeName, name);
@@ -2235,6 +2410,8 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                 std::size_t peekPos = current_ + 1; // skip '('
                 int parenDepth = 1;
                 bool foundBrace = false;
+                std::size_t bodyBraceIndex = std::string::npos;
+                const std::size_t posAfterName = current_;
                 
                 while (peekPos < tokens_.size() && parenDepth > 0) {
                     if (tokens_[peekPos].value == "(") parenDepth++;
@@ -2284,6 +2461,7 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                             }
                             if (afterParen < tokens_.size() && tokens_[afterParen].value == "{") {
                                 foundBrace = true;
+                                bodyBraceIndex = afterParen;
                             }
                             break;
                         }
@@ -2305,7 +2483,19 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
                     if (isDeprecated) func->setDeprecated(true);
                         return func;
                     } catch (const ParseError&) {
-                        // Fall through to variable declaration with constructor
+                        // MUHIM: agar xatolik funksiya TANASI ichida yuz bergan
+                        // bo'lsa, uni yutib yubormaymiz. Ilgari bu `catch` har
+                        // qanday xatoni bosib, keyin o'zgaruvchi e'loni sifatida
+                        // qayta urinardi — natijada foydalanuvchi haqiqiy sabab
+                        // ("`holat` kalit so'z") o'rniga faylning oxiridagi
+                        // ma'nosiz "Noto'g'ri ifoda" xabarini ko'rardi.
+                        // Fall-through faqat sarlavha o'qilayotganda mantiqiy.
+                        if (bodyBraceIndex != std::string::npos && current_ > bodyBraceIndex) {
+                            throw;
+                        }
+                        // Aks holda: o'zgaruvchi e'loni sifatida qayta urinamiz —
+                        // holatni nomdan keyingi joyga tiklaymiz.
+                        current_ = posAfterName;
                     }
                 }
 
@@ -2474,7 +2664,12 @@ std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration(const std:
         if (varName == kw) { isShadowable = true; break; }
     }
     if (!isShadowable && isUzbekKeyword(varName)) {
-        throw ParseError("Kalit so'z o'zgaruvchi nomi sifatida ishlatilishi mumkin emas: `" + varName + "`");
+        // Ko'p kalit so'zlar kundalik o'zbekcha so'zlar (`holat`, `boshqa`,
+        // `va`, `yoki`, `bosh`). Foydalanuvchi ularni tabiiy ravishda
+        // o'zgaruvchi nomi qilib tanlaydi — shuning uchun yechim ham aytiladi.
+        throw ParseError("Kalit so'z o'zgaruvchi nomi sifatida ishlatilishi mumkin emas: `" +
+                         varName + "`. Boshqa nom tanlang, masalan `" + varName + "_qiymat`" +
+                         " " + formatLocation(peek()));
     }
 
     Token token;
@@ -2656,6 +2851,24 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
                 param.token = previous();
             }
         }
+
+        // Massiv parametri: `belgi* argv[]`, `butun jadval[10]`.
+        // C++ da massiv parametri ko'rsatkichga aylanadi — turga `*` qo'shamiz
+        // (`belgi* argv[]` → `char**`), o'lcham e'tiborga olinmaydi.
+        while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "[") {
+            advance(); // '['
+            int bDepth = 1;
+            while (!isAtEnd() && bDepth > 0) {
+                if (peek().value == "[") bDepth++;
+                else if (peek().value == "]") bDepth--;
+                if (bDepth > 0) advance();
+            }
+            if (isAtEnd() || peek().value != "]") {
+                throw ParseError("Kutilgan ']' massiv parametridan keyin " + formatLocation(peek()));
+            }
+            advance(); // ']'
+            param.type += "*";
+        }
         
         // Standart qiymat: butun son = 0
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "=") {
@@ -2695,6 +2908,51 @@ std::vector<FunctionDeclaration::Parameter> Parser::parseFunctionParameters() {
 }
 
 
+// Asosiy sinf nomini o'qiydi. Quyidagilarni qabul qiladi:
+//   Foo                      — oddiy nom
+//   ochiq Foo                — kirish darajasi bilan (C++ `public Foo`)
+//   std::runtime_error       — to'liq malakalangan nom
+//   Baza<butun>              — shablon instansiyasi
+std::string Parser::parseBaseClassName() {
+    // Ixtiyoriy kirish darajasi — C++ da `public`/`protected`/`private`.
+    // uz++ da meros doim ochiq, shuning uchun faqat o'tkazib yuboramiz.
+    if (!isAtEnd() && peek().type == TokenType::Identifier &&
+        (peek().value == "ochiq" || peek().value == "himoyalangan" || peek().value == "yopiq")) {
+        advance();
+    }
+
+    if (isAtEnd() || peek().type != TokenType::Identifier) {
+        throw ParseError("Kutilgan asosiy sinf yoki interfeys nomi " + formatLocation(peek()));
+    }
+
+    std::string name = advance().value;
+
+    // To'liq malakalangan nom: A::B::C
+    while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "::") {
+        advance();
+        if (isAtEnd() || peek().type != TokenType::Identifier) {
+            throw ParseError("Kutilgan identifikator '::' dan keyin " + formatLocation(peek()));
+        }
+        name += "::" + advance().value;
+    }
+
+    // Shablon argumentlari: Baza<butun, matn>
+    if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "<") {
+        std::string args;
+        int depth = 0;
+        do {
+            const std::string& v = peek().value;
+            if (v == "<") depth++;
+            else if (v == ">") depth--;
+            else if (v == ">>") depth -= 2;
+            args += advance().value;
+        } while (!isAtEnd() && depth > 0);
+        name += args;
+    }
+
+    return name;
+}
+
 std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
     const Token classToken = advance(); // consume 'sinf' / 'tuzilma' / 'birlashma'
 
@@ -2714,17 +2972,11 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
     std::vector<std::string> interfaces;
     if (matchKeyword("meros") || (peek().type == TokenType::Symbol && peek().value == ":")) {
         if (peek().value == ":") advance(); // consume ':'
-        if (isAtEnd() || peek().type != TokenType::Identifier) {
-            throw ParseError("Kutilgan asosiy sinf yoki interfeys nomi " + formatLocation(peek()));
-        }
-        baseClass = advance().value;
+        baseClass = parseBaseClassName();
         // Multiple inheritance: meros A, B, C { ... }  → first is base, rest are interfaces.
         while (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == ",") {
             advance(); // ','
-            if (isAtEnd() || peek().type != TokenType::Identifier) {
-                throw ParseError("Kutilgan keyingi asosiy sinf nomi " + formatLocation(peek()));
-            }
-            interfaces.push_back(advance().value);
+            interfaces.push_back(parseBaseClassName());
         }
     }
 
@@ -3058,14 +3310,16 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                     member.bitWidth = advance().value;
                 }
 
-                members.push_back(member);
-
+                // Standart qiymat: `butun soni_ = 42;` yoki `matn nomi_ = "x";`
                 if (!isAtEnd() && peek().value == "=") {
-                    advance(); // skip '='
-                    while (!isAtEnd() && peek().value != ";") {
-                        advance();
-                    }
+                    advance(); // '='
+                    member.defaultValue = std::shared_ptr<Expression>(parseExpression().release());
+                } else if (!isAtEnd() && peek().value == "{") {
+                    // Qavsli initsializatsiya: `vektor<butun> v {1, 2, 3};`
+                    member.defaultValue = std::shared_ptr<Expression>(parseExpression().release());
                 }
+
+                members.push_back(std::move(member));
                 if (!isAtEnd() && peek().value == ";") {
                     advance(); // consume ';'
                 }
@@ -3138,8 +3392,13 @@ std::unique_ptr<InterfaceDeclaration> Parser::parseInterfaceDeclaration() {
 
 // Phase 12: Xatolikni yig'ish va sinxronizatsiya.
 void Parser::recordError(const std::string& msg, const Token& token) {
-    std::string fullMsg = msg + " " + formatLocation(token);
-    errors_.push_back(fullMsg);
+    // Ko'p ParseError xabarlari o'z ichida allaqachon joylashuvni olib yuradi
+    // (`... qator: 5 ustun: 1`). Ikkinchi marta qo'shsak, xabar takrorlanadi.
+    if (msg.find("qator:") != std::string::npos) {
+        errors_.push_back(msg);
+        return;
+    }
+    errors_.push_back(msg + " " + formatLocation(token));
 }
 
 // Phase 2.5: Eskirgan sinonimlar — har bir C++ tushunchasi uchun bitta

@@ -39,7 +39,7 @@ Get-ChildItem -Path $scriptDir -Filter "*.uzpp" -File | ForEach-Object {
 
 Write-Host ""
 Write-Host "============================================="
-Write-Host " Salbiy testlar | Negative tests"
+Write-Host " Salbiy testlar"
 Write-Host "  caught (xatolik aniqlandi):  $caught"
 Write-Host "  missed (regression!):        $missed"
 Write-Host "============================================="

@@ -2,6 +2,101 @@
 
 Barcha muhim o'zgarishlar shu yerda hujjatlashtiriladi.
 
+## [v2.3.1] — 2026-09-04
+
+Sifat va ishonchlilik relizi. Yangi imkoniyat qo'shilmagan — mavjudlari
+haqiqatan ishlashi ta'minlangan. Barcha o'zgarishlar darslik misollarini
+haqiqiy kompilyator bilan solishtirish natijasida topilgan.
+
+### Tildagi tuzatishlar
+- **`<<` / `>>` ustuvorligi C++ bilan moslashtirildi.** Ilgari ular qo'shish
+  darajasida edi: `yozish << a + b` → `(std::cout << a) + b`.
+  `a << 2 + 1` endi `a << 3` (avval `(a << 2) + 1` edi) — bu JIMGINA
+  noto'g'ri natija berardi.
+- **`bajar { ... } toki (shart);`** (do/while) qo'shildi — ilgari umuman yo'q edi.
+- **`<<=` va `>>=`** operatorlari qo'shildi.
+- **Bo'sh gap `;`** — `uchun (butun i = 0; i < 10; i++);` endi ishlaydi.
+- **`moslash` da guruhlangan yorliqlar**: `holat 1, 2, 3:` va ketma-ket
+  bo'sh `holat` yorliqlari. Ilgari `holat 12: holat 1: holat 2: <tana>`
+  kompilyatsiya bo'lardi, lekin faqat OXIRGI qiymat uchun ishlardi.
+- **Massiv parametrlari**: `butun asosiy(butun argc, belgi* argv[])`.
+- **`yangi Tur{a, b}`** — qavsli initsializatsiya (agregat tuzilmalar uchun).
+- **`butun* o'zgarmas p`** — o'zgarmas ko'rsatkich (`int* const`).
+- **`o'zgarmas PI = 3.14;`** — tursiz o'zgarmas (`const auto`). Ilgari
+  `const PI =;` degan buzuq C++ chiqarardi.
+- **Sinf maydonlarining standart qiymati** (`butun soni_ = 42;`) ilgari
+  JIMGINA tashlab yuborilardi — maydon initsializatsiyalanmagan qolardi.
+- Asosiy sinf nomi malakalangan va kirish darajali bo'lishi mumkin:
+  `sinf X : std::runtime_error`, `sinf X : ochiq Ota`, `sinf X : Baza<butun>`.
+
+### Standart kutubxona
+- **`Natija<matn, matn>`** (T == E) kompilyatsiya bo'lmasdi — teg turlari
+  bilan tuzatildi. 10-bob aynan shu turni o'rgatadi.
+- **`uzpp sinov` (@sinov) umuman ishlamasdi** — codegen mavjud bo'lmagan
+  sinf nomlarini chaqirardi.
+- **`uzpp bench` (@bench) uchun stdlib da sinf yo'q edi** — `BenchTo'plami`
+  qo'shildi (isitish chaqiruvi, ns/amal o'lchov).
+- **`OqimHovuz::kutish()` abadiy osilib qolardi** — u ishchi oqimlarni
+  `join` qilardi, ishchilar esa `toxtatish()` chaqirilmaguncha
+  aylanaveradi. `misollar/09_kop_oqimlilik.uzpp` oxirigacha yetib
+  bormasdi. Endi `kutish()` navbat bo'shashini kutadi va havzani
+  to'xtatmaydi.
+
+### Tur tekshiruvchi
+- Shablon funksiyasi `-> T` qaytarsa, chaqiruv joyida soxta
+  "'butun' qaytarishi kerak, lekin 'T' qaytarilmoqda" ogohlantirishi berardi.
+- `vektor<T>` maydonli shablon sinf soxta ogohlantirish berardi.
+- Shablon chaqiruvidan keyingi gaplar "erishib bo'lmaydi" deb belgilanardi.
+- Katta harfli o'zgaruvchilar (`PI`, `MAX`) ishlatilsa ham
+  "ishlatilmagan" deb ogohlantirilardi.
+- Bir xil xabar ikki marta chiqmaydi.
+
+### Xato xabarlari
+- Funksiya TANASI ichidagi parser xatoliklari YUTILARDI — foydalanuvchi
+  haqiqiy sabab o'rniga faylning oxiridagi "Noto'g'ri ifoda" xabarini
+  ko'rardi.
+- Joylashuv xabarda ikki marta takrorlanardi.
+- `moslash` ichida `to'xtatish` uchun aniq, o'rgatuvchi xabar.
+- Kalit so'zni o'zgaruvchi nomi qilganda yechim ham ko'rsatiladi.
+
+### LSP (VS Code)
+- **Sintaksis xatoliklari muharrirda UMUMAN ko'rinmasdi** (v2.3.0 dan beri).
+- **Hujjat keshini JSON dekodlash buzuq edi**: `yozish << "salom"` bor
+  har qanday fayl birinchi qo'shtirnoqda kesilardi — diagnostika, hover
+  va semantik ranglar noto'g'ri ishlardi.
+
+### Formatlagich
+- **Kodni buzardi.** 87 test faylidan 26 tasi formatlashdan keyin
+  kompilyatsiya bo'lmasdi. Endi fayl qayta yozilishdan OLDIN natija
+  tekshiriladi; farq bo'lsa fayl tegilmaydi.
+- Chiqish sifati: ustuvorlikka qarab qavs, K&R uslub, kirish darajalari
+  saqlanadi, ichki `__uzpp_*` nomlari manba faylga chiqmaydi. Idempotent.
+
+### macOS
+- **`uzpp qurish` macOS da HAR DOIM yiqilardi**: `-fmodules-ts` (Apple
+  Clang bilmaydi) va `-Wl,--gc-sections` (Mach-O linkerida yo'q).
+  Yangi `src/host_compiler.h` kompilyatorni aniqlab, bayroqlarni moslaydi.
+- `/proc/self/exe` Darwin da yo'q — `_NSGetExecutablePath` ishlatiladi.
+- `install.sh`: karantin belgisi olib tashlanadi (`xattr -dr`), ad-hoc
+  imzo qo'yiladi (`codesign --sign -`) — Gatekeeper to'sig'i shundan.
+- macOS Intel (x86_64) qo'llab-quvvatlanadi; relizda universal binar.
+
+### CI
+- **YANGI macOS ishi** — ilgari macOS umuman tekshirilmasdi.
+- Uchala platformada: salbiy testlar, `uzpp sinov`/`uzpp bench`,
+  formatlagich xavfsizligi va HUJJATLARDAGI HAMMA KOD MISOLLARI.
+
+### Hujjatlar
+- Darslik misollari kompilyator bilan solishtirildi: 4-bob `moslash`
+  bo'limi (C `switch` semantikasini o'rgatardi) va 14-bob `@sinov`
+  bo'limi (mavjud bo'lmagan sintaksis) qayta yozildi; ikki bobda
+  yo'qolgan ``` tiklandi; eskirgan sinonimlar, yetishmagan `;` va
+  noto'g'ri API chaqiruvlari tuzatildi.
+- `getting-started.md` 12 misolidan 7 tasi kompilyatsiya bo'lmasdi.
+- Darslik PDF qayta qurildi; uchta nusxa o'rniga bitta; README dan havola.
+- `uzpp --version` "v4.0.0" deb yolg'on aytardi (endi CMake dan keladi).
+- `uzpp --yordam` / `-h` qo'shildi; `formatlah` → `formatlash`.
+
 ## [v2.3.0] — 2026-05-22
 
 ### Phase 2.5 — Sinonim tozalash ✅

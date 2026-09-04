@@ -108,9 +108,10 @@ butun asosiy() {
 
 Solishtiring, bir xil dastur C++ da:
 
+<!-- darslik:skip -->
 ```cpp
-ulash <iostream>
-ulash <string>
+#include <iostream>
+#include <string>
 
 int main() {
     std::string ism = "Aziz";
@@ -402,6 +403,8 @@ qilayotganini eslatadi.
 > nima ekan?" demaslik uchun, izohlar yozing.
 
 #### 2-qator: Funksiya e'loni
+
+<!-- darslik:skip -->
 ```cpp
 butun asosiy() {
 ```
@@ -791,9 +794,11 @@ mantiqiy kichik = (3 < 7); // rost
 mantiqiy farqli = (5 != 5); // yolg'on
 
 // Mantiqiy amallar
-mantiqiy va = rost && yolg'on; // yolg'on (ikkalasi ham rost bo'lishi kerak)
-mantiqiy yo = rost || yolg'on; // rost (kamida bittasi rost)
-mantiqiy inkor = !rost; // yolg'on
+// DIQQAT: `va` va `yoki` — kalit so'zlar, ularni o'zgaruvchi nomi
+// sifatida ishlatib bo'lmaydi. Shu sababli nomlar `_natija` bilan.
+mantiqiy va_natija = rost && yolg'on;   // yolg'on (ikkalasi ham rost bo'lishi kerak)
+mantiqiy yoki_natija = rost || yolg'on; // rost (kamida bittasi rost)
+mantiqiy inkor = !rost;                 // yolg'on
 ```
 
 Operatorlarni keyingi bobda batafsil ko'ramiz.

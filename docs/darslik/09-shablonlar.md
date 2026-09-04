@@ -77,12 +77,12 @@ mumkin: `butun`, `matn`, `Talaba`, va h.k.
 
 ```cpp
 shablon<tur T, tur U>
-bosh chiqarish(T a, U b) {
+bosh juftlikni_korsat(T a, U b) {
     yozish << a << " " << b << qator_oxiri;
 }
 
-chiqarish(5, "salom"); // T=butun, U=matn
-chiqarish(3.14, rost); // T=haqiqiy, U=mantiqiy
+juftlikni_korsat(5, "salom"); // T=butun, U=matn
+juftlikni_korsat(3.14, rost); // T=haqiqiy, U=mantiqiy
 ```
 
 ### Aniq chaqirish
@@ -215,15 +215,23 @@ Zamonaviy C++ da shablon parametrlarini cheklash mumkin. Masalan,
 "faqat sonli turlar" deb cheklash:
 
 ```cpp
-shablon<tur T>
-talab std::integral<T>; // T butun bo'lishi kerak
+ulash <concepts>
+
+shablon<tur T> shart (std::integral<T>)   // T butun bo'lishi kerak
 T kvadrat(T x) {
     qaytarish x * x;
 }
 
-kvadrat(5); // OK
-kvadrat(3.14); // ← XATO: haqiqiy butun emas
+butun asosiy() {
+    yozish << kvadrat(5) << qator_oxiri;  // OK
+    // kvadrat(3.14);                     // ← XATO: haqiqiy butun emas
+    qaytarish 0;
+}
 ```
+
+Cheklov `shablon<...>` dan keyin, `shart (...)` shaklida yoziladi
+(C++ dagi `requires`). Qavslar ichida — istalgan `concept` yoki
+mantiqiy ifoda.
 
 Concepts — qadimgi shablonlarning xatolik xabarlarini soddalashtiradi.
 
@@ -235,7 +243,7 @@ Shablonni ba'zan sekin yoki keraksiz ishlatish mumkin. Misol:
 
 ```cpp
 shablon<tur T>
-T qoshish(T a, T b) { qaytarish a + b }
+T qoshish(T a, T b) { qaytarish a + b; }
 ```
 
 Bu yaxshi. Lekin agar siz `matn + butun` ni qo'shmoqchi bo'lsangiz:
@@ -326,6 +334,7 @@ ular **header**da to'liq yozilishi kerak — `.cpp` faylida emas.
 
 ### 2. Turlarni adashtirish
 
+<!-- darslik:skip -->
 ```cpp
 shablon<tur T> T maks(T a, T b)
 

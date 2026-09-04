@@ -1,0 +1,37 @@
+// `uzpp::OqimHovuz` — oqim havzasi (thread pool).
+//
+// `kutish()` ilgari ABADIY osilib qolardi: u ishchi oqimlarni `join`
+// qilardi, ishchilar esa `toxtatish()` chaqirilmaguncha aylanaveradi.
+// Endi u navbat bo'shashini va bajarilayotgan vazifalar tugashini kutadi,
+// havzani to'xtatmaydi.
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    uzpp::OqimHovuz havza(4);
+
+    atomik<butun> hisob(0);
+
+    uchun (butun i = 0; i < 16; i++) {
+        havza.vazifaQosh([&hisob]() {
+            hisob.fetch_add(1);
+        });
+    }
+
+    havza.kutish();
+
+    yozish << "Bajarilgan vazifalar: " << hisob.load() << qator_oxiri;
+
+    // `kutish()` dan keyin havza hamon ishlashi kerak.
+    havza.vazifaQosh([&hisob]() { hisob.fetch_add(100); });
+    havza.kutish();
+
+    yozish << "Ikkinchi to'lqindan keyin: " << hisob.load() << qator_oxiri;
+
+    agar (hisob.load() == 116) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

@@ -76,7 +76,7 @@ private:
     bool userMainTakesArgcArgv_ = false;  // true when asosiy(int, char**)
     bool headerMode_ = false;
     bool bare_ = false;
-    bool moduleEmitted_ = false;  // Phase 17: export module уже выведен
+    bool moduleEmitted_ = false;  // Phase 17: `export module` allaqachon chiqarildi
     std::vector<std::string> uzppDependencies_;
 
     // Stack of local-name scopes used to suppress keyword translation when a

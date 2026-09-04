@@ -1,0 +1,34 @@
+// `bajar { ... } toki (shart);` — tana kamida bir marta bajariladi (do/while).
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    butun i = 0;
+    butun yigindi = 0;
+
+    bajar {
+        yigindi += i;
+        i++;
+    } toki (i < 5);
+
+    // Shart darhol yolg'on bo'lsa ham tana bir marta ishlaydi.
+    butun marta = 0;
+    bajar {
+        marta++;
+    } toki (yolg'on);
+
+    // Tanasiz sikl — `;` bo'sh gap sifatida qabul qilinadi.
+    butun j = 0;
+    uchun (j = 0; j < 3; j++);
+
+    yozish << "yigindi = " << yigindi << qator_oxiri;
+    yozish << "marta = " << marta << qator_oxiri;
+    yozish << "j = " << j << qator_oxiri;
+
+    agar (yigindi == 10 && marta == 1 && j == 3) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

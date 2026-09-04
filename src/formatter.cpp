@@ -119,14 +119,14 @@ void Formatter::formatFunctionDeclaration(const FunctionDeclaration* decl) {
     const auto& params = decl->getParameters();
     for (std::size_t i = 0; i < params.size(); ++i) {
         if (i > 0) emitRaw(", ");
-        if (params[i].isConst) emitRaw("ozgarmas ");
+        // Kanonik shakl apostrofli — `ozgarmas` Phase 2.5 da olib tashlangan.
+        if (params[i].isConst) emitRaw("o'zgarmas ");
         emitRaw(params[i].type);
         emitRaw(" ");
         emitRaw(params[i].name);
     }
     emitRaw(")");
-    emitNewline();
-    formatBlock(decl->getBody());
+    formatBlockBody(decl->getBody());
     emitNewline();
 }
 
@@ -151,9 +151,26 @@ void Formatter::formatClassDeclaration(const ClassDeclaration* decl) {
     emitNewline();
     indentLevel_++;
 
+    // Kirish darajasi o'zgarganda `ochiq:` / `yopiq:` / `himoyalangan:`
+    // chiqariladi — ilgari ular butunlay yo'qolardi va formatlangan sinf
+    // hamma a'zolarini standart darajaga tushirib qo'yardi.
+    std::string currentAccess;
+    auto emitAccessIfChanged = [&](const std::string& access) {
+        if (access.empty() || access == currentAccess) return;
+        currentAccess = access;
+        indentLevel_--;
+        writeIndent();
+        if (access == "private")        emitRaw("yopiq:");
+        else if (access == "protected") emitRaw("himoyalangan:");
+        else                            emitRaw("ochiq:");
+        emitNewline();
+        indentLevel_++;
+    };
+
     for (const auto& m : decl->getMembers()) {
         // Skip sentinel members like friend-declarations stored as fake fields
         if (m.type == "__uzpp_friend__") continue;
+        emitAccessIfChanged(m.accessSpecifier);
         writeIndent();
         emitRaw(m.type);
         emitRaw(" ");
@@ -167,10 +184,17 @@ void Formatter::formatClassDeclaration(const ClassDeclaration* decl) {
             emitRaw(" : ");
             emitRaw(m.bitWidth);
         }
+        // Maydonning standart qiymati — formatlashda yo'qolmasligi shart
+        // (gotcha #10: formatClassDeclaration eng ko'p maydonli emitter).
+        if (m.defaultValue) {
+            emitRaw(" = ");
+            formatExpression(m.defaultValue.get());
+        }
         emitRaw(";");
         emitNewline();
     }
     for (const auto& m : decl->getMethods()) {
+        emitAccessIfChanged(m->accessSpecifier);
         writeIndent();
         if (m->isStatic) emitRaw("statik ");
         if (m->isPureVirtual) emitRaw("mavhum ");
@@ -284,7 +308,7 @@ void Formatter::formatIncludeStatement(const IncludeStatement* stmt) {
         emitRaw(mod);
         emitRaw("\"");
     }
-    emitRaw(";");
+    // `ulash` dan keyin `;` kerak emas — darslik va misollar shu shaklda.
     emitNewline();
 }
 
@@ -391,36 +415,69 @@ void Formatter::formatBlock(const Block* block) {
     emitNewline();
 }
 
+// `agar (...) {`, `toki (...) {` — ochuvchi qavs sarlavha bilan bir qatorda,
+// tana bitta daraja ichkarida. Tana blok bo'lmasa (bir gapli shakl), uni
+// oddiygina ichkariga suramiz.
+void Formatter::formatBlockBody(const Statement* body) {
+    if (!body) {
+        emitRaw(" {");
+        emitNewline();
+        writeIndent();
+        emitRaw("}");
+        emitNewline();
+        return;
+    }
+    if (body->getType() == ASTNodeType::Block) {
+        emitRaw(" {");
+        emitNewline();
+        indentLevel_++;
+        for (const auto& s : static_cast<const Block*>(body)->getStatements()) {
+            formatStatement(s.get());
+        }
+        indentLevel_--;
+        writeIndent();
+        emitRaw("}");
+        emitNewline();
+        return;
+    }
+    emitNewline();
+    indentLevel_++;
+    formatStatement(body);
+    indentLevel_--;
+}
+
 void Formatter::formatIfStatement(const IfStatement* stmt) {
     if (!stmt) return;
     writeIndent();
     emitRaw("agar (");
     formatExpression(stmt->getCondition());
     emitRaw(")");
-    emitNewline();
-    indentLevel_++;
-    formatStatement(stmt->getThenBranch());
-    indentLevel_--;
+    formatBlockBody(stmt->getThenBranch());
     if (stmt->getElseBranch()) {
         writeIndent();
-        emitRaw("aks");
-        emitNewline();
-        indentLevel_++;
-        formatStatement(stmt->getElseBranch());
-        indentLevel_--;
+        emitRaw("aks_holda");
+        formatBlockBody(stmt->getElseBranch());
     }
 }
 
 void Formatter::formatWhileStatement(const WhileStatement* stmt) {
     if (!stmt) return;
+    if (stmt->isDoWhile()) {
+        writeIndent();
+        emitRaw("bajar");
+        formatBlockBody(stmt->getBody());
+        writeIndent();
+        emitRaw("toki (");
+        formatExpression(stmt->getCondition());
+        emitRaw(");");
+        emitNewline();
+        return;
+    }
     writeIndent();
     emitRaw("toki (");
     formatExpression(stmt->getCondition());
     emitRaw(")");
-    emitNewline();
-    indentLevel_++;
-    formatStatement(stmt->getBody());
-    indentLevel_--;
+    formatBlockBody(stmt->getBody());
 }
 
 void Formatter::formatForStatement(const ForStatement* stmt) {
@@ -454,10 +511,7 @@ void Formatter::formatForStatement(const ForStatement* stmt) {
         if (stmt->getIncrement()) formatExpression(stmt->getIncrement());
     }
     emitRaw(")");
-    emitNewline();
-    indentLevel_++;
-    formatStatement(stmt->getBody());
-    indentLevel_--;
+    formatBlockBody(stmt->getBody());
 }
 
 void Formatter::formatReturnStatement(const ReturnStatement* stmt) {
@@ -541,11 +595,38 @@ void Formatter::formatTryStatement(const TryStatement* stmt) {
 
 // ===== EXPRESSIONS =====
 
-void Formatter::formatExpression(const Expression* expr) {
+namespace {
+
+// Binar operatorlarning ustuvorligi — parser zanjiri bilan bir xil tartib
+// (yuqori raqam = kuchliroq bog'lanadi).
+int binaryPrecedence(const std::string& op) {
+    if (op == "*" || op == "/" || op == "%")                      return 10;
+    if (op == "+" || op == "-")                                   return 9;
+    if (op == "<<" || op == ">>")                                 return 8;
+    if (op == "<" || op == ">" || op == "<=" || op == ">=" ||
+        op == "<=>")                                              return 7;
+    if (op == "==" || op == "!=")                                 return 6;
+    if (op == "&")                                                return 5;
+    if (op == "^")                                                return 4;
+    if (op == "|")                                                return 3;
+    if (op == "&&")                                               return 2;
+    if (op == "||")                                               return 1;
+    return 0;
+}
+
+} // namespace
+
+void Formatter::formatExpression(const Expression* expr, int parentPrec, bool rightChild) {
     if (!expr) return;
     switch (expr->getType()) {
         case ASTNodeType::LiteralExpression: {
             const auto* lit = static_cast<const LiteralExpression*>(expr);
+            // Manba fayl uz++ da qoladi — `true`/`false` emas, `rost`/`yolg'on`.
+            if (lit->getLiteralType() == LiteralExpression::LiteralType::Boolean) {
+                const std::string& v = lit->getValue();
+                emitRaw((v == "true" || v == "rost") ? "rost" : "yolg'on");
+                break;
+            }
             emitRaw(lit->getValue());
             break;
         }
@@ -556,13 +637,19 @@ void Formatter::formatExpression(const Expression* expr) {
         }
         case ASTNodeType::BinaryExpression: {
             const auto* bin = static_cast<const BinaryExpression*>(expr);
-            emitRaw("(");
-            formatExpression(bin->getLeft());
+            const int prec = binaryPrecedence(bin->getOperator());
+            // Qavs faqat kerak bo'lganda: ichki ifoda kuchsizroq bog'lansa,
+            // yoki teng kuchda bo'lib o'ng tomonda tursa (chapdan-o'ngga).
+            const bool needParens =
+                prec == 0 ? parentPrec > 0
+                          : (prec < parentPrec || (prec == parentPrec && rightChild));
+            if (needParens) emitRaw("(");
+            formatExpression(bin->getLeft(), prec, false);
             emitRaw(" ");
             emitRaw(bin->getOperator());
             emitRaw(" ");
-            formatExpression(bin->getRight());
-            emitRaw(")");
+            formatExpression(bin->getRight(), prec, true);
+            if (needParens) emitRaw(")");
             break;
         }
         case ASTNodeType::UnaryExpression: {
@@ -593,9 +680,40 @@ void Formatter::formatExpression(const Expression* expr) {
         }
         case ASTNodeType::FunctionCall: {
             const auto* call = static_cast<const FunctionCall*>(expr);
+            const auto& args = call->getArguments();
+
+            // Parser massiv/lug'at/qavsli literallarni ichki `__uzpp_*`
+            // chaqiruvlariga o'raydi. Formatlagich ularni ASL uz++
+            // sintaksisiga qaytarishi shart — aks holda manba faylga
+            // `__uzpp_array(1, 2, 3)` kabi ichki nom yozilib qoladi.
+            if (call->getCallee()->getType() == ASTNodeType::IdentifierExpression) {
+                const std::string& fn =
+                    static_cast<const IdentifierExpression*>(call->getCallee())->getName();
+                if (fn == "__uzpp_array" || fn == "__uzpp_brace") {
+                    const bool square = (fn == "__uzpp_array");
+                    emitRaw(square ? "[" : "{");
+                    for (std::size_t i = 0; i < args.size(); ++i) {
+                        if (i > 0) emitRaw(", ");
+                        formatExpression(args[i].get());
+                    }
+                    emitRaw(square ? "]" : "}");
+                    break;
+                }
+                if (fn == "__uzpp_dict") {
+                    emitRaw("{");
+                    for (std::size_t i = 0; i + 1 < args.size(); i += 2) {
+                        if (i > 0) emitRaw(", ");
+                        formatExpression(args[i].get());
+                        emitRaw(": ");
+                        formatExpression(args[i + 1].get());
+                    }
+                    emitRaw("}");
+                    break;
+                }
+            }
+
             formatExpression(call->getCallee());
             emitRaw("(");
-            const auto& args = call->getArguments();
             for (std::size_t i = 0; i < args.size(); ++i) {
                 if (i > 0) emitRaw(", ");
                 formatExpression(args[i].get());

@@ -149,85 +149,134 @@ keladi va kelajakda yangi qator qo'shish oson bo'ladi.
 
 ---
 
-## `moslash` — bir nechta yo'naltirishlardan tanlash
+## `moslash` — bir nechta yo'nalishdan tanlash
 
-Agar siz bir nechta aniq qiymatlarni tekshirayotgan bo'lsangiz, `moslash`
-(C++ da `switch`) qulayroq:
+Agar siz bir nechta aniq qiymatni tekshirayotgan bo'lsangiz, uzun
+`agar / aks_holda agar / aks_holda` zanjiri o'rniga `moslash` qulayroq:
 
 ```cpp
 butun kun = 3;
 
 moslash (kun) {
-    holat 1: yozish << "Dushanba" << qator_oxiri; to'xtatish;
-    holat 2: yozish << "Seshanba" << qator_oxiri; to'xtatish;
-    holat 3: yozish << "Chorshanba" << qator_oxiri; to'xtatish;
-    holat 4: yozish << "Payshanba" << qator_oxiri; to'xtatish;
-    holat 5: yozish << "Juma" << qator_oxiri; to'xtatish;
-    holat 6: yozish << "Shanba" << qator_oxiri; to'xtatish;
-    holat 7: yozish << "Yakshanba" << qator_oxiri; to'xtatish;
+    holat 1: yozish << "Dushanba" << qator_oxiri;
+    holat 2: yozish << "Seshanba" << qator_oxiri;
+    holat 3: yozish << "Chorshanba" << qator_oxiri;
+    holat 4: yozish << "Payshanba" << qator_oxiri;
+    holat 5: yozish << "Juma" << qator_oxiri;
+    holat 6: yozish << "Shanba" << qator_oxiri;
+    holat 7: yozish << "Yakshanba" << qator_oxiri;
     boshqa: yozish << "Noto'g'ri kun" << qator_oxiri;
 }
 ```
 
 ### Sintaksis va qoidalar
 
-- `tanlash (ifoda)` — qaysi qiymatni tekshirayapmiz
-- `holat qiymat:` — agar `ifoda == qiymat` bo'lsa, bu bo'limga
-  o'tamiz
-- `to'xtatish` — `tanlash` dan chiqamiz (boshqasini ham tekshirmaymiz)
-- `boshqa:` — agar hech bir `holat` mos kelmasa, bu bajariladi (C++
-  da `default`)
+- `moslash (ifoda)` — qaysi qiymatni tekshirayapmiz
+- `holat qiymat:` — agar `ifoda == qiymat` bo'lsa, shu bo'lim bajariladi
+- `boshqa:` — hech bir `holat` mos kelmasa, shu bo'lim bajariladi
 
-> **Diqqat — `to'xtatish` ni unutmang!** Agar `to'xtatish` yo'q bo'lsa,
-> dastur **keyingi `holat`ga ham o'tib ketadi**. Bu ba'zan ataylab
-> qilinadi, lekin ko'pincha xato.
+> ### ⚠️ `moslash` — bu C++ dagi `switch` EMAS
+>
+> Agar siz C yoki C++ dan kelgan bo'lsangiz, bu eng muhim farq:
+>
+> **`to'xtatish` (`break`) yozish SHART EMAS — va yozib ham bo'lmaydi.**
+>
+> Har bir `holat` o'z tanasi bilan tugaydi. Keyingi `holat` ga "oqib
+> o'tish" (`fallthrough`) yo'q, shuning uchun uni to'xtatish ham
+> kerak emas. `moslash` ichida `to'xtatish` yozsangiz, kompilyator
+> buni xato deb aytadi:
+>
+> ```
+> xato: `moslash` ichida `to'xtatish` kerak emas — har bir `holat`
+>       avtomatik tugaydi. Uni olib tashlang.
+> ```
+>
+> Bu — ataylab qilingan tanlov. C dagi unutilgan `break` — dunyodagi
+> eng ko'p uchraydigan xatolardan biri. uz++ da bunday xato bo'lishi
+> mumkin emas.
 
-### `to'xtatish` siz "fallthrough" (oqib o'tish)
+### Bir nechta qiymat — bitta natija
+
+C da buni "fallthrough" bilan qilishardi. uz++ da esa qiymatlarni
+vergul bilan sanab ketasiz:
 
 ```cpp
 butun oy = 2;
 
 moslash (oy) {
+    holat 12, 1, 2:  yozish << "Qish" << qator_oxiri;
+    holat 3, 4, 5:   yozish << "Bahor" << qator_oxiri;
+    holat 6, 7, 8:   yozish << "Yoz" << qator_oxiri;
+    holat 9, 10, 11: yozish << "Kuz" << qator_oxiri;
+    boshqa:          yozish << "Noto'g'ri oy" << qator_oxiri;
+}
+```
+
+Yorliqlarni ustma-ust ham yozish mumkin — tanasi bo'sh `holat` o'zidan
+keyingisiga qo'shiladi. Natija yuqoridagi bilan bir xil:
+
+```cpp
+moslash (oy) {
     holat 12:
     holat 1:
     holat 2:
         yozish << "Qish" << qator_oxiri;
-        to'xtatish;
-    holat 3:
-    holat 4:
-    holat 5:
-        yozish << "Bahor" << qator_oxiri;
-        to'xtatish;
-    holat 6:
-    holat 7:
-    holat 8:
-        yozish << "Yoz" << qator_oxiri;
-        to'xtatish;
-    holat 9:
-    holat 10:
-    holat 11:
-        yozish << "Kuz" << qator_oxiri;
-        to'xtatish;
+    boshqa:
+        yozish << "Boshqa fasl" << qator_oxiri;
 }
 ```
 
-12, 1, va 2-oylar uchun bitta natija — "Qish". `to'xtatish` qo'yilmagani
-sababli kompilyator pastki `holat`larga oqib boradi.
+Ikkala shakl ham to'g'ri. Vergulli shakl qisqaroq, ustma-ust shakl esa
+qiymatlar ko'p bo'lganda o'qishga qulayroq.
 
-### `moslash` ning chegaralari
+### `moslash` istalgan tur bilan ishlaydi
 
-`moslash` faqat **butun va belgi** turi bilan ishlay oladi. Matn,
-kasr yoki `mantiqiy` bilan ishlamaydi. Shu bilan bir qatorda — har bir
-`holat` **aniq qiymat** bo'lishi kerak, oraliq emas.
+C++ dagi `switch` faqat butun va belgi turlari bilan ishlaydi. uz++
+dagi `moslash` shunday cheklovga ega emas — u `==` bilan taqqoslash
+mumkin bo'lgan har qanday qiymatni qabul qiladi, jumladan `matn` ni:
 
 ```cpp
+matn til = "uz";
+
+moslash (til) {
+    holat "uz":       yozish << "Assalomu alaykum!" << qator_oxiri;
+    holat "en", "gb": yozish << "Hello!" << qator_oxiri;
+    holat "ru":       yozish << "Zdravstvuyte!" << qator_oxiri;
+    boshqa:           yozish << "Salom!" << qator_oxiri;
+}
+```
+
+`haqiqiy` va o'zingiz yozgan sinflar ham ishlaydi — agar ular uchun
+`==` operatori aniqlangan bo'lsa.
+
+### `moslash` ning chegarasi
+
+Har bir `holat` — bu **aniq qiymat**, shart emas. Oraliqni tekshirish
+uchun `agar / aks_holda` ishlating:
+
+<!-- darslik:skip -->
+```cpp
 moslash (baho) {
-    holat (baho >= 90):       // ← XATO! Bunday yozib bo'lmaydi
+    holat (baho >= 90):   // ← XATO! `holat` shart qabul qilmaydi
     ...;
 }
 ```
 
-Bu hollarda `agar/aks_holda` ishlating.
+To'g'ri yo'l:
+
+```cpp
+butun baho = 85;
+
+agar (baho >= 90) {
+    yozish << "A'lo" << qator_oxiri;
+}
+aks_holda agar (baho >= 75) {
+    yozish << "Yaxshi" << qator_oxiri;
+}
+aks_holda {
+    yozish << "Qoniqarli" << qator_oxiri;
+}
+```
 
 ---
 
@@ -298,7 +347,7 @@ toki (i <= 5) {
 
 Bunday holatlarda dasturni `Ctrl+C` bilan to'xtatishingiz kerak.
 
-### `bajar/davr` — kamida bir marta bajariladi
+### `bajar ... toki` — kamida bir marta bajariladi
 
 ```cpp
 butun javob;
@@ -312,9 +361,12 @@ yozish << "Rahmat! " << javob << " qabul qilindi" << qator_oxiri;
 ```
 
 Bu yerda farq: blok **birinchi marta har holda** bajariladi, keyin
-shart tekshiriladi.
+shart tekshiriladi. C++ da bu `do { ... } while (shart);`.
 
-> **Qachon `bajar/davr` ishlatish kerak?** Foydalanuvchidan ma'lumot
+Yopuvchi `)` dan keyin nuqta-vergul (`;`) qo'yish odat — u ixtiyoriy,
+lekin kod C++ ga o'xshab qolgani uchun tavsiya etiladi.
+
+> **Qachon `bajar ... toki` ishlatish kerak?** Foydalanuvchidan ma'lumot
 > so'raganda — siz birinchi marta savol berishingiz **shart**, keyin
 > javobiga qarab davom etish yoki to'xtash.
 

@@ -7,9 +7,10 @@ xususiyat, hujjat yoki tarjima — qadrlanadi.
 
 **Talablar:**
 - CMake 3.20+
-- GCC 15+ yoki Clang 18+ (C++23 qo'llab-quvvatlashi kerak)
+- C++23 kompilyatori: GCC 13+ yoki Clang 16+ (macOS dagi Apple Clang ham)
 - Ninja (tavsiya etiladi)
 - Windows: MSYS2/UCRT64 muhiti
+- Python 3 (hujjat misollarini tekshiruvchi skript uchun)
 
 ```bash
 # 1. Nusxa olish
@@ -20,15 +21,26 @@ cd uzpp
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 
-# 3. To'liq test to'plamini ishga tushirish (PR yuborishdan oldin)
-./build/uzpp --version
-./build/uzpp_frontend_tests                                     # frontend smoke
-for f in tests/*.uzpp; do ./build/uzpp qurish "$f"; done        # 75 pozitiv
-bash tests/negative/run.sh ./build/uzpp                         # 51 salbiy
+# 3. To'liq test to'plamini ishga tushirish (PR yuborishdan OLDIN)
+./build/uzpp_frontend_tests                            # frontend birlik testlari
+for f in tests/*.uzpp; do ./build/uzpp qurish "$f"; done
+bash tests/negative/run.sh ./build/uzpp                # kompilyator xatoni tutadimi
+bash tests/formatlash_xavfsizlik.sh ./build/uzpp       # formatlagich kodni buzmaydimi
+python3 tests/darslik_tekshir.py ./build/uzpp          # hujjatlardagi misollar
+python3 tests/darslik_tekshir.py ./build/uzpp --qurish
 
 # 4. Misol dasturni ishga tushirish
 ./build/uzpp ishga-tushirish misollar/01_salom_dunyo.uzpp
 ```
+
+Windows'da hammasini bitta buyruq bilan:
+
+```powershell
+.\run_tests.ps1          # -Tez bayrog'i sekin bosqichni o'tkazib yuboradi
+```
+
+CI (`.github/workflows/ci.yml`) aynan shu to'plamni Windows, Linux va
+macOS da bajaradi.
 
 ## Loyiha tuzilmasi
 
@@ -42,8 +54,8 @@ uz++/
 │   ├── codegen.{h,cpp}        # `AST` → C++23 generatori
 │   ├── lsp_server.{h,cpp}     # `LSP` server (editor integratsiyasi)
 │   └── main.cpp               # CLI: `qurish`, `ishga-tushirish`, `lsp`
-├── stdlib/                    # Standart kutubxona (6 ta self-hosted + 25 qo'lda)
-├── tests/                     # Regression testlar (75 pozitiv + 51 salbiy)
+├── stdlib/                    # Standart kutubxona (6 ta self-hosted + 20 qo'lda)
+├── tests/                     # Regression testlar + tekshiruv skriptlari
 ├── misollar/                  # 15 ta tayyor dastur (foydalanuvchi uchun)
 ├── vscode-uzpp/               # VS Code kengaytmasi (TypeScript)
 ├── installer/                 # Windows Inno Setup + Unix install.sh
@@ -56,7 +68,7 @@ uz++/
 
 ## Test darajalari
 
-PR yuborishdan oldin uchchala daraja yashil bo'lishi shart:
+PR yuborishdan oldin BARCHA darajalar yashil bo'lishi shart:
 
 1. **`tests/*.uzpp`** — integratsiya testlari. Har bir yangi til xususiyati
    uchun bittadan qo'shing.
@@ -66,7 +78,20 @@ PR yuborishdan oldin uchchala daraja yashil bo'lishi shart:
    `exit != 0` qaytarishini tekshiradi.
 3. **`tests/frontend_smoke.cpp`** — `Lexer`/`Parser`/`TypeChecker`/`CodeGen`
    ichki invariantlari. Yangi `assert` blokini qo'shing va
-   `cmake --build` ni qayta ishga tushiring.
+   `cmake --build` ni qayta ishga tushiring. DIQQAT: `assert` birinchi
+   xatoda jarayonni to'xtatadi, ya'ni undan keyingi pinlar umuman
+   bajarilmaydi — natijani CHIQISH KODI bo'yicha tekshiring, oxirgi
+   qatorga qarab emas.
+4. **`tests/darslik_tekshir.py`** — hujjatlardagi (`docs/darslik/`,
+   `README.md`, `docs/getting-started.md`) HAR BIR kod bloki
+   kompilyatordan o'tkaziladi. Misolni o'zgartirsangiz yoki tilga
+   o'zgarish kiritsangiz, shuni yugurtiring. Psevdokod yoki ataylab
+   noto'g'ri blok oldiga `<!-- darslik:skip -->` yoki
+   `<!-- darslik:xato -->` qo'ying.
+5. **`tests/formatlash_xavfsizlik.sh`** — `uzpp formatlash` hech qachon
+   kodni buzmasligini pinlaydi. Formatlagich natijani asl kod bilan
+   token darajasida solishtiradi va farq bo'lsa faylni tegmaydi.
+   "Rad etildi" — bu xato emas; "BUZILDI" — bu regressiya.
 
 ## Kod uslubi
 

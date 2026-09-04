@@ -43,8 +43,8 @@ namespace uzpp {
 template <typename T, typename E = std::string>
 class Natija {
 public:
-    static Natija muvaffaqiyat(T val) { return Natija(std::move(val), true); }
-    static Natija xato(E err)         { return Natija(std::move(err), false); }
+    static Natija muvaffaqiyat(T val) { return Natija(OkTeg{}, std::move(val)); }
+    static Natija xato(E err)         { return Natija(XatoTeg{}, std::move(err)); }
 
     [[nodiscard]] bool yaroqliMi()   const noexcept { return ok_; }
     [[nodiscard]] bool xatoliMi()    const noexcept { return !ok_; }
@@ -63,12 +63,20 @@ public:
     explicit operator bool() const noexcept { return ok_; }
 
 private:
-    Natija(T val, bool ok) : val_(std::move(val)), ok_(ok) {}
-    Natija(E err, bool ok) : err_(std::move(err)), ok_(ok) {}
+    // Teg (tag) turlari kerak, chunki T va E BIR XIL bo'lishi mumkin —
+    // masalan `Natija<matn, matn>` (qiymat ham, xato ham matn). Ilgari
+    // ikkala konstruktor `(T, bool)` va `(E, bool)` edi va T == E bo'lganda
+    // ular bir xil imzoga ega bo'lib, kompilyatsiya buzilardi:
+    //     "cannot be overloaded with 'Natija(T, bool)'"
+    struct OkTeg {};
+    struct XatoTeg {};
+
+    Natija(OkTeg,   T val) : val_(std::move(val)), ok_(true)  {}
+    Natija(XatoTeg, E err) : err_(std::move(err)), ok_(false) {}
 
     T val_{};
     E err_{};
-    bool ok_;
+    bool ok_ = false;
 };
 
 // ===== TANLOV (Option<T>) — mavjud yoki yo'q =====
@@ -289,23 +297,34 @@ public:
         return javob;
     }
     
-    // Barcha vazifalarni tugatish uchun kutish
+    // Barcha vazifalar tugashini kutish (havzani TO'XTATMAYDI).
+    //
+    // Ilgari bu metod shunchaki ishchi oqimlarni `join` qilardi. Ishchilar
+    // esa `toxtab_` bo'lgunicha aylanaveradi, `toxtab_` ni faqat
+    // `toxtatish()` qo'yadi — natijada `kutish()` ABADIY osilib qolardi.
+    // 13-bob aynan shu metodni o'rgatadi va `misollar/09` shu yerda
+    // muzlab turardi.
     void kutish() {
+        std::unique_lock<std::mutex> lock(vazifaMutex_);
+        boshAytishnomasi_.wait(lock, [this] {
+            return vazifalar_.empty() && bajarilmoqda_ == 0;
+        });
+    }
+
+    // Havzani to'xtatish: yangi vazifa qabul qilinmaydi, navbatdagilar
+    // tugatiladi, so'ng ishchi oqimlar qo'shiladi (join).
+    void toxtatish() {
+        {
+            std::lock_guard<std::mutex> lock(vazifaMutex_);
+            if (toxtab_) return;
+            toxtab_ = true;
+        }
+        aytishnomasi_.notify_all();
         for (auto& worker : ishchilar_) {
             if (worker.joinable()) {
                 worker.join();
             }
         }
-    }
-    
-    // Thread poolni toxtatish
-    void toxtatish() {
-        {
-            std::lock_guard<std::mutex> lock(vazifaMutex_);
-            toxtab_ = true;
-        }
-        aytishnomasi_.notify_all();
-        kutish();
     }
     
     [[nodiscard]] std::size_t ishchilarSoni() const {
@@ -321,7 +340,9 @@ private:
     std::vector<std::jthread> ishchilar_;
     std::deque<OqimHovuzIchki::VazifaNavbati> vazifalar_;
     mutable std::mutex vazifaMutex_;
-    std::condition_variable aytishnomasi_;
+    std::condition_variable aytishnomasi_;      // ishchilarni uyg'otadi
+    std::condition_variable boshAytishnomasi_;  // `kutish()` ni uyg'otadi
+    std::size_t bajarilmoqda_ = 0;              // hozir bajarilayotgan vazifalar
     bool toxtab_ = false;
     
     void ishchiSikli() {
@@ -344,8 +365,9 @@ private:
                 
                 vazifa = std::move(vazifalar_.front());
                 vazifalar_.pop_front();
+                ++bajarilmoqda_;
             }
-            
+
             if (!vazifa.bosMi()) {
                 try {
                     vazifa.chiqarish();
@@ -358,6 +380,14 @@ private:
                     }
                 }
             }
+
+            {
+                std::lock_guard<std::mutex> lock(vazifaMutex_);
+                --bajarilmoqda_;
+            }
+            // Navbat bo'shab, hech narsa bajarilmayotgan bo'lsa —
+            // `kutish()` da turganlarni uyg'otamiz.
+            boshAytishnomasi_.notify_all();
         }
     }
 };

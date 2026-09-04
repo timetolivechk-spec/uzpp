@@ -233,11 +233,17 @@ public:
     Expression* getCallee() const { return callee_.get(); }
     const std::vector<std::unique_ptr<Expression>>& getArguments() const { return args_; }
     const Token& getCallToken() const { return callToken_; }
-    
+
+    // `Tur{a, b}` — qavsli initsializatsiya, `Tur(a, b)` emas.
+    // Agregat tuzilmalar uchun muhim: ularda konstruktor yo'q.
+    bool usesBraceInit() const { return braceInit_; }
+    void setBraceInit(bool value) { braceInit_ = value; }
+
 private:
     std::unique_ptr<Expression> callee_;
     std::vector<std::unique_ptr<Expression>> args_;
     Token callToken_;
+    bool braceInit_ = false;
 };
 
 class AwaitExpression final : public Expression {
@@ -516,6 +522,9 @@ class MatchStatement final : public Statement {
 public:
     struct MatchCase {
         std::unique_ptr<Expression> pattern; // if null, it's the 'boshqa' (default) case
+        // Qo'shimcha naqshlar — `holat 1, 2, 3:` yoki ketma-ket bo'sh
+        // `holat` yorliqlari. Hammasi `||` bilan birlashtiriladi.
+        std::vector<std::unique_ptr<Expression>> extraPatterns;
         std::unique_ptr<Statement> body;
         Token caseToken;
     };
@@ -622,11 +631,16 @@ public:
     Expression* getCondition() const { return condition_.get(); }
     Statement* getBody() const { return body_.get(); }
     const Token& getWhileToken() const { return whileToken_; }
-    
+
+    // `bajar { ... } toki (shart);` — tana kamida bir marta bajariladi.
+    bool isDoWhile() const { return isDoWhile_; }
+    void setDoWhile(bool value) { isDoWhile_ = value; }
+
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> body_;
     Token whileToken_;
+    bool isDoWhile_ = false;
 };
 
 class ForStatement final : public Statement {
@@ -740,6 +754,11 @@ public:
         std::string accessSpecifier; // ochiq, yopiq, protected
         std::string arraySize; // For C-style arrays: "10" for int data[10], empty if not array
         std::string bitWidth;  // C++ bitfield: "4" for `int x : 4`. Empty if not bitfield.
+        // Maydonning standart qiymati: `butun soni_ = 42;`.
+        // shared_ptr (unique_ptr emas) — `Member` bir necha joyda NUSXALANADI
+        // (type_checker, formatter, LSP), shuning uchun ko'chiriladigan
+        // egalik kerak emas, ulashiladigan egalik kerak.
+        std::shared_ptr<Expression> defaultValue;
         bool isVolatile = false;
         bool isThreadLocal = false;
         bool hasNoUniqueAddress = false;  // C++20 [[no_unique_address]]

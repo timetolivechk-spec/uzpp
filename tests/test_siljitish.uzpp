@@ -1,0 +1,31 @@
+// Siljitish operatorlari va ularning ustuvorligi.
+// C++ da `<<` qo'shishdan PAST darajada turadi:
+//     a << 2 + 1   ===   a << (2 + 1)
+//     yozish << a + b  ===  std::cout << (a + b)
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    butun a = 1;
+
+    a <<= 3;                 // 8
+    butun sakkiz = a;
+    a >>= 2;                 // 2
+    butun ikki = a;
+    a |= 5;                  // 7
+    a &= 6;                  // 6
+    a ^= 3;                  // 5
+
+    butun ustuvorlik = 1 << 2 + 1;   // 1 << 3 == 8
+    butun qavs = (1 << 2) + 1;       // 5
+
+    butun x = 2, y = 3;
+    yozish << x + y << qator_oxiri;  // 5 — (cout << x) + y EMAS
+
+    agar (sakkiz == 8 && ikki == 2 && a == 5 && ustuvorlik == 8 && qavs == 5) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}
