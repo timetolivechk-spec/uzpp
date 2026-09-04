@@ -475,7 +475,14 @@ public:
         }
 
         const std::string command =
-            buildCompileCommand(cppFile, binaryFile, resolveTarget(target), includeDirs, forcedIncludeHeader, debugMode, extraLinkLibs);
+            // DIQQAT: bu yerga RESOLVE QILINMAGAN target beriladi.
+            // `resolveTarget(Host)` Windows'dan tashqari hamma joyda `Linux`
+            // qaytaradi, `Linux` esa KROSS-kompilyator `x86_64-linux-gnu-g++`
+            // ni chaqiradi. macOS'da bunday buyruq yo'q — natijada har qanday
+            // `uzpp qurish` "command not found" bilan yiqilardi. `Host`
+            // aniqlangan host kompilyatoriga borishi kerak (host_compiler.h).
+            // `resolveTarget` faqat chiqish fayli nomi uchun qoladi.
+            buildCompileCommand(cppFile, binaryFile, target, includeDirs, forcedIncludeHeader, debugMode, extraLinkLibs);
 
         char buffer[256];
         std::string compilerOutput;

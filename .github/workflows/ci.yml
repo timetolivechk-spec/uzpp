@@ -270,7 +270,13 @@ jobs:
 
       - name: Install dependencies (GCC-15 via toolchain PPA)
         run: |
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          # Launchpad vaqti-vaqti bilan HTTP 500 qaytaradi va butun ish
+          # yiqiladi. Bir necha marta urinamiz.
+          for attempt in 1 2 3; do
+            if sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; then break; fi
+            echo "add-apt-repository urinish $attempt muvaffaqiyatsiz, qayta urinamiz..."
+            sleep 15
+          done
           sudo apt-get update -qq
           # libstdc++-15-dev is required for <generator> (C++23 coroutines)
           # — gcc-15 ships the compiler but the matching libstdc++ headers
