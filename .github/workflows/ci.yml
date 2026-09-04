@@ -47,9 +47,12 @@ jobs:
           for f in misollar/01_salom_dunyo.uzpp \
                    misollar/02_fizzbuzz.uzpp \
                    misollar/03_rekursiya.uzpp \
+                   misollar/04_sinflar.uzpp \
                    misollar/05_kolleksiyalar.uzpp \
+                   misollar/06_xatolik_boshqaruvi.uzpp \
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
+                   misollar/09_kop_oqimlilik.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp.exe ishga-tushirish "$f"; then
@@ -307,9 +310,12 @@ jobs:
           for f in misollar/01_salom_dunyo.uzpp \
                    misollar/02_fizzbuzz.uzpp \
                    misollar/03_rekursiya.uzpp \
+                   misollar/04_sinflar.uzpp \
                    misollar/05_kolleksiyalar.uzpp \
+                   misollar/06_xatolik_boshqaruvi.uzpp \
                    misollar/07_matn_ishlash.uzpp \
                    misollar/08_json_ishlash.uzpp \
+                   misollar/09_kop_oqimlilik.uzpp \
                    misollar/10_ilgor_dasturlash.uzpp; do
             echo "--- Testing: $f ---"
             if ./build/uzpp ishga-tushirish "$f"; then
