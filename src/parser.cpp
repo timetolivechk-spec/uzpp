@@ -1647,7 +1647,7 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     }
 
     // C++20 branch hints on the then-branch: agar (cond) @bashqarib { ... }
-    // (@bashqarib = "обычно/чаще всего" → [[likely]], @kamdan_kam = "редко" → [[unlikely]])
+    // (@bashqarib = "odatda" → [[likely]], @kamdan_kam = "kamdan-kam" → [[unlikely]])
     auto parseBranchHint = [&](bool& likely, bool& unlikely) {
         if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "@") {
             std::size_t saved = current_;

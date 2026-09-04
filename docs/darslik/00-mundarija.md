@@ -1,7 +1,7 @@
 # UZ++ DASTURLASH TILI: TO'LIQ O'QUV QO'LLANMA
 
 **Muallif:** Shaxriyor Malikov  
-**Versiya:** v2.2.1 (2026-yil may)  
+**Versiya:** v2.3.0 (2026-yil sentabr)  
 **Litsenziya:** MIT  
 
 ---
@@ -14,7 +14,7 @@
 4. [Boshqaruv tuzilmalari](#04-boshqaruv)
 5. [Funksiyalar](#05-funksiyalar)
 6. [Ko'rsatkichlar va havolalar](#06-korsatkichlar)
-7. [Massivlar va to'plamlar](#07-to'plamlar)
+7. [Massivlar va to'plamlar](#07-tuplamlar)
 8. [Sinflar — obyektga yo'naltirilgan dasturlash](#08-sinflar)
 9. [Shablonlar — umumlashgan dasturlash](#09-shablonlar)
 10. [Xatolik bilan ishlash](#10-xatolik)

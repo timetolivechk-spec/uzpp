@@ -65,3 +65,9 @@ gcm.cache/
 
 # AI yordamchi vositalarining lokal ish fayllari
 .gemini/
+
+# Darslik PDF ning oraliq LaTeX fayli (build.ps1 -KeepTex bilan hosil bo'ladi)
+docs/darslik/uzpp-darslik.tex
+docs/darslik/*.aux
+docs/darslik/*.log
+docs/darslik/*.toc

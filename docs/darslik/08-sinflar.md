@@ -53,7 +53,7 @@ ochiq:
         yozish << "Yoshi: " << yoshi << qator_oxiri;
         yozish << "O'rtacha: " << ortacha_baho << qator_oxiri;
     }
-}
+};
 
 butun asosiy() {
     Talaba t1;
@@ -82,7 +82,9 @@ Tahlil:
 
 ### Obyekt yaratish va ishlatish
 
-Поскольку объявление класса и функция `asosiy()` теперь объединены в одном блоке, код полностью работоспособен.
+Sinf e'loni va `asosiy()` funksiyasi bitta blokda berilgani uchun
+yuqoridagi kodni o'zgartirmasdan nusxalab, `uzpp ishga-tushirish
+talaba.uzpp` bilan darhol ishga tushirish mumkin.
 
 **Natija:**
 

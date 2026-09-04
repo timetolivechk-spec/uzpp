@@ -165,7 +165,17 @@ Talablar: `g++` ≥ 13 (C++23 uchun), `cmake` ≥ 3.20, `ninja`.
 
 ## Hujjatlar
 
-- [`docs/getting-started.md`](docs/getting-started.md) — qadamma-qadam darslik
+**Darslik — noldan boshlab o'rganish uchun 16 bob:**
+
+- [📘 To'liq darslik (PDF)](docs/darslik/uzpp-darslik.pdf) — bir faylda, chop etishga tayyor
+- [Mundarija va boblar (Markdown)](docs/darslik/00-mundarija.md) — brauzerda o'qish uchun
+
+Darslikdagi har bir kod misoli CI da haqiqiy kompilyator orqali
+tekshiriladi (`tests/darslik_tekshir.py`) — ular ishlashi kafolatlangan.
+
+**Qolgan hujjatlar:**
+
+- [`docs/getting-started.md`](docs/getting-started.md) — 5 daqiqada birinchi dastur
 - [`docs/stdlib-status.md`](docs/stdlib-status.md) — har bir stdlib modulning holati
 - [`CHANGELOG.md`](CHANGELOG.md) — versiyalararo o'zgarishlar
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — loyihaga hissa qo'shish

@@ -30,6 +30,7 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
 
       - name: Configure
         run: cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build
@@ -110,6 +111,15 @@ jobs:
           grep -q "Quladi:0" sinov.log
           ./build/uzpp.exe bench tests/test_sinov_atribut.uzpp | tee bench.log
           grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python tests/darslik_tekshir.py build/uzpp.exe
+          python tests/darslik_tekshir.py build/uzpp.exe --qurish
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp.exe
@@ -220,6 +230,15 @@ jobs:
           grep -q "Quladi:0" sinov.log
           ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
           grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python3 tests/darslik_tekshir.py build/uzpp
+          python3 tests/darslik_tekshir.py build/uzpp --qurish
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
@@ -345,6 +364,15 @@ jobs:
           grep -q "Quladi:0" sinov.log
           ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
           grep -q "ns/amal" bench.log
+
+      - name: Verify darslik (textbook) examples still compile
+        run: |
+          # The textbook is what new users type first. Every ```cpp block in
+          # docs/darslik/ is extracted and run through the compiler; blocks that
+          # are pseudo-code or deliberately wrong carry an explicit
+          # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
+          python3 tests/darslik_tekshir.py build/uzpp
+          python3 tests/darslik_tekshir.py build/uzpp --qurish
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
