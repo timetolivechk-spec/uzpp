@@ -147,6 +147,10 @@ def main():
     if not os.path.exists(uzpp):
         print("XATO: uzpp topilmadi -> %s" % uzpp)
         return 1
+    # MUTLAQ yo'lga aylantiramiz: bloklar vaqtinchalik papkada (cwd=work)
+    # quriladi, nisbiy `build/uzpp` esa POSIX da BOLA jarayonning cwd siga
+    # nisbatan qidiriladi va topilmaydi.
+    uzpp = os.path.abspath(uzpp)
 
     work = tempfile.mkdtemp(prefix="darslik_")
     tested = failed = skipped = 0
