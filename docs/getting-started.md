@@ -9,9 +9,9 @@
 ### 🪟 Windows — tavsiya etiladi
 
 **Eng oson yo'l:** [`uzpp-setup.exe`](https://github.com/timetolivechk-spec/uzpp/releases/latest/download/uzpp-setup.exe)
-ni yuklab oling va ishga tushiring (~115 MB).
+ni yuklab oling va ishga tushiring (~150 MB).
 
-Ichida MinGW GCC 14.2 ham bor — boshqa hech narsa o'rnatish kerak emas. Admin
+Ichida MinGW GCC 15.2 ham bor — boshqa hech narsa o'rnatish kerak emas. Admin
 huquqlari talab qilinmaydi. Default joy:
 `%LOCALAPPDATA%\Programs\uzpp\`. PATH ga avtomatik qo'shiladi.
 
@@ -27,6 +27,15 @@ Bir-qatorli o'rnatuvchi (rasmiy):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/timetolivechk-spec/uzpp/main/installer/unix/install.sh | bash
+```
+
+macOS da skript karantin belgisini (`com.apple.quarantine`) olib tashlaydi va
+ad-hoc imzo qo'yadi — Gatekeeper ning "ishlab chiquvchini tekshirib bo'lmadi"
+xatosi shundan. Arxivni qo'lda ochsangiz, shu ikki buyruqni o'zingiz bajaring:
+
+```bash
+sudo xattr -dr com.apple.quarantine /usr/local/bin/uzpp
+sudo codesign --force --sign - /usr/local/bin/uzpp
 ```
 
 Yoki manba koddan qurish (~3 daqiqa):
@@ -487,17 +496,29 @@ butun asosiy() {
 
 | Buyruq | Tavsif |
 |--------|--------|
-| `uzpp qurish fayl.uzpp` | Kompilyatsiya qilish |
-| `uzpp ishga-tushirish fayl.uzpp` | Kompilyatsiya va ishga tushirish |
-| `uzpp format fayl.uzpp` | Kodni formatlash |
-| `uzpp lsp` | LSP serverini ishga tushirish (editor uchun) |
+| `uzpp ishga-tushirish fayl.uzpp` | Kompilyatsiya va darhol ishga tushirish |
+| `uzpp qurish fayl.uzpp` | Faqat kompilyatsiya → `build/<nom>` |
+| `uzpp tekshirish fayl.uzpp` | Faqat tekshirish, hech narsa qurmaydi (lint) |
+| `uzpp transpile fayl.uzpp --show-cpp` | uz++ va hosil bo'lgan C++ ni yonma-yon ko'rsatish |
+| `uzpp sinov fayl.uzpp` | `@sinov` funksiyalarini yugurtirish |
+| `uzpp bench fayl.uzpp` | `@bench` funksiyalari tezligini o'lchash |
+| `uzpp formatlash fayl.uzpp` | Kodni formatlash |
+| `uzpp init <nom>` | Yangi loyiha skeleti yaratish |
+| `uzpp lsp` | LSP serverini ishga tushirish (muharrir uchun) |
 | `uzpp --version` | Versiyani ko'rish |
+| `uzpp --yordam` | To'liq ro'yxat va izohlar |
+
+Loyiha ichida (`uzpp.toml` bor papkada) fayl nomini yozish shart emas —
+`uzpp ishga-tushirish` yetarli.
 
 ---
 
 ## Keyingi qadamlar
 
-- `misollar/` papkasidagi 15 ta misolni ko'ring
-- `tests/` papkasidagi regression testlarni o'rganing
+- [To'liq darslik](darslik/00-mundarija.md) — 16 bob, noldan boshlab
+  ([PDF](darslik/uzpp-darslik.pdf))
+- [`misollar/`](../misollar/README.md) — 15 ta izohlangan misol
+- `tests/` papkasidagi 89 ta kichik dastur — har biri bitta til
+  imkoniyatini ko'rsatadi
 - [CONTRIBUTING.md](../CONTRIBUTING.md) orqali hissa qo'shing
 - [GitHub Issues](https://github.com/timetolivechk-spec/uzpp/issues) da savol bering
