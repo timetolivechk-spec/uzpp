@@ -1,0 +1,28 @@
+// Massiv shaklidagi parametrlar: `belgi* argv[]`, `butun jadval[]`.
+// C++ da ular ko'rsatkichga aylanadi.
+ulash "uzpp_runtime.hpp"
+
+butun yigindi(butun sonlar[], butun n) {
+    butun s = 0;
+    uchun (butun i = 0; i < n; i++) {
+        s += sonlar[i];
+    }
+    qaytarish s;
+}
+
+butun asosiy(butun argc, belgi* argv[]) {
+    butun sonlar[5] = {1, 2, 3, 4, 5};
+
+    yozish << "argc = " << argc << qator_oxiri;
+    agar (argc > 0) {
+        yozish << "argv[0] bor" << qator_oxiri;
+    }
+
+    agar (yigindi(sonlar, 5) == 15) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

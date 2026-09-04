@@ -1,0 +1,44 @@
+// `moslash` da bir nechta qiymatni bitta tanaga bog'lash.
+// Ikki shakl ham qo'llab-quvvatlanadi:
+//   1. vergul bilan:   holat 3, 4, 5:
+//   2. bo'sh yorliqlar: holat 12: holat 1: holat 2: <tana>
+ulash "uzpp_runtime.hpp"
+
+matn fasl(butun oy) {
+    moslash (oy) {
+        holat 12:
+        holat 1:
+        holat 2:
+            qaytarish "Qish";
+        holat 3, 4, 5:
+            qaytarish "Bahor";
+        holat 6, 7, 8:
+            qaytarish "Yoz";
+        boshqa:
+            qaytarish "Kuz";
+    }
+    qaytarish "?";
+}
+
+butun asosiy() {
+    mantiqiy hammasi_togri = rost;
+
+    agar (fasl(12) != "Qish")  hammasi_togri = yolg'on;
+    agar (fasl(1)  != "Qish")  hammasi_togri = yolg'on;
+    agar (fasl(2)  != "Qish")  hammasi_togri = yolg'on;
+    agar (fasl(4)  != "Bahor") hammasi_togri = yolg'on;
+    agar (fasl(7)  != "Yoz")   hammasi_togri = yolg'on;
+    agar (fasl(10) != "Kuz")   hammasi_togri = yolg'on;
+
+    uchun (butun oy = 1; oy <= 12; oy++) {
+        yozish << oy << " -> " << fasl(oy) << qator_oxiri;
+    }
+
+    agar (hammasi_togri) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

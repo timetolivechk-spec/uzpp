@@ -317,12 +317,72 @@ private:
     bool reportedUnreachable_ = false;
     bool currentFunctionIsAsync_ = false;
     int loopDepth_ = 0;
+    int matchDepth_ = 0;
+
+    // Shablon tanalari (Phase 4 — kechiktirilgan instansiyalash) bir necha bor
+    // tekshirilishi mumkin. Bir xil xabar + joylashuv ikki marta ko'rinmasligi
+    // uchun takrorlarni bu yerda filtrlaymiz.
+    static bool alreadyReported(const std::vector<SemanticError>& list,
+                                const std::string& msg, int line, int column) {
+        for (const auto& d : list) {
+            if (d.line == line && d.column == column && d.message == msg) return true;
+        }
+        return false;
+    }
+
+    // GroupNode ning ochuvchi tokeni shablon sarlavhasini xom C++ satri
+    // sifatida olib yuradi: "template <typename T, typename... Args>\n".
+    // Undan e'lon qilingan parametr NOMLARINI ajratib olamiz — bu
+    // `looksLikeTemplateParam` evristikasidan aniqroq, chunki `vektor<T>`
+    // kabi kompozit turlar orqali T ni topib bo'lmaydi.
+    static std::vector<std::string> templateParamNames(const std::string& header) {
+        std::vector<std::string> names;
+        const std::size_t lt = header.find('<');
+        if (lt == std::string::npos) return names;
+        const std::size_t gt = header.rfind('>');
+        if (gt == std::string::npos || gt <= lt) return names;
+
+        const std::string inner = header.substr(lt + 1, gt - lt - 1);
+        int depth = 0;
+        std::string part;
+        auto flush = [&]() {
+            // Bo'lakdagi OXIRGI identifikator — parametr nomi.
+            //   "typename T"        -> T
+            //   "typename... Args"  -> Args
+            //   "int N"             -> N
+            std::string last, cur;
+            for (const char c : part) {
+                const bool wordChar = (c == '_' || (c >= 'a' && c <= 'z') ||
+                                       (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                                       static_cast<unsigned char>(c) >= 0x80);
+                if (wordChar) {
+                    cur += c;
+                } else {
+                    if (!cur.empty()) last = cur;
+                    cur.clear();
+                }
+            }
+            if (!cur.empty()) last = cur;
+            if (!last.empty() && last != "typename" && last != "class") names.push_back(last);
+            part.clear();
+        };
+        for (const char c : inner) {
+            if (c == '<' || c == '(') ++depth;
+            else if (c == '>' || c == ')') --depth;
+            if (c == ',' && depth == 0) { flush(); continue; }
+            part += c;
+        }
+        flush();
+        return names;
+    }
 
     void reportError(const std::string& msg, const Token& token) {
+        if (alreadyReported(errors_, msg, token.line, token.column)) return;
         errors_.push_back({msg, token.line, token.column});
     }
 
     void reportWarning(const std::string& msg, const Token& token) {
+        if (alreadyReported(warnings_, msg, token.line, token.column)) return;
         warnings_.push_back({msg, token.line, token.column});
     }
 
@@ -407,6 +467,8 @@ private:
         if (auto lam = dynamic_cast<const LambdaExpression*>(node)) return lam->getLambdaToken();
         if (auto pipe = dynamic_cast<const PipelineExpression*>(node)) return pipe->getPipeToken();
         if (auto sub = dynamic_cast<const SubscriptAccess*>(node)) return sub->getBracketToken();
+        if (auto brk = dynamic_cast<const BreakStatement*>(node)) return brk->getBreakToken();
+        if (auto cont = dynamic_cast<const ContinueStatement*>(node)) return cont->getContinueToken();
         return Token{TokenType::Identifier, "", 0, 0};
     }
 
@@ -535,7 +597,17 @@ private:
                                 if (subst != currentTemplateSubsts_.end())
                                     return Type::aniq(subst->second);
                             }
-                            return r.empty() || r == "noma'lum" ? Type::nomalum() : Type::aniq(r);
+                            if (r.empty() || r == "noma'lum") return Type::nomalum();
+                            // Gotcha #17: shablon funksiyasi tur parametrini
+                            // qaytarsa (`-> T`, `-> vektor<T>`), chaqiruv joyida
+                            // aniq tur yo'q. Uni Aniq deb belgilash soxta
+                            // "Funksiya 'butun' qaytarishi kerak, lekin 'T'
+                            // qaytarilmoqda" ogohlantirishini keltirib chiqaradi.
+                            if (templateFunctions_.contains(name) &&
+                                (looksLikeTemplateParam(r) || typeMentionsTemplateParam(r))) {
+                                return Type::nomalum();
+                            }
+                            return Type::aniq(r);
                         }
                     }
                     if (classes_.contains(name)) return Type::aniq(name);
@@ -1379,7 +1451,14 @@ private:
             case ASTNodeType::BreakStatement:
             case ASTNodeType::ContinueStatement: {
                 if (loopDepth_ == 0) {
-                    reportError("'to'xtatish' yoki 'davom_etish' faqat sikl ichida ishlatilishi mumkin.", getTokenForNode(node));
+                    if (matchDepth_ > 0) {
+                        // `moslash` — C++ `switch` emas: har bir `holat` o'z
+                        // tanasi bilan tugaydi, "fallthrough" yo'q.
+                        reportError("`moslash` ichida `to'xtatish` kerak emas — har bir `holat` "
+                                    "avtomatik tugaydi. Uni olib tashlang.", getTokenForNode(node));
+                    } else {
+                        reportError("'to'xtatish' yoki 'davom_etish' faqat sikl ichida ishlatilishi mumkin.", getTokenForNode(node));
+                    }
                 }
                 reachable_ = false;
                 reportedUnreachable_ = false;
@@ -1394,13 +1473,16 @@ private:
                 checkExpr(ms->getCondition());
                 bool savedReachable = reachable_;
                 bool savedReported = reportedUnreachable_;
+                matchDepth_++;
                 for (const auto& mc : ms->getCases()) {
                     if (mc->pattern) checkExpr(mc->pattern.get());
+                    for (const auto& extra : mc->extraPatterns) checkExpr(extra.get());
                     // Each case arm is an independent branch — reset reachability
                     reachable_ = true;
                     reportedUnreachable_ = false;
                     if (mc->body) checkNode(mc->body.get());
                 }
+                matchDepth_--;
                 reachable_ = savedReachable;
                 reportedUnreachable_ = savedReported;
                 break;
@@ -1408,6 +1490,16 @@ private:
             case ASTNodeType::Group: {
                 // shablon funksiyalari va sinflarini GroupNode ichida o'rab keladi
                 auto grp = static_cast<const GroupNode*>(node);
+
+                // Shablon sarlavhasidagi parametr nomlarini butun guruh
+                // davomida faol qilamiz. Busiz `vektor<T>` kabi kompozit
+                // turlar Aniq deb hisoblanib, soxta ogohlantirish beradi
+                // (gotcha #17 — uch holatli Type shartnomasi).
+                auto savedTemplateParams = currentTemplateParams_;
+                for (const auto& tp : templateParamNames(grp->getOpeningToken().value)) {
+                    currentTemplateParams_.insert(tp);
+                }
+
                 for (const auto& child : grp->getChildren()) {
                     if (child->getType() == ASTNodeType::FunctionDeclaration) {
                         auto fn = static_cast<const FunctionDeclaration*>(child.get());
@@ -1419,6 +1511,8 @@ private:
                     }
                     checkNode(child.get());
                 }
+
+                currentTemplateParams_ = savedTemplateParams;
                 break;
             }
             case ASTNodeType::TypeAlias: {

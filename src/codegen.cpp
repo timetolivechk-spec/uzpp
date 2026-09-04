@@ -1423,7 +1423,26 @@ void CodeGen::visitTryStatement(const TryStatement* stmt) {
 
 void CodeGen::visitWhileStatement(const WhileStatement* stmt) {
     if (stmt == nullptr) return;
-    
+
+    if (stmt->isDoWhile()) {
+        writeIndentIfNeeded();
+        emitRawToken("do");
+        emitNewline();
+
+        indentMore();
+        visitStatement(stmt->getBody());
+        indentLess();
+
+        writeIndentIfNeeded();
+        emitRawToken("while");
+        emitRawToken("(");
+        visitExpression(stmt->getCondition());
+        emitRawToken(")");
+        emitRawToken(";");
+        emitNewline();
+        return;
+    }
+
     writeIndentIfNeeded();
     emitRawToken("while");
     emitRawToken("(");
@@ -1476,6 +1495,11 @@ void CodeGen::visitForStatement(const ForStatement* stmt) {
                     emitRawToken("=");
                     visitExpression(varDecl->getInitializer());
                 }
+            } else if (stmt->getInit()->getType() == ASTNodeType::ExpressionStatement) {
+                // `uchun (j = 0; ...)` — e'lon emas, oddiy ifoda.
+                // visitStatement o'zi ';' va yangi qator chiqaradi — bu yerda
+                // ular ortiqcha edi — natijada `for` da to'rtta bo'lak chiqardi.
+                visitExpression(static_cast<const ExpressionStatement*>(stmt->getInit())->getExpression());
             } else {
                 visitStatement(stmt->getInit());
             }
@@ -1557,6 +1581,12 @@ void CodeGen::visitMatchStatement(const MatchStatement* stmt) {
             emitRawToken(matchVar);
             emitRawToken("==");
             visitExpression(matchCase->pattern.get());
+            for (const auto& extra : matchCase->extraPatterns) {
+                emitRawToken("||");
+                emitRawToken(matchVar);
+                emitRawToken("==");
+                visitExpression(extra.get());
+            }
             emitRawToken(")");
             emitNewline();
         } else {

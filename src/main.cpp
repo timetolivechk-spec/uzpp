@@ -12,6 +12,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include "host_compiler.h"
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -36,20 +40,49 @@ namespace uzpp {
 namespace CompilerUtils {
     inline fs::path getExecutableDir() {
         fs::path exePath;
-#ifdef _WIN32
+#if defined(_WIN32)
         wchar_t path[MAX_PATH];
         GetModuleFileNameW(NULL, path, MAX_PATH);
         exePath = fs::path(path);
+#elif defined(__APPLE__)
+        // macOS da `/proc` yo'q — Darwin o'z API sini beradi.
+        uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+        std::string buffer(size ? size : 1024, '\0');
+        if (_NSGetExecutablePath(buffer.data(), &size) == 0) {
+            buffer.resize(std::char_traits<char>::length(buffer.c_str()));
+            std::error_code ec;
+            fs::path resolved = fs::weakly_canonical(fs::path(buffer), ec);
+            exePath = ec ? fs::path(buffer) : resolved;
+        }
 #else
         char path[1024];
         ssize_t count = readlink("/proc/self/exe", path, sizeof(path));
         if (count != -1) {
             exePath = fs::path(std::string(path, count));
         } else {
-            exePath = fs::canonical("/proc/self/exe");
+            std::error_code ec;
+            exePath = fs::canonical("/proc/self/exe", ec);
         }
 #endif
         return exePath.parent_path();
+    }
+
+    // Aniqlangan host C++ kompilyatori (bir marta hisoblanadi).
+    inline const uzpp::HostCompiler& hostCxx() {
+        return uzpp::hostcxx::detect(getExecutableDir());
+    }
+
+    // Kompilyator topilmasa — foydali xabar chiqaradi.
+    inline bool requireHostCxx() {
+        const uzpp::HostCompiler& cxx = hostCxx();
+        if (cxx.found) return true;
+        std::cerr << "XATO: C++ kompilyatori topilmadi.\n"
+                  << "  uz++ kodni C++23 ga aylantiradi va uni tizimdagi kompilyator bilan yig'adi.\n"
+                  << "  Iltimos, quyidagilardan birini o'rnating:\n"
+                  << uzpp::hostcxx::installHint()
+                  << "  Yoki o'zingiz ko'rsating:  UZPP_CXX=/yo'l/g++ uzpp qurish fayl.uzpp\n";
+        return false;
     }
 }
 
@@ -812,42 +845,44 @@ private:
                                     bool debugMode,
                                     const std::vector<fs::path>& extraLinkLibs = {}) const {
         std::ostringstream command;
-        
-        fs::path exeDir = CompilerUtils::getExecutableDir();
-        fs::path bundledWindowsCompiler = exeDir / "compiler" / "bin" / "g++.exe";
-        fs::path bundledLinuxCompiler = exeDir / "compiler" / "bin" / "g++";
+
+        const uzpp::HostCompiler& cxx = CompilerUtils::hostCxx();
+        // Krossbild maqsadlari o'z toolchain'iga ega; qolgani host kompilyatori.
+        bool useHostFlags = true;
 
         switch (target) {
             case BuildTarget::Windows:
             case BuildTarget::Host:
-#ifdef _WIN32
-                if (fs::exists(bundledWindowsCompiler)) {
-                    command << quote(bundledWindowsCompiler.string()) << " ";
-                } else {
-                    command << "g++ ";
-                }
-#else
-                if (fs::exists(bundledLinuxCompiler)) {
-                    command << quote(bundledLinuxCompiler.string()) << " ";
-                } else {
-                    command << "g++ ";
-                }
-#endif
+                command << (cxx.found ? cxx.command : std::string("g++")) << " ";
                 break;
             case BuildTarget::Linux:
                 command << "x86_64-linux-gnu-g++ ";
+                useHostFlags = false;
                 break;
             case BuildTarget::Wasm:
                 command << "em++ ";
+                useHostFlags = false;
                 break;
         }
 
-        command << quote(cppFile.string()) << " -o " << quote(binaryFile.string()) << " -std=gnu++23 -fmodules-ts -DUZPP_NO_WINDOW ";
+        command << quote(cppFile.string()) << " -o " << quote(binaryFile.string()) << " ";
+
+        if (useHostFlags) {
+            command << uzpp::hostcxx::standardFlag(cxx) << " ";
+            if (uzpp::hostcxx::supportsModulesTs(cxx)) command << "-fmodules-ts ";
+        } else {
+            command << "-std=gnu++23 -fmodules-ts ";
+        }
+        command << "-DUZPP_NO_WINDOW ";
 
         if (debugMode) {
-            command << "-g3 -O0 -D_GLIBCXX_DEBUG -Wall -Wextra ";
+            command << "-g3 -O0 -Wall -Wextra ";
+            if (useHostFlags) command << uzpp::hostcxx::debugStdlibFlags(cxx);
+            else              command << "-D_GLIBCXX_DEBUG ";
         } else {
-            command << "-O3 -ffunction-sections -fdata-sections -Wl,--gc-sections ";
+            command << "-O3 ";
+            if (useHostFlags) command << uzpp::hostcxx::deadCodeStripFlags(cxx);
+            else              command << "-ffunction-sections -fdata-sections -Wl,--gc-sections ";
         }
 
         // Parse generated cpp files for library linking commands
@@ -1045,11 +1080,12 @@ void printHelp() {
     std::cout << "  uzpp bench [<fayl.uzpp>]                        Benchmark\n";
     std::cout << "  uzpp ornatish <modul>                           Paket o'rnatish\n";
     std::cout << "  uzpp yangilash <modul>                          Paketni yangilash\n";
-    std::cout << "  uzpp formatlah [<fayl.uzpp>]                    Kodni formatlash\n";
+    std::cout << "  uzpp formatlash [<fayl.uzpp>]                   Kodni formatlash\n";
     std::cout << "  uzpp lsp                                        LSP serverni ishga tushirish\n";
     std::cout << "  uzpp dap                                        DAP serverni ishga tushirish\n";
     std::cout << "  uzpp hujjat (yoki doc) [<chiqish_papkasi>]      Hujjat yaratish\n";
     std::cout << "  uzpp --version (yoki -v)                        Versiyani ko'rsatish\n";
+    std::cout << "  uzpp --yordam (yoki --help, -h)                 Shu yordamni ko'rsatish\n";
     std::cout << "\nMisollar:\n";
     std::cout << "  uzpp ishga-tushirish salom.uzpp\n";
     std::cout << "  uzpp tekshirish kod.uzpp\n";
@@ -1140,7 +1176,7 @@ CliOptions parseArguments(int argc, char* argv[]) {
         return options;
     }
 
-    if (first == "formatlah") {
+    if (first == "formatlash" || first == "formatlah") {
         options.mode = CommandMode::Format;
         if (argc >= 3) {
             options.inputFile = argv[2];
@@ -1246,7 +1282,8 @@ CliOptions parseArguments(int argc, char* argv[]) {
         return options;
     }
 
-    if (first == "--help" || first == "help") {
+    if (first == "--help" || first == "-h" || first == "help" ||
+        first == "--yordam" || first == "yordam" || first == "/?") {
         options.mode = CommandMode::Help;
         return options;
     }
@@ -1640,12 +1677,20 @@ int main(int argc, char* argv[]) {
 
         if (isModule) {
             // Modul fayli — faqat kompilyatsiya, linkersiz
-            std::string cmd = "g++ -std=c++23 -fmodules-ts -c " + layout.cppFile.string() +
-                              " -I" + (layout.stdlibRoot ? layout.stdlibRoot->string() : "stdlib") +
-                              " -o " + (layout.cppFile.parent_path() / layout.cppFile.stem()).string() + ".o 2>&1";
+            if (!CompilerUtils::requireHostCxx()) return 1;
+            const uzpp::HostCompiler& cxx = CompilerUtils::hostCxx();
+            const fs::path objFile = layout.cppFile.parent_path() / (layout.cppFile.stem().string() + ".o");
+            std::string cmd = cxx.command + " " + uzpp::hostcxx::standardFlag(cxx) + " ";
+            if (uzpp::hostcxx::supportsModulesTs(cxx)) cmd += "-fmodules-ts ";
+            cmd += "-c \"" + layout.cppFile.string() + "\""
+                   " -I\"" + (layout.stdlibRoot ? layout.stdlibRoot->string() : std::string("stdlib")) + "\""
+                   " -o \"" + objFile.string() + "\" 2>&1";
             int ret = system(cmd.c_str());
             if (ret == 0) {
+                // Regression harness `MUVAFFAQIYAT: Dastur tayyor` ni qidiradi —
+                // modul yo'li ham shu belgini chiqarishi kerak.
                 std::cout << "MUVAFFAQIYAT: Modul kompilyatsiya qilindi -> " << layout.cppFile.filename().string() << '\n';
+                std::cout << "MUVAFFAQIYAT: Dastur tayyor -> " << objFile.string() << '\n';
             } else {
                 std::cerr << "XATO: Modul kompilyatsiyasi muvaffaqiyatsiz.\n";
                 return 1;

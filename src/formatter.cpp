@@ -413,6 +413,20 @@ void Formatter::formatIfStatement(const IfStatement* stmt) {
 
 void Formatter::formatWhileStatement(const WhileStatement* stmt) {
     if (!stmt) return;
+    if (stmt->isDoWhile()) {
+        writeIndent();
+        emitRaw("bajar");
+        emitNewline();
+        indentLevel_++;
+        formatStatement(stmt->getBody());
+        indentLevel_--;
+        writeIndent();
+        emitRaw("toki (");
+        formatExpression(stmt->getCondition());
+        emitRaw(");");
+        emitNewline();
+        return;
+    }
     writeIndent();
     emitRaw("toki (");
     formatExpression(stmt->getCondition());

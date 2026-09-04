@@ -516,6 +516,9 @@ class MatchStatement final : public Statement {
 public:
     struct MatchCase {
         std::unique_ptr<Expression> pattern; // if null, it's the 'boshqa' (default) case
+        // Qo'shimcha naqshlar — `holat 1, 2, 3:` yoki ketma-ket bo'sh
+        // `holat` yorliqlari. Hammasi `||` bilan birlashtiriladi.
+        std::vector<std::unique_ptr<Expression>> extraPatterns;
         std::unique_ptr<Statement> body;
         Token caseToken;
     };
@@ -622,11 +625,16 @@ public:
     Expression* getCondition() const { return condition_.get(); }
     Statement* getBody() const { return body_.get(); }
     const Token& getWhileToken() const { return whileToken_; }
-    
+
+    // `bajar { ... } toki (shart);` — tana kamida bir marta bajariladi.
+    bool isDoWhile() const { return isDoWhile_; }
+    void setDoWhile(bool value) { isDoWhile_ = value; }
+
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> body_;
     Token whileToken_;
+    bool isDoWhile_ = false;
 };
 
 class ForStatement final : public Statement {

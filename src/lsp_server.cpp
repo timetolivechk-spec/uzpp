@@ -9,8 +9,156 @@
 #include <sstream>
 #include <unordered_map>
 #include <array>
+#include <cctype>
+#include <cstddef>
 
 namespace uzpp {
+
+namespace {
+
+// JSON satr qiymatini o'qiydi va ekranlash ketma-ketliklarini ochadi.
+// `pos` — ochuvchi qo'shtirnoqdan keyingi indeks; qaytishda yopuvchi
+// qo'shtirnoqdan keyingi indeksga suriladi.
+std::string decodeJsonStringAt(const std::string& json, std::size_t& pos) {
+    std::string out;
+    while (pos < json.size()) {
+        const char c = json[pos];
+        if (c == '"') { ++pos; break; }
+        if (c != '\\') { out += c; ++pos; continue; }
+
+        ++pos; // '\' ni o'tkazamiz
+        if (pos >= json.size()) break;
+        const char esc = json[pos++];
+        switch (esc) {
+            case '"':  out += '"';  break;
+            case '\\': out += '\\'; break;
+            case '/':  out += '/';  break;
+            case 'b':  out += '\b'; break;
+            case 'f':  out += '\f'; break;
+            case 'n':  out += '\n'; break;
+            case 'r':  out += '\r'; break;
+            case 't':  out += '\t'; break;
+            case 'u': {
+                if (pos + 4 > json.size()) break;
+                unsigned int cp = 0;
+                bool ok = true;
+                for (int i = 0; i < 4; ++i) {
+                    const char h = json[pos + i];
+                    cp <<= 4;
+                    if (h >= '0' && h <= '9')      cp |= static_cast<unsigned>(h - '0');
+                    else if (h >= 'a' && h <= 'f') cp |= static_cast<unsigned>(h - 'a' + 10);
+                    else if (h >= 'A' && h <= 'F') cp |= static_cast<unsigned>(h - 'A' + 10);
+                    else { ok = false; break; }
+                }
+                if (!ok) break;
+                pos += 4;
+                // Surrogat juftligi: \uD800-\uDBFF + \uDC00-\uDFFF
+                if (cp >= 0xD800 && cp <= 0xDBFF && pos + 6 <= json.size() &&
+                    json[pos] == '\\' && json[pos + 1] == 'u') {
+                    unsigned int low = 0;
+                    bool lowOk = true;
+                    for (int i = 0; i < 4; ++i) {
+                        const char h = json[pos + 2 + i];
+                        low <<= 4;
+                        if (h >= '0' && h <= '9')      low |= static_cast<unsigned>(h - '0');
+                        else if (h >= 'a' && h <= 'f') low |= static_cast<unsigned>(h - 'a' + 10);
+                        else if (h >= 'A' && h <= 'F') low |= static_cast<unsigned>(h - 'A' + 10);
+                        else { lowOk = false; break; }
+                    }
+                    if (lowOk && low >= 0xDC00 && low <= 0xDFFF) {
+                        cp = 0x10000u + ((cp - 0xD800u) << 10) + (low - 0xDC00u);
+                        pos += 6;
+                    }
+                }
+                // UTF-8 ga kodlash
+                if (cp < 0x80) {
+                    out += static_cast<char>(cp);
+                } else if (cp < 0x800) {
+                    out += static_cast<char>(0xC0 | (cp >> 6));
+                    out += static_cast<char>(0x80 | (cp & 0x3F));
+                } else if (cp < 0x10000) {
+                    out += static_cast<char>(0xE0 | (cp >> 12));
+                    out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                    out += static_cast<char>(0x80 | (cp & 0x3F));
+                } else {
+                    out += static_cast<char>(0xF0 | (cp >> 18));
+                    out += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                    out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                    out += static_cast<char>(0x80 | (cp & 0x3F));
+                }
+                break;
+            }
+            default: out += esc; break;
+        }
+    }
+    return out;
+}
+
+// `"<key>":"<value>"` ni topib, ochilgan qiymatni qaytaradi.
+// `found` — kalit umuman uchradimi (bo'sh satr ham haqiqiy qiymat bo'lishi mumkin).
+std::string jsonStringValue(const std::string& json, const std::string& key,
+                            bool* found = nullptr, std::size_t from = 0) {
+    if (found) *found = false;
+    const std::string target = "\"" + key + "\"";
+    std::size_t pos = json.find(target, from);
+    while (pos != std::string::npos) {
+        std::size_t p = pos + target.size();
+        while (p < json.size() && std::isspace(static_cast<unsigned char>(json[p]))) ++p;
+        if (p < json.size() && json[p] == ':') {
+            ++p;
+            while (p < json.size() && std::isspace(static_cast<unsigned char>(json[p]))) ++p;
+            if (p < json.size() && json[p] == '"') {
+                ++p;
+                if (found) *found = true;
+                return decodeJsonStringAt(json, p);
+            }
+        }
+        pos = json.find(target, pos + 1);
+    }
+    return "";
+}
+
+// `... qator: 5 ustun: 12` shaklidagi joylashuvni 0-asosli LSP koordinatasiga
+// aylantiradi. Topilmasa (0,0) qoldiradi — hujjat boshi.
+void parseUzppLocation(const std::string& msg, int& line, int& col) {
+    line = 0;
+    col = 0;
+    const std::size_t qatorPos = msg.rfind("qator: ");
+    if (qatorPos == std::string::npos) return;
+    const std::size_t ustunPos = msg.find("ustun: ", qatorPos);
+    if (ustunPos == std::string::npos) return;
+    try {
+        const int l = std::stoi(msg.substr(qatorPos + 7, ustunPos - qatorPos - 7));
+        const int c = std::stoi(msg.substr(ustunPos + 7));
+        line = l > 0 ? l - 1 : 0;
+        col = c > 0 ? c - 1 : 0;
+    } catch (const std::exception&) {
+        line = 0;
+        col = 0;
+    }
+}
+
+// JSON satri uchun minimal ekranlash — diagnostika xabarlari ichida qo'shtirnoq,
+// teskari chiziq yoki yangi qator uchrashi mumkin.
+std::string escapeJsonString(const std::string& in) {
+    std::string out;
+    out.reserve(in.size() + 8);
+    for (const char c : in) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:
+                if (static_cast<unsigned char>(c) >= 0x20) out += c;
+                // boshqaruv belgilari tashlab yuboriladi
+        }
+    }
+    return out;
+}
+
+} // namespace
 
 void LspServer::run() {
     while (std::cin) {
@@ -41,25 +189,7 @@ void LspServer::sendMessage(const std::string& jsonContent) {
 }
 
 std::string LspServer::extractJsonString(const std::string& json, const std::string& key) {
-    std::string target = "\"" + key + "\":";
-    size_t pos = json.find(target);
-    if (pos == std::string::npos) return "";
-    
-    pos += target.length();
-    while (pos < json.length() && (json[pos] == ' ' || json[pos] == '\t' || json[pos] == '\n' || json[pos] == '\r')) {
-        pos++;
-    }
-    
-    if (pos < json.length() && json[pos] == '"') {
-        pos++;
-        size_t end = pos;
-        while (end < json.length()) {
-            if (json[end] == '"' && json[end-1] != '\\') break;
-            end++;
-        }
-        return json.substr(pos, end - pos);
-    }
-    return "";
+    return jsonStringValue(json, key);
 }
 
 void LspServer::handleMessage(const std::string& content) {
@@ -111,7 +241,28 @@ void LspServer::handleMessage(const std::string& content) {
             auto tokens = lexer.tokenize();
             Parser parser(tokens);
             auto program = parser.parse();
-            
+
+            // Phase 12 dan beri parser xatoliklarni yig'adi (istisno tashlamaydi).
+            // Ular ham diagnostikaga chiqishi shart — aks holda sintaksis xatosi
+            // muharrirda umuman ko'rinmaydi.
+            if (parser.hasErrors()) {
+                std::ostringstream diags;
+                diags << "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/publishDiagnostics\",\"params\":{\"uri\":\"" << uri << "\",\"diagnostics\":[";
+                bool first = true;
+                for (const auto& raw : parser.getErrors()) {
+                    int line = 0, col = 0;
+                    parseUzppLocation(raw, line, col);
+                    if (!first) diags << ",";
+                    diags << "{\"range\":{\"start\":{\"line\":" << line << ",\"character\":" << col << "},"
+                          << "\"end\":{\"line\":" << line << ",\"character\":" << (col + 5) << "}},"
+                          << "\"message\":\"" << escapeJsonString(raw) << "\",\"severity\":1}";
+                    first = false;
+                }
+                diags << "]}}";
+                sendMessage(diags.str());
+                return;
+            }
+
             TypeChecker checker;
             checker.check(program.get());
             
@@ -1430,21 +1581,14 @@ std::string LspServer::computeCodeActions(const std::string& text,
 }
 
 void LspServer::applyContentChanges(std::string& document, const std::string& contentChangesJson) {
-    // Simple text extraction from contentChangesJson
-    std::string textKey = "\"text\":\"";
-    size_t pos = contentChangesJson.find(textKey);
-    if (pos != std::string::npos) {
-        pos += textKey.length();
-        size_t endPos = contentChangesJson.find("\"", pos);
-        if (endPos != std::string::npos) {
-            std::string newText = contentChangesJson.substr(pos, endPos - pos);
-            // Handle escape sequences
-            size_t escapePos = 0;
-            while ((escapePos = newText.find("\\n", escapePos)) != std::string::npos) {
-                newText.replace(escapePos, 2, "\n");
-            }
-            document = newText;
-        }
+    // Eslatma: ilgari bu yerda `"text":"` dan keyingi BIRINCHI qo'shtirnoqqacha
+    // qirqib olinardi — ya'ni `yozish << "salom"` bor har qanday hujjat muharrir
+    // keshida yarim yo'lda kesilardi va diagnostika/hover noto'g'ri ishlardi.
+    // Endi to'liq JSON dekoderi ishlatiladi (ekranlangan qo'shtirnoq, \n, \uXXXX).
+    bool found = false;
+    const std::string newText = jsonStringValue(contentChangesJson, "text", &found);
+    if (found) {
+        document = newText;
     }
 }
 

@@ -62,3 +62,6 @@ build_release/
 
 # Git Credential Manager local cache
 gcm.cache/
+
+# AI yordamchi vositalarining lokal ish fayllari
+.gemini/
