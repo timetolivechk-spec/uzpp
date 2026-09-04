@@ -48,3 +48,21 @@ if (WIN32)
 endif()
 
 add_test(NAME uzpp_frontend_smoke COMMAND uzpp_frontend_tests)
+
+# ─── Stdlib stress testlari ─────────────────────────────────────────────────
+# Ular ko'p oqimli `Kesh` va `Xotira` modullarini millionlab amal bilan
+# sinaydi — bir necha daqiqa oladi, shuning uchun `add_test` ga qo'shilmagan
+# (CI da avtomatik yugurmaydi). Lekin QURILADI: shu tariqa ular stdlib
+# o'zgarganda jimgina chirimaydi.
+#
+# Qo'lda yugurtirish:  ./build/uzpp_stress_kesh   va   ./build/uzpp_stress_xotira
+add_executable(uzpp_stress_kesh   tests/stress_test_kesh.cpp)
+add_executable(uzpp_stress_xotira tests/stress_test_memory.cpp)
+foreach(stress_target uzpp_stress_kesh uzpp_stress_xotira)
+    target_include_directories(${stress_target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdlib)
+    target_compile_features(${stress_target} PRIVATE cxx_std_23)
+    if (NOT WIN32)
+        find_package(Threads REQUIRED)
+        target_link_libraries(${stress_target} PRIVATE Threads::Threads)
+    endif()
+endforeach()

@@ -1,4 +1,4 @@
-# build.ps1 — UZ++ darslik PDF qurish (Pandoc + XeLaTeX)
+﻿# build.ps1 — UZ++ darslik PDF qurish (Pandoc + XeLaTeX)
 # Talab: Pandoc 3.x, MiKTeX (xelatex), TeX Gyre + DejaVu shriftlar
 param(
     [string]$Output = "uzpp-darslik.pdf",

@@ -1,4 +1,8 @@
-# Скомпилированные бинарники
+# ============================================================================
+#  uz++ — versiya nazoratiga tushmaydigan fayllar
+# ============================================================================
+
+# ─── Kompilyatsiya natijalari ───────────────────────────────────────────────
 *.exe
 *.o
 *.a
@@ -6,24 +10,50 @@
 *.dll
 *.so
 *.dylib
-
-# Генерированные C++ файлы
 *.generated.cpp
 
-# Директория сборки CMake
+# ─── Qurish papkalari ───────────────────────────────────────────────────────
 build/
 build_wt/
 build2/
+build_release/
+dist/
 
-# Node.js зависимости (vscode-uzpp расширение)
+# CMake keshi
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+# CTest artefaktlari. DIQQAT: .gitignore bir qatorda izohni qo'llab-quvvatlamaydi —
+# `Testing/   # izoh` butun satr sifatida qidiriladi va hech narsaga mos kelmaydi.
+Testing/
+
+# GCC modul keshi
+gcm.cache/
+
+# ─── Node.js (VS Code kengaytmasi) ──────────────────────────────────────────
 node_modules/
 vscode-uzpp/node_modules/
-
-# Большие бинарники (собираются из исходников)
 vscode-uzpp/bin/
 vscode-uzpp/*.vsix
 
-# Временные тестовые файлы в корне (NOT в tests/)
+# ─── Reliz paketlari ────────────────────────────────────────────────────────
+release-pkg/
+uzpp-windows-x64.zip
+uzpp-linux-x64.tar.gz
+uzpp-macos-*.tar.gz
+mingw-w64-windows-x64.zip
+installer/windows/Output/
+
+# Tashqi kutubxonalar o'rnatuvchilari (qo'lda yuklanadi, repozitoriyga kirmaydi)
+external/
+
+# ─── Darslik PDF ning oraliq fayllari (build.ps1 -KeepTex) ──────────────────
+docs/darslik/uzpp-darslik.tex
+docs/darslik/*.aux
+docs/darslik/*.log
+docs/darslik/*.toc
+
+# ─── Ildizdagi vaqtinchalik sinov fayllari (tests/ ichidagilar EMAS) ────────
 /test_fayl.txt
 /test_out.txt
 /test.txt
@@ -32,42 +62,15 @@ vscode-uzpp/*.vsix
 /test*.uzpp
 /demo_*.uzpp
 /temp.uzpp
+/smoke/
 
-# Release packaging artifacts
-release-pkg/
-uzpp-windows-x64.zip
-uzpp-linux-x64.tar.gz
-uzpp-macos-*.tar.gz
-dist/
-installer/windows/Output/
-
-# CMake кэш
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Testing/                            # CTest artifacts
-
-# IDE
+# ─── Mahalliy muhit va AI vositalari ────────────────────────────────────────
+.venv/
 .vscode/settings.json
-
-# Claude AI настройки
 .claude/
-build_release/
+.gemini/
 
-# AI session-continuity context (local-only mirror of ~/.claude/.../memory/project_uzpp.md).
-# Don't commit — public repo doesn't need internal handoff docs.
+# AI sessiyalari uchun lokal kontekst — ochiq repozitoriyga kerak emas.
 /HANDOFF.md
 /NEXT_SESSION_PLAN.md
 /UZPP_CONTEXT.md
-
-# Git Credential Manager local cache
-gcm.cache/
-
-# AI yordamchi vositalarining lokal ish fayllari
-.gemini/
-
-# Darslik PDF ning oraliq LaTeX fayli (build.ps1 -KeepTex bilan hosil bo'ladi)
-docs/darslik/uzpp-darslik.tex
-docs/darslik/*.aux
-docs/darslik/*.log
-docs/darslik/*.toc
