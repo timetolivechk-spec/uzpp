@@ -1,7 +1,7 @@
 # UZ++ DASTURLASH TILI: TO'LIQ O'QUV QO'LLANMA
 
 **Muallif:** Shaxriyor Malikov  
-**Versiya:** v2.3.0 (2026-yil sentabr)  
+**Versiya:** v2.3.1 (2026-yil sentabr)  
 **Litsenziya:** MIT  
 
 ---

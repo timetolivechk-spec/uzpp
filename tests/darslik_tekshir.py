@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Darslikdagi har bir kod blokini haqiqiy uzpp kompilyatori bilan tekshiradi.
+"""Hujjatlardagi har bir kod blokini haqiqiy uzpp kompilyatori bilan tekshiradi.
 
-Darslik misollari — foydalanuvchi ko'radigan birinchi kod. Ular ishlamasa,
-til ishlamaydi. Bu skript `docs/darslik/*.md` dagi har bir ```cpp blokini
-ajratib oladi va uzpp orqali o'tkazadi.
+Misollar — foydalanuvchi ko'radigan birinchi kod. Ular ishlamasa, til
+ishlamaydi. Skript `docs/darslik/*.md`, `README.md` va
+`docs/getting-started.md` dagi har bir ```cpp blokini ajratib oladi va
+uzpp orqali o'tkazadi.
 
 Ishlatish:
 
@@ -32,6 +33,13 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = os.path.join(ROOT, "docs", "darslik")
 
+# Darslikdan tashqari — foydalanuvchi ko'radigan boshqa hujjatlar.
+# Ularda ham kod misollari bor va ular ham ishlashi shart.
+EXTRA_DOCS = [
+    os.path.join(ROOT, "README.md"),
+    os.path.join(ROOT, "docs", "getting-started.md"),
+]
+
 FENCE = re.compile(r"^```(\w*)\s*$")
 DIRECTIVE = re.compile(r"<!--\s*darslik:(\w+)\s*-->")
 
@@ -49,13 +57,22 @@ UZPP_HINTS = [
 ]
 
 
-def blocks(only=None):
+def _doc_paths(only=None):
     for fn in sorted(os.listdir(DOCS)):
         if not fn.endswith(".md"):
             continue
         if only and not fn.startswith(only):
             continue
-        lines = open(os.path.join(DOCS, fn), encoding="utf-8").read().split("\n")
+        yield fn, os.path.join(DOCS, fn)
+    if not only:
+        for path in EXTRA_DOCS:
+            if os.path.exists(path):
+                yield os.path.basename(path), path
+
+
+def blocks(only=None):
+    for fn, path in _doc_paths(only):
+        lines = open(path, encoding="utf-8").read().split("\n")
         i = 0
         while i < len(lines):
             m = FENCE.match(lines[i])
