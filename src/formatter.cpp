@@ -167,6 +167,12 @@ void Formatter::formatClassDeclaration(const ClassDeclaration* decl) {
             emitRaw(" : ");
             emitRaw(m.bitWidth);
         }
+        // Maydonning standart qiymati — formatlashda yo'qolmasligi shart
+        // (gotcha #10: formatClassDeclaration eng ko'p maydonli emitter).
+        if (m.defaultValue) {
+            emitRaw(" = ");
+            formatExpression(m.defaultValue.get());
+        }
         emitRaw(";");
         emitNewline();
     }

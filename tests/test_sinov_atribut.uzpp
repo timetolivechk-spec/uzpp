@@ -1,0 +1,41 @@
+// `@sinov` va `@bench` atributlari.
+//
+// `uzpp sinov <fayl>`  — @sinov funksiyalarini yig'ib, test to'plamini yuritadi.
+// `uzpp bench <fayl>`  — @bench funksiyalarini o'lchaydi.
+// `uzpp qurish <fayl>` — oddiy dastur sifatida quradi (`asosiy` ishlaydi).
+//
+// Bu fayl uchala rejimda ham qurilishi kerak.
+ulash "uzpp_runtime.hpp"
+
+butun yigindi(butun a, butun b) {
+    qaytarish a + b;
+}
+
+@sinov bosh yigindi_musbat_sonlar() {
+    uzpp::Sinov::tasdiqlash(yigindi(2, 3) == 5, "2 + 3 = 5 bo'lishi kerak");
+    uzpp::Sinov::tasdiqlash_teng(0, yigindi(0, 0));
+}
+
+@sinov bosh yigindi_manfiy_sonlar() {
+    uzpp::Sinov::tasdiqlash_teng(0, yigindi(-1, 1));
+    uzpp::Sinov::tasdiqlash_teng(-5, yigindi(-2, -3));
+}
+
+@bench bosh yigindi_olchov() {
+    butun s = 0;
+    uchun (butun i = 0; i < 100; i++) {
+        s = yigindi(s, i);
+    }
+    agar (s < 0) {
+        yozish << s;
+    }
+}
+
+butun asosiy() {
+    agar (yigindi(2, 3) == 5 && yigindi(-2, -3) == -5) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

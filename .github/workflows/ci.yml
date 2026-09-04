@@ -101,6 +101,16 @@ jobs:
             exit 1
           fi
 
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          # `@sinov` / `@bench` glue lives in codegen and references stdlib class
+          # names by hand. It broke silently once (wrong class name) and nothing
+          # caught it, because `qurish` does not exercise that path.
+          ./build/uzpp.exe sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp.exe bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
+
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp.exe
 
@@ -203,6 +213,13 @@ jobs:
           done
           echo "tests/ regression: $PASS passed, $FAIL failed, $SKIPPED skipped"
           if [ $FAIL -ne 0 ]; then echo "FAILED tests:$FAILED_LIST"; exit 1; fi
+
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          ./build/uzpp sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
@@ -321,6 +338,13 @@ jobs:
             echo "FAILED tests:$FAILED_LIST"
             exit 1
           fi
+
+      - name: Verify uzpp sinov / bench work end-to-end
+        run: |
+          ./build/uzpp sinov tests/test_sinov_atribut.uzpp | tee sinov.log
+          grep -q "Quladi:0" sinov.log
+          ./build/uzpp bench tests/test_sinov_atribut.uzpp | tee bench.log
+          grep -q "ns/amal" bench.log
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp

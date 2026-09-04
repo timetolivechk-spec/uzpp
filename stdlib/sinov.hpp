@@ -1,12 +1,13 @@
 #pragma once
 #ifndef UZPP_GEN_SINOV_HPP_
 #define UZPP_GEN_SINOV_HPP_
-#line 1 "C:\\Users\\MSN\\uz++\\stdlib\\sinov.uzpp"
+#line 1 "stdlib\\sinov.uzpp"
 #include <exception>
 #include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <chrono>
 #include <vector>
 namespace uzpp::Sinov {
     inline auto tasdiqlash(bool shart, const std::string& xabar = "")->void
@@ -102,6 +103,64 @@ namespace uzpp::Sinov {
                 }
             ((std::cout << "=============================================") << std::endl);
             return quladi;
+        }
+    };
+    class BenchToʼplami {
+    public:
+        std::vector<std::function<void()>> olchovlar_;
+        std::vector<std::string> nomlar_;
+        int takror_ = 1000;
+        BenchToʼplami()
+        {
+        }
+        void takror_belgilash(int n)
+        {
+            if((n > 0))
+                {
+                    (takror_ = n);
+                }
+        }
+        void bench_qoshish(const std::string& nom, std::function<void()> olchov)
+        {
+            nomlar_.push_back(nom);
+            olchovlar_.push_back(olchov);
+        }
+        int ishga_tushirish()
+        {
+            (std::cout << std::endl);
+            ((std::cout << "=============================================") << std::endl);
+            ((((std::cout << "  Benchmark (") << takror_) << " marta takrorlash)") << std::endl);
+            ((std::cout << "=============================================") << std::endl);
+            int xatolar = 0;
+            for(std::size_t i = 0;(i < olchovlar_.size());(i =(i + 1)))
+                {
+                    (((((((std::cout << "  [") <<(i + 1)) << "/") << olchovlar_.size()) << "] ") << nomlar_[i]) << " ... ");
+                    try
+                        {
+                            olchovlar_[i]();
+                            auto boshlanish = std::chrono::steady_clock::now();
+                            for(int k = 0;(k < takror_);(k =(k + 1)))
+                                {
+                                    olchovlar_[i]();
+                                }
+                            auto tugash = std::chrono::steady_clock::now();
+                            auto jami_ns = std::chrono::duration_cast<std::chrono::nanoseconds>((tugash - boshlanish)).count();
+                            double ortacha_ns =(static_cast < double >(jami_ns) / static_cast < double >(takror_));
+                            ((((((std::cout << ortacha_ns) << " ns/amal") << "  (jami ") <<(static_cast < double >(jami_ns) / 1000000.0)) << " ms)") << std::endl);
+                        }
+                    catch(std :: exception & e)
+                        {
+                            (((std::cout << "XATO: ") << e.what()) << std::endl);
+                            (xatolar =(xatolar + 1));
+                        }
+                    catch(...)
+                        {
+                            ((std::cout << "XATO: noma'lum") << std::endl);
+                            (xatolar =(xatolar + 1));
+                        }
+                }
+            ((std::cout << "=============================================") << std::endl);
+            return xatolar;
         }
     };
     inline auto test_bajar(const std::string& nom, std::function<void()> test)->bool

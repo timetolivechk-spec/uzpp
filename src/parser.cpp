@@ -3224,14 +3224,16 @@ std::unique_ptr<ClassDeclaration> Parser::parseClassDeclaration() {
                     member.bitWidth = advance().value;
                 }
 
-                members.push_back(member);
-
+                // Standart qiymat: `butun soni_ = 42;` yoki `matn nomi_ = "x";`
                 if (!isAtEnd() && peek().value == "=") {
-                    advance(); // skip '='
-                    while (!isAtEnd() && peek().value != ";") {
-                        advance();
-                    }
+                    advance(); // '='
+                    member.defaultValue = std::shared_ptr<Expression>(parseExpression().release());
+                } else if (!isAtEnd() && peek().value == "{") {
+                    // Qavsli initsializatsiya: `vektor<butun> v {1, 2, 3};`
+                    member.defaultValue = std::shared_ptr<Expression>(parseExpression().release());
                 }
+
+                members.push_back(std::move(member));
                 if (!isAtEnd() && peek().value == ";") {
                     advance(); // consume ';'
                 }

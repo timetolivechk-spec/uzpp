@@ -1,0 +1,44 @@
+// Sinf maydonlarining standart qiymati (C++11 non-static data member
+// initializer). Ilgari parser `= qiymat` ni JIMGINA tashlab yuborardi —
+// dastur kompilyatsiya bo'lardi, lekin maydon axlat qiymat bilan qolardi.
+ulash "uzpp_runtime.hpp"
+
+sinf Sozlama {
+    butun urinishlar_ = 3;
+    matn nomi_ = "standart";
+    mantiqiy yoqilgan_ = rost;
+    haqiqiy chegara_ = 0.75;
+
+ochiq:
+    butun ochiq_son = 100;
+
+    butun urinishlar() o'zgarmas { qaytarish urinishlar_; }
+    matn nomi() o'zgarmas { qaytarish nomi_; }
+    mantiqiy yoqilgan() o'zgarmas { qaytarish yoqilgan_; }
+    haqiqiy chegara() o'zgarmas { qaytarish chegara_; }
+};
+
+tuzilma Nuqta {
+    butun x = 1;
+    butun y = 2;
+};
+
+butun asosiy() {
+    Sozlama s;
+    Nuqta n;
+
+    yozish << s.urinishlar() << " " << s.nomi() << " "
+           << s.yoqilgan() << " " << s.chegara() << " "
+           << s.ochiq_son << qator_oxiri;
+    yozish << n.x << "," << n.y << qator_oxiri;
+
+    agar (s.urinishlar() == 3 && s.nomi() == "standart" && s.yoqilgan()
+          && s.chegara() > 0.7 && s.chegara() < 0.8
+          && s.ochiq_son == 100 && n.x == 1 && n.y == 2) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}

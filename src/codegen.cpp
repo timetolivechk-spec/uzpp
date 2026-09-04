@@ -100,15 +100,18 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
         emitRawToken("int main(int argc, char* argv[]) {");
         emitNewline();
         indentMore();
-        emitRawToken("uzpp::Sinov::SinovlarToplami runner;");
+        // DIQQAT: sinf nomi stdlib/sinov.uzpp dagi `TestTo'plami` dan keladi va
+        // apostrof C++ da U+02BC ga aylanadi (gotcha #16). Aynan shu belgini
+        // chiqarish kerak — universal-character-name orqali, manba fayl ASCII
+        // qolishi uchun. Ilgari bu yerda mavjud bo'lmagan `SinovlarToplami`
+        // yozilgan edi, ya'ni @sinov umuman kompilyatsiya bo'lmasdi.
+        emitRawToken("uzpp::Sinov::TestTo\u02BCplami runner(\"uz++ sinovlari\");");
         emitNewline();
         for (const auto& func : testFunctions_) {
-            emitRawToken("runner.testQoshish(\"" + func + "\", " + func + ");");
+            emitRawToken("runner.test_qoshish(\"" + func + "\", " + func + ");");
             emitNewline();
         }
-        emitRawToken("runner.ishgaTushirish();");
-        emitNewline();
-        emitRawToken("return 0;");
+        emitRawToken("return runner.ishga_tushirish();");
         emitNewline();
         indentLess();
         emitRawToken("}");
@@ -120,15 +123,13 @@ std::string CodeGen::generate(const Program* program, const std::string& sourceN
         emitRawToken("int main(int argc, char* argv[]) {");
         emitNewline();
         indentMore();
-        emitRawToken("uzpp::Sinov::BenchToplami runner;");
+        emitRawToken("uzpp::Sinov::BenchTo\u02BCplami runner;");
         emitNewline();
         for (const auto& func : benchFunctions_) {
-            emitRawToken("runner.benchQoshish(\"" + func + "\", " + func + ");");
+            emitRawToken("runner.bench_qoshish(\"" + func + "\", " + func + ");");
             emitNewline();
         }
-        emitRawToken("runner.ishgaTushirish();");
-        emitNewline();
-        emitRawToken("return 0;");
+        emitRawToken("return runner.ishga_tushirish();");
         emitNewline();
         indentLess();
         emitRawToken("}");
@@ -1942,6 +1943,12 @@ void CodeGen::visitClassDeclaration(const ClassDeclaration* decl) {
             if (!member.bitWidth.empty()) {
                 emitRawToken(":");
                 emitRawToken(member.bitWidth);
+            }
+            // Standart qiymat (C++11 non-static data member initializer).
+            // Bit-maydonlar uchun ham amal qiladi (C++20).
+            if (member.defaultValue) {
+                emitRawToken("=");
+                visitExpression(member.defaultValue.get());
             }
             emitRawToken(";");
             emitNewline();

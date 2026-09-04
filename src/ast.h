@@ -748,6 +748,11 @@ public:
         std::string accessSpecifier; // ochiq, yopiq, protected
         std::string arraySize; // For C-style arrays: "10" for int data[10], empty if not array
         std::string bitWidth;  // C++ bitfield: "4" for `int x : 4`. Empty if not bitfield.
+        // Maydonning standart qiymati: `butun soni_ = 42;`.
+        // shared_ptr (unique_ptr emas) — `Member` bir necha joyda NUSXALANADI
+        // (type_checker, formatter, LSP), shuning uchun ko'chiriladigan
+        // egalik kerak emas, ulashiladigan egalik kerak.
+        std::shared_ptr<Expression> defaultValue;
         bool isVolatile = false;
         bool isThreadLocal = false;
         bool hasNoUniqueAddress = false;  // C++20 [[no_unique_address]]

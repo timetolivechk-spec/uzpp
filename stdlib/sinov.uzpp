@@ -7,6 +7,7 @@ ulash <functional>
 ulash <iostream>
 ulash <stdexcept>
 ulash <string>
+ulash <chrono>
 ulash <vector>
 
 nomlar_fazosi uzpp::Sinov {
@@ -103,6 +104,73 @@ ochiq:
 
         yozish << "=============================================" << qator_oxiri;
         qaytarish quladi;
+    }
+};
+
+// ===== BENCHMARK TO'PLAMI =====
+//
+// `@bench` atributi qo'yilgan funksiyalar shu to'plam orqali ishga
+// tushiriladi (`uzpp bench fayl.uzpp`). Har bir funksiya bir necha marta
+// takrorlanadi va o'rtacha vaqt chiqariladi.
+
+sinf BenchTo'plami {
+    vektor<std::function<void()>> olchovlar_;
+    vektor<matn> nomlar_;
+    butun takror_ = 1000;
+
+ochiq:
+    BenchTo'plami() {}
+
+    bosh takror_belgilash(butun n) {
+        agar (n > 0) {
+            takror_ = n;
+        }
+    }
+
+    bosh bench_qoshish(o'zgarmas matn& nom, std::function<void()> olchov) {
+        nomlar_.push_back(nom);
+        olchovlar_.push_back(olchov);
+    }
+
+    butun ishga_tushirish() {
+        yozish << qator_oxiri;
+        yozish << "=============================================" << qator_oxiri;
+        yozish << "  Benchmark (" << takror_ << " marta takrorlash)" << qator_oxiri;
+        yozish << "=============================================" << qator_oxiri;
+
+        butun xatolar = 0;
+
+        uchun (hajm_turi i = 0; i < olchovlar_.size(); i = i + 1) {
+            yozish << "  [" << (i + 1) << "/" << olchovlar_.size() << "] "
+                   << nomlar_[i] << " ... ";
+
+            urinish {
+                // Isitish — birinchi chaqiruv kesh va lazy-init ta'sirini yutadi.
+                olchovlar_[i]();
+
+                o'zgaruvchan boshlanish = std::chrono::steady_clock::now();
+                uchun (butun k = 0; k < takror_; k = k + 1) {
+                    olchovlar_[i]();
+                }
+                o'zgaruvchan tugash = std::chrono::steady_clock::now();
+
+                o'zgaruvchan jami_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(tugash - boshlanish).count();
+                haqiqiy ortacha_ns = statik_otkazish<haqiqiy>(jami_ns) / statik_otkazish<haqiqiy>(takror_);
+
+                yozish << ortacha_ns << " ns/amal"
+                       << "  (jami " << (statik_otkazish<haqiqiy>(jami_ns) / 1000000.0) << " ms)"
+                       << qator_oxiri;
+            } ushlash (std::exception& e) {
+                yozish << "XATO: " << e.what() << qator_oxiri;
+                xatolar = xatolar + 1;
+            } ushlash (...) {
+                yozish << "XATO: noma'lum" << qator_oxiri;
+                xatolar = xatolar + 1;
+            }
+        }
+
+        yozish << "=============================================" << qator_oxiri;
+        qaytarish xatolar;
     }
 };
 
