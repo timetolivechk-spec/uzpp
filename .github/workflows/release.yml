@@ -401,7 +401,7 @@ jobs:
             Installer ichida bor:
             - `uzpp.exe` (kompilyator)
             - `stdlib/` (standart kutubxona)
-            - `misollar/` (10 ta misol)
+            - `misollar/` (15 ta misol)
             - `compiler/` (WinLibs GCC 15.2 UCRT — uzpp avtomatik ishlatadi)
 
             PATH avtomatik sozlanadi, `.uzpp` fayllari uzpp bilan ochiladi.
@@ -437,13 +437,23 @@ jobs:
             sudo apt-get install -y g++ libstdc++-15-dev  # if you don't have g++ yet
             ```
 
-            **macOS (Apple Silicon, qo'lda):**
+            **macOS (qo'lda):**
+
+            `install.sh` ni ishlatish TAVSIYA ETILADI — u karantin belgisini
+            olib tashlaydi va imzo qo'yadi. Qo'lda o'rnatsangiz, oxirgi ikki
+            buyruqni O'TKAZIB YUBORMANG: ularsiz Gatekeeper binarni bloklaydi
+            (Apple Silicon da esa imzosiz jarayon darhol o'ldiriladi).
+
             ```bash
-            curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-arm64.tar.gz
+            # arm64 / x64 / universal — o'zingizga mosini tanlang
+            curl -L -o uzpp.tar.gz https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/uzpp-macos-universal.tar.gz
             mkdir uzpp-install && tar -xzf uzpp.tar.gz -C uzpp-install
             sudo cp uzpp-install/uzpp /usr/local/bin/
-            sudo cp -r uzpp-install/stdlib /usr/local/lib/uzpp/
-            xcode-select --install  # if Command Line Tools missing
+            sudo mkdir -p /usr/local/lib/uzpp && sudo cp -r uzpp-install/stdlib/. /usr/local/lib/uzpp/
+            xcode-select --install                                  # Command Line Tools yo'q bo'lsa
+
+            sudo xattr -dr com.apple.quarantine /usr/local/bin/uzpp # ← Gatekeeper
+            sudo codesign --force --sign - /usr/local/bin/uzpp      # ← Apple Silicon
             ```
 
             ### Arxiv tarkibi
@@ -454,7 +464,9 @@ jobs:
             | `install.sh` | **Linux/macOS bir-buyruqli installer** — tizimni aniqlaydi va o'rnatadi |
             | `uzpp-windows-x64.zip` | `uzpp.exe` + `stdlib/` (portable, MinGW yo'q) |
             | `uzpp-linux-x64.tar.gz` | `uzpp` + `stdlib/` |
-            | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (Apple Silicon) |
+            | `uzpp-macos-universal.tar.gz` | `uzpp` + `stdlib/` (Intel + Apple Silicon, tavsiya etiladi) |
+            | `uzpp-macos-arm64.tar.gz` | `uzpp` + `stdlib/` (faqat Apple Silicon) |
+            | `uzpp-macos-x64.tar.gz` | `uzpp` + `stdlib/` (faqat Intel) |
             | `mingw-w64-windows-x64.zip` | Portable C++ kompilyatori (g++) Windows uchun |
           files: |
             dist/uzpp-setup-windows/uzpp-setup.exe
