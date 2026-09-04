@@ -29,7 +29,7 @@
 
 ; Version is read from CLI override (e.g. /DAppVersion=2.1.1) or falls back.
 #ifndef AppVersion
-  #define AppVersion   "2.1.1"
+  #define AppVersion   "2.3.0"
 #endif
 
 ; Source paths are resolved relative to this .iss file. The build script in

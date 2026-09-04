@@ -121,6 +121,9 @@ jobs:
           python tests/darslik_tekshir.py build/uzpp.exe
           python tests/darslik_tekshir.py build/uzpp.exe --qurish
 
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp.exe
+
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp.exe
 
@@ -239,6 +242,9 @@ jobs:
           # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
           python3 tests/darslik_tekshir.py build/uzpp
           python3 tests/darslik_tekshir.py build/uzpp --qurish
+
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
@@ -373,6 +379,9 @@ jobs:
           # <!-- darslik:skip --> / <!-- darslik:xato --> marker.
           python3 tests/darslik_tekshir.py build/uzpp
           python3 tests/darslik_tekshir.py build/uzpp --qurish
+
+      - name: Formatter safety (must never corrupt source)
+        run: bash tests/formatlash_xavfsizlik.sh build/uzpp
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp

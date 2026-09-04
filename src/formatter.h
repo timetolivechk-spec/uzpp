@@ -48,7 +48,12 @@ private:
     void formatTryStatement(const TryStatement* stmt);
 
     // Expressions
-    void formatExpression(const Expression* expr);
+    // `parentPrec` — o'rab turgan operatorning ustuvorligi; `rightChild`
+    // chapdan-o'ngga bog'lanish uchun. Ular yordamida qavs FAQAT kerak
+    // bo'lganda qo'yiladi.
+    void formatExpression(const Expression* expr, int parentPrec = 0, bool rightChild = false);
+    // Blok tanasini `{` bilan bir qatorda, bitta daraja ichkarida chiqaradi.
+    void formatBlockBody(const Statement* body);
 
     // Utilities
     void writeIndent();

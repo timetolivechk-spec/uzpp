@@ -37,6 +37,13 @@ namespace fs = std::filesystem;
 
 namespace uzpp {
 
+// Versiya CMake dan keladi (`target_compile_definitions(... UZPP_VERSION=...)`).
+// CMake'siz qurilganda ham kompilyatsiya bo'lishi uchun zaxira qiymat.
+#ifndef UZPP_VERSION
+#define UZPP_VERSION "0.0.0-dev"
+#endif
+#define UZPP_VERSION_STRING "v" UZPP_VERSION
+
 namespace CompilerUtils {
     inline fs::path getExecutableDir() {
         fs::path exePath;
@@ -787,6 +794,43 @@ public:
                   << cppLines.size() << " qator C++\033[0m\n";
     }
 
+    // Formatlagichning qamrovi hali to'liq emas: ba'zi tugun turlari
+    // (sanab_olish, standart parametr qiymatlari, massiv o'lchamlari, ...)
+    // chiqarishda yo'qoladi. Shu sababli fayl QAYTA YOZILISHIDAN OLDIN
+    // natija tekshiriladi: formatlangan matn qayta leksiy qilinadi va
+    // token oqimi asl fayl bilan solishtiriladi. Farq bo'lsa — fayl
+    // TEGILMAYDI. Chirkin format — noqulaylik; yo'qolgan kod — falokat.
+    static std::vector<std::string> significantTokens(const std::string& source) {
+        std::vector<std::string> out;
+        Lexer lexer(source);
+        for (const Token& t : lexer.tokenize()) {
+            if (t.type == TokenType::EndOfFile) continue;
+            out.push_back(t.value);
+        }
+        return out;
+    }
+
+    static std::string firstDifference(const std::vector<std::string>& a,
+                                       const std::vector<std::string>& b) {
+        const std::size_t n = std::min(a.size(), b.size());
+        for (std::size_t i = 0; i < n; ++i) {
+            if (a[i] != b[i]) {
+                std::string ctx;
+                const std::size_t from = i > 3 ? i - 3 : 0;
+                for (std::size_t k = from; k < i; ++k) ctx += a[k] + " ";
+                return "  ... " + ctx + "[asl: `" + a[i] + "` / format: `" + b[i] + "`]";
+            }
+        }
+        if (a.size() > b.size()) {
+            return "  formatlashda yo'qoldi: `" + a[n] + "` (va yana " +
+                   std::to_string(a.size() - n - 1) + " ta token)";
+        }
+        if (b.size() > a.size()) {
+            return "  formatlashda qo'shildi: `" + b[n] + "`";
+        }
+        return "";
+    }
+
     bool formatCode(const fs::path& filePath) const {
         std::ifstream input(filePath, std::ios::binary);
         if (!input.is_open()) {
@@ -795,22 +839,43 @@ public:
         }
         std::ostringstream buffer;
         buffer << input.rdbuf();
+        const std::string original = buffer.str();
 
         try {
-            Lexer lexer(buffer.str());
+            Lexer lexer(original);
             const auto tokens = lexer.tokenize();
             Parser parser(tokens);
             const auto program = parser.parse();
 
+            if (parser.hasErrors()) {
+                std::cerr << "XATO (formatlash): faylda sintaksis xatosi bor, formatlanmadi.\n";
+                for (const auto& e : parser.getErrors()) std::cerr << "  " << e << '\n';
+                return false;
+            }
+
             Formatter formatter;
             const std::string formatted = formatter.format(program.get());
+
+            // --- Xavfsizlik tekshiruvi ---
+            const auto before = significantTokens(original);
+            const auto after  = significantTokens(formatted);
+            if (before != after) {
+                std::cerr << "XATO (formatlash): natija asl kod bilan mos kelmadi — "
+                             "fayl o'zgartirilmadi.\n"
+                          << "  " << filePath.string() << '\n'
+                          << firstDifference(before, after) << '\n'
+                          << "  Bu formatlagichning kamchiligi. Kodingiz joyida qoldi;\n"
+                          << "  iltimos, shu faylni namuna qilib xato haqida xabar bering:\n"
+                          << "  https://github.com/timetolivechk-spec/uzpp/issues\n";
+                return false;
+            }
 
             std::ofstream output(filePath, std::ios::binary);
             output << formatted;
             std::cout << "Formatlandi -> " << filePath.string() << '\n';
             return true;
         } catch (const std::exception& error) {
-            std::cerr << "XATO (Formatlah): " << error.what() << '\n';
+            std::cerr << "XATO (formatlash): " << error.what() << '\n';
             return false;
         }
     }
@@ -1080,7 +1145,7 @@ void printHelp() {
     std::cout << "  uzpp bench [<fayl.uzpp>]                        Benchmark\n";
     std::cout << "  uzpp ornatish <modul>                           Paket o'rnatish\n";
     std::cout << "  uzpp yangilash <modul>                          Paketni yangilash\n";
-    std::cout << "  uzpp formatlash [<fayl.uzpp>]                   Kodni formatlash\n";
+    std::cout << "  uzpp formatlash [<fayl.uzpp>]                   Kodni formatlash (qisman)\n";
     std::cout << "  uzpp lsp                                        LSP serverni ishga tushirish\n";
     std::cout << "  uzpp dap                                        DAP serverni ishga tushirish\n";
     std::cout << "  uzpp hujjat (yoki doc) [<chiqish_papkasi>]      Hujjat yaratish\n";
@@ -1092,6 +1157,8 @@ void printHelp() {
     std::cout << "  uzpp transpile kod.uzpp --show-cpp\n";
     std::cout << "\nEslatma:\n";
     std::cout << "  - `qurish`, `ishga-tushirish` va `transpile` faylsiz chaqirilsa, `uzpp.toml` dan foydalaniladi.\n";
+    std::cout << "  - `formatlash` hali tilning bir qismini qamrab oladi. Natija asl kodga\n";
+    std::cout << "    teng bo'lmasa, fayl O'ZGARTIRILMAYDI va sabab ko'rsatiladi.\n";
 }
 
 BuildTarget hostTarget() {
@@ -1502,7 +1569,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (options.mode == CommandMode::Version) {
-            std::cout << "uz++ OMEGA CLI v4.0.0 (C++23 transpile engine)\n";
+            std::cout << "uz++ " << UZPP_VERSION_STRING << " (C++23 transpile engine)\n";
             return 0;
         }
 

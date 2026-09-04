@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(uz_plus_plus LANGUAGES CXX)
+# Versiya — YAGONA manba. Bu yerdan main.cpp ga (UZPP_VERSION) uzatiladi.
+# CHANGELOG.md, vscode-uzpp/package.json va installer/windows/installer.iss
+# shu raqam bilan mos bo'lishi kerak.
+project(uz_plus_plus VERSION 2.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +34,7 @@ endif()
 
 add_executable(uzpp src/main.cpp)
 target_link_libraries(uzpp PRIVATE uzpp_frontend)
+target_compile_definitions(uzpp PRIVATE UZPP_VERSION="${PROJECT_VERSION}")
 if (WIN32)
     target_link_options(uzpp PRIVATE -static)
 endif()
