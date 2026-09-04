@@ -233,11 +233,17 @@ public:
     Expression* getCallee() const { return callee_.get(); }
     const std::vector<std::unique_ptr<Expression>>& getArguments() const { return args_; }
     const Token& getCallToken() const { return callToken_; }
-    
+
+    // `Tur{a, b}` — qavsli initsializatsiya, `Tur(a, b)` emas.
+    // Agregat tuzilmalar uchun muhim: ularda konstruktor yo'q.
+    bool usesBraceInit() const { return braceInit_; }
+    void setBraceInit(bool value) { braceInit_ = value; }
+
 private:
     std::unique_ptr<Expression> callee_;
     std::vector<std::unique_ptr<Expression>> args_;
     Token callToken_;
+    bool braceInit_ = false;
 };
 
 class AwaitExpression final : public Expression {

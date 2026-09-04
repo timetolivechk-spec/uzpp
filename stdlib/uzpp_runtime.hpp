@@ -43,8 +43,8 @@ namespace uzpp {
 template <typename T, typename E = std::string>
 class Natija {
 public:
-    static Natija muvaffaqiyat(T val) { return Natija(std::move(val), true); }
-    static Natija xato(E err)         { return Natija(std::move(err), false); }
+    static Natija muvaffaqiyat(T val) { return Natija(OkTeg{}, std::move(val)); }
+    static Natija xato(E err)         { return Natija(XatoTeg{}, std::move(err)); }
 
     [[nodiscard]] bool yaroqliMi()   const noexcept { return ok_; }
     [[nodiscard]] bool xatoliMi()    const noexcept { return !ok_; }
@@ -63,12 +63,20 @@ public:
     explicit operator bool() const noexcept { return ok_; }
 
 private:
-    Natija(T val, bool ok) : val_(std::move(val)), ok_(ok) {}
-    Natija(E err, bool ok) : err_(std::move(err)), ok_(ok) {}
+    // Teg (tag) turlari kerak, chunki T va E BIR XIL bo'lishi mumkin —
+    // masalan `Natija<matn, matn>` (qiymat ham, xato ham matn). Ilgari
+    // ikkala konstruktor `(T, bool)` va `(E, bool)` edi va T == E bo'lganda
+    // ular bir xil imzoga ega bo'lib, kompilyatsiya buzilardi:
+    //     "cannot be overloaded with 'Natija(T, bool)'"
+    struct OkTeg {};
+    struct XatoTeg {};
+
+    Natija(OkTeg,   T val) : val_(std::move(val)), ok_(true)  {}
+    Natija(XatoTeg, E err) : err_(std::move(err)), ok_(false) {}
 
     T val_{};
     E err_{};
-    bool ok_;
+    bool ok_ = false;
 };
 
 // ===== TANLOV (Option<T>) — mavjud yoki yo'q =====

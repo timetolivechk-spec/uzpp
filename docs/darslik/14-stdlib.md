@@ -95,35 +95,134 @@ yozish << "O'tdi: " << (oxir - bosh).millisekund() << " ms";
 
 ## `sinov` moduli — Test framework
 
-uz++ da test yozish uchun sodda framework.
+uz++ da test yozish uchun sodda framework. Ikkita yo'l bor.
+
+### 1-yo'l: `@sinov` atributi (eng qulay)
+
+`@sinov` — bu **funksiya atributi**. Uni `bosh` qaytaruvchi funksiya
+oldiga qo'yasiz, funksiya nomi esa test nomi bo'ladi:
 
 ```cpp
-ulash "sinov.uzpp"
+ulash "uzpp_runtime.hpp"
 
-@sinov("yigindi to'g'ri ishlashi kerak") {
-    sinov::tekshirish(yigindi(2, 3) == 5);
-    sinov::tekshirish(yigindi(0, 0) == 0);
-    sinov::tekshirish(yigindi(-1, 1) == 0);
+butun yigindi(butun a, butun b) {
+    qaytarish a + b;
 }
 
-@sinov("matn uzunligini olish") {
-    sinov::tenglik(matn("salom").length(), 5);
-    sinov::tenglik(matn("").length(), 0);
+@sinov bosh yigindi_musbat_sonlar() {
+    uzpp::Sinov::tasdiqlash(yigindi(2, 3) == 5, "2 + 3 = 5 bo'lishi kerak");
+    uzpp::Sinov::tasdiqlash_teng(0, yigindi(0, 0));
+}
+
+@sinov bosh yigindi_manfiy_sonlar() {
+    uzpp::Sinov::tasdiqlash_teng(0, yigindi(-1, 1));
+    uzpp::Sinov::tasdiqlash_teng(-5, yigindi(-2, -3));
+}
+
+butun asosiy() {
+    yozish << "Oddiy ishga tushirish" << qator_oxiri;
+    qaytarish 0;
 }
 ```
 
 Testlarni ishga tushirish:
 
 ```bash
-uzpp sinov;
+uzpp sinov mening_testlarim.uzpp
 ```
 
-Natija:
+`uzpp sinov` `asosiy` ni chetlab o'tadi va `@sinov` funksiyalarini
+yig'ib, o'z test yurituvchisini quradi. Natija:
+
 ```
-[OK] yigindi to'g'ri ishlashi kerak
-[OK] matn uzunligini olish
-2/2 muvaffaqiyatli
+=============================================
+  uz++ sinovlari
+=============================================
+  [1/2] yigindi_musbat_sonlar ... OTDI
+  [2/2] yigindi_manfiy_sonlar ... OTDI
+---------------------------------------------
+  Jami:  2
+  O'tdi: 2
+  Quladi:0
+=============================================
 ```
+
+Bitta test qulasa, jarayon nolga teng bo'lmagan kod bilan tugaydi —
+CI da shuning o'zi yetarli.
+
+### Tasdiqlash funksiyalari
+
+| Funksiya | Nima tekshiradi |
+|----------|-----------------|
+| `uzpp::Sinov::tasdiqlash(shart, xabar)` | shart `rost` ekanini |
+| `uzpp::Sinov::tasdiqlash_teng(kutilgan, qiymat, xabar)` | `kutilgan == qiymat` |
+| `uzpp::Sinov::tasdiqlash_yaqin(kutilgan, qiymat, epsilon, xabar)` | haqiqiy sonlar yaqinligini |
+
+`xabar` — ixtiyoriy; test qulaganda shu matn chiqadi.
+
+### 2-yo'l: `TestTo'plami` — to'plamni qo'lda yig'ish
+
+Testlarni dastur ichida o'zingiz boshqarmoqchi bo'lsangiz:
+
+```cpp
+ulash "uzpp_runtime.hpp"
+
+butun asosiy() {
+    uzpp::Sinov::TestTo'plami sinovlar("Matematika testlari");
+
+    sinovlar.test_qoshish("qo'shish", []() {
+        uzpp::Sinov::tasdiqlash(2 + 2 == 4);
+    });
+
+    sinovlar.test_qoshish("bo'lish", []() {
+        uzpp::Sinov::tasdiqlash_yaqin(2.5, 5.0 / 2.0, 0.0001);
+    });
+
+    qaytarish sinovlar.ishga_tushirish();
+}
+```
+
+Bu shaklda `uzpp ishga-tushirish` yetarli — maxsus buyruq kerak emas.
+
+---
+
+## `@bench` — tezlikni o'lchash
+
+`@sinov` bilan bir xil ishlaydi, lekin funksiyani ming marta
+takrorlab, bitta amalga ketgan o'rtacha vaqtni chiqaradi:
+
+```cpp
+ulash "uzpp_runtime.hpp"
+
+butun fib(butun n) {
+    agar (n < 2) qaytarish n;
+    qaytarish fib(n - 1) + fib(n - 2);
+}
+
+@bench bosh fib_20() {
+    o'zgaruvchan natija = fib(20);
+    agar (natija < 0) {
+        yozish << natija;   // natija ishlatilmasa, kompilyator uni tashlab yuborishi mumkin
+    }
+}
+
+butun asosiy() { qaytarish 0; }
+```
+
+```bash
+uzpp bench mening_olchovlarim.uzpp
+```
+
+```
+=============================================
+  Benchmark (1000 marta takrorlash)
+=============================================
+  [1/1] fib_20 ... 11054.2 ns/amal  (jami 11.0542 ms)
+=============================================
+```
+
+Birinchi chaqiruv "isitish" uchun ishlatiladi va o'lchovga
+kirmaydi — kesh va lazy-init ta'siri natijani buzmasligi uchun.
 
 ---
 

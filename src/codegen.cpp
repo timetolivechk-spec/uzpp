@@ -698,6 +698,12 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
         if (!result.empty()) return result;
     }
 
+    // Qo'shimchadagi o'zgarmas: `butun* o'zgarmas` → `int* const`
+    // (ko'rsatkichning o'zi o'zgarmas, ko'rsatilayotgan qiymat emas).
+    if (uzppType.ends_with(" o'zgarmas")) {
+        return getCppType(uzppType.substr(0, uzppType.size() - 10), depth + 1) + " const";
+    }
+
     // Strip trailing reference/pointer/ellipsis qualifiers, translate base, reattach
     {
         std::string suffix;
@@ -1069,6 +1075,19 @@ void CodeGen::visitIdentifierExpression(const IdentifierExpression* expr) {
 
 void CodeGen::visitFunctionCall(const FunctionCall* expr) {
     if (expr == nullptr || expr->getCallee() == nullptr) return;
+
+    // `Tur{a, b}` — qavsli initsializatsiya (`yangi Tur{...}` dan keladi).
+    if (expr->usesBraceInit()) {
+        visitExpression(expr->getCallee());
+        emitRawToken("{");
+        const auto& args = expr->getArguments();
+        for (std::size_t i = 0; i < args.size(); ++i) {
+            if (i > 0) emitRawToken(",");
+            visitExpression(args[i].get());
+        }
+        emitRawToken("}");
+        return;
+    }
     
     if (expr->getCallee()->getType() == ASTNodeType::IdentifierExpression) {
         const auto* idExpr = static_cast<const IdentifierExpression*>(expr->getCallee());

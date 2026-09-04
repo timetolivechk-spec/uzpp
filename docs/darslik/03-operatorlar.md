@@ -597,8 +597,12 @@ agar (yosh == 18) { ... }    // TO'G'RI
 
 ### 2. Butun bo'lish kutilmagan natija beradi
 ```cpp
-haqiqiy ortacha = (1 + 2 + 3) / 3; // 2 (2.0 emas!)
-haqiqiy ortacha = (1 + 2 + 3) / 3.0; // 2.0
+haqiqiy notogri = (1 + 2 + 3) / 3;   // 2.0 — chunki 6 / 3 BUTUN bo'linish
+haqiqiy togri   = (1 + 2 + 3) / 3.0; // 2.0 — bu safar haqiqiy bo'linish
+
+// Farq 7 / 2 da yaqqol ko'rinadi:
+haqiqiy yarim_notogri = 7 / 2;   // 3.0  (butun bo'linish, kasr qismi yo'qoladi)
+haqiqiy yarim_togri   = 7 / 2.0; // 3.5
 ```
 
 ### 3. Operatorlar ustunligini noto'g'ri tushunish

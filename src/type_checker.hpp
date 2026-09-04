@@ -2044,6 +2044,12 @@ private:
                                 auto savedTParams = currentTemplateParams_;
                                 auto savedReturnType = currentReturnType_;
                                 auto savedErrors = errors_.size();
+                                // Shablon tanasi `qaytarish` bilan tugasa,
+                                // reachable_ = false bo'ladi. Uni tiklamasak,
+                                // chaqiruvdan KEYINGI gaplar "erishib
+                                // bo'lmaydi" deb noto'g'ri belgilanadi.
+                                const bool savedReachable = reachable_;
+                                const bool savedReportedUnreachable = reportedUnreachable_;
                                 
                                 // Polimorf rejimni o'chiramiz — haqiqiy
                                 // diagnostika uchun
@@ -2080,7 +2086,8 @@ private:
                                 currentTemplateSubsts_ = savedSubsts;
                                 currentTemplateParams_ = savedTParams;
                                 currentReturnType_ = savedReturnType;
-                                currentTemplateParams_ = savedTParams;
+                                reachable_ = savedReachable;
+                                reportedUnreachable_ = savedReportedUnreachable;
                             }
                         }
                     }

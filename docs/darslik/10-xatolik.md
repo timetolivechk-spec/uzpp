@@ -31,6 +31,8 @@ Eng oddiy va eski usul. Funksiya muvaffaqiyat bo'lsa qiymatni, xato
 bo'lsa maxsus belgi qaytaradi.
 
 ```cpp
+ulash "uzpp_runtime.hpp"
+
 butun bolish(butun a, butun b) {
     agar (b == 0) {
         qaytarish -1; // xato belgisi
@@ -38,9 +40,12 @@ butun bolish(butun a, butun b) {
     qaytarish a / b;
 }
 
-butun n = bolish(10, 0);
-agar (n == -1) {
-    yozish << "Xato: 0 ga bo'lib bo'lmaydi" << qator_oxiri;
+butun asosiy() {
+    butun n = bolish(10, 0);
+    agar (n == -1) {
+        yozish << "Xato: 0 ga bo'lib bo'lmaydi" << qator_oxiri;
+    }
+    qaytarish 0;
 }
 ```
 
@@ -272,28 +277,30 @@ ushlash uchun.
 
 ## Amaliy misol: Konfiguratsiya faylini o'qish
 
-ulash <fstream>;
-ulash <string>;
+```cpp
+ulash "uzpp_runtime.hpp"
+ulash <fstream>
+ulash <string>
 
-Natija<matn, matn> faylni_oqish(matn yo'l) {
-    std::ifstream f(yo'l);
+uzpp::Natija<matn, matn> faylni_oqish(matn yol) {
+    std::ifstream f(yol);
     agar (!f.is_open()) {
-        qaytarish std::unexpected("Fayl ochilmadi: " + yo'l);
+        qaytarish uzpp::Natija<matn, matn>::xato("Fayl ochilmadi: " + yol);
     }
 
     matn mazmun((std::istreambuf_iterator<char>(f)),
                 std::istreambuf_iterator<char>());
-    qaytarish Natija<matn, matn>::muvaffaqiyat(mazmun);
+    qaytarish uzpp::Natija<matn, matn>::muvaffaqiyat(mazmun);
 }
 
 butun asosiy() {
     o'zgaruvchan natija = faylni_oqish("config.txt");
 
-    agar (natija) {
-        yozish << "Fayl mazmuni:" << qator_oxiri << *natija;
+    agar (natija.yaroqliMi()) {
+        yozish << "Fayl mazmuni:" << qator_oxiri << natija.qiymat();
     }
     aks_holda {
-        yozish << "Xato: " << natija.error() << qator_oxiri;
+        yozish << "Xato: " << natija.xatoMazmun() << qator_oxiri;
         qaytarish 1;
     }
 

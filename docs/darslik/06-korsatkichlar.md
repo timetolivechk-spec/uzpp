@@ -254,7 +254,8 @@ qiladi: **aqlli ko'rsatkichlar**.
 
 Avtomatik tozalanadigan ko'rsatkich. Faqat bitta egasi bor:
 ```cpp
-#include <memory>
+ulash "uzpp_runtime.hpp"
+ulash <memory>
 
 butun asosiy() {
     yagona_korsatkich<butun> p = std::make_unique<butun>(42);
@@ -342,13 +343,13 @@ keyingisining manzilini bilib turadi.
 tuzilma Tugun {
     butun qiymat;
     Tugun* keyingi;
-}
+};
 
 butun asosiy() {
     // Uchta tugun yaratamiz
-    Tugun* birinchi = yangi Tugun{10, nullptr}
-    Tugun* ikkinchi = yangi Tugun{20, nullptr}
-    Tugun* uchinchi = yangi Tugun{30, nullptr}
+    Tugun* birinchi = yangi Tugun{10, nullptr};
+    Tugun* ikkinchi = yangi Tugun{20, nullptr};
+    Tugun* uchinchi = yangi Tugun{30, nullptr};
 
     // Bog'laymiz: 10 → 20 → 30
     birinchi->keyingi = ikkinchi;

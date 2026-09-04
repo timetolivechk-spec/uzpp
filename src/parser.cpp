@@ -233,6 +233,22 @@ std::string Parser::parseTypeString() {
            (peek().value == "&" || peek().value == "*" || peek().value == "&&" || peek().value == "...")) {
         typeStr += advance().value;
     }
+
+    // O'zgarmas ko'rsatkich: `butun* o'zgarmas p` → `int* const p`.
+    // (Ko'rsatkichning O'ZI o'zgarmas; `o'zgarmas butun* p` esa —
+    //  ko'rsatilayotgan QIYMAT o'zgarmas.) Faqat `*` dan keyin qabul
+    //  qilamiz — aks holda `butun x; o'zgarmas butun y;` ketma-ketligi
+    //  bilan chalkashib ketardi.
+    while (!typeStr.empty() && typeStr.back() == '*' &&
+           !isAtEnd() && peek().type == TokenType::Identifier && peek().value == "o'zgarmas") {
+        advance();
+        typeStr += " o'zgarmas";
+        while (!isAtEnd() && peek().type == TokenType::Symbol &&
+               (peek().value == "*" || peek().value == "&" || peek().value == "&&")) {
+            typeStr += advance().value;
+        }
+    }
+
     return typeStr;
 }
 
@@ -618,6 +634,39 @@ std::unique_ptr<Expression> Parser::parseUnaryExpression() {
             (nxt.type == TokenType::Symbol && nxt.value == "(");
         if (looksLikeNew) {
             const Token opToken = advance(); // consume 'yangi'
+
+            // `yangi Tur{a, b}` — qavsli initsializatsiya. Turdan keyin `{`
+            // kelsa, uni shu yerda o'zimiz o'qiymiz: `parsePostfixExpression`
+            // umumiy holda `Identifier {` ni tutolmaydi (bu `agar (x) {` bilan
+            // chalkashadi), shuning uchun faqat `yangi` kontekstida.
+            if (peek().type == TokenType::Identifier) {
+                const std::size_t save = current_;
+                const Token typeToken = peek();
+                std::string typeName = parseTypeString();
+                if (!isAtEnd() && peek().type == TokenType::Symbol && peek().value == "{") {
+                    const Token braceToken = advance(); // '{'
+                    std::vector<std::unique_ptr<Expression>> args;
+                    while (!isAtEnd() && peek().value != "}") {
+                        args.push_back(parseExpression());
+                        if (!isAtEnd() && peek().value == ",") {
+                            advance();
+                            continue;
+                        }
+                        break;
+                    }
+                    if (isAtEnd() || peek().value != "}") {
+                        throw ParseError("Kutilgan '}' `yangi` qavsli initsializatsiyasida " + formatLocation(peek()));
+                    }
+                    advance(); // '}'
+
+                    auto callee = std::make_unique<IdentifierExpression>(typeName, typeToken);
+                    auto call = std::make_unique<FunctionCall>(std::move(callee), std::move(args), braceToken);
+                    call->setBraceInit(true);
+                    return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(call), opToken, true);
+                }
+                current_ = save; // `{` yo'q — odatdagi yo'lga qaytamiz
+            }
+
             auto expr = parseUnaryExpression();
             return std::make_unique<UnaryExpression>(UnaryExpression::UnaryOp::New, std::move(expr), opToken, true);
         }

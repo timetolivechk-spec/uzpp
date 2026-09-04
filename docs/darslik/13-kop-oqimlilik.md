@@ -69,13 +69,13 @@ butun asosiy() {
 ### Parametrli funksiya bilan
 
 ```cpp
-bosh chiqarish(matn xabar, butun marta) {
+bosh takrorlab_yoz(matn xabar, butun marta) {
     uchun (butun i = 0; i < marta; i++) {
         yozish << xabar << qator_oxiri;
     }
 }
 
-oqim t(chiqarish, "Salom", 3);
+oqim t(takrorlab_yoz, "Salom", 3);
 t.kutish();
 ```
 

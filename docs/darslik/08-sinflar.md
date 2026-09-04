@@ -642,6 +642,7 @@ ochiq:
 
 ### 3. Virtual destruktorni unutish
 
+<!-- darslik:skip -->
 ```cpp
 sinf Ota { ochiq: ~Ota() {} }    // virtual emas
 sinf Voris : Ota { ... }

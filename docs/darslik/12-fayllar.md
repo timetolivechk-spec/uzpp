@@ -22,7 +22,9 @@ Bu bobda uz++ orqali fayllar bilan ishlashni o'rganamiz.
 
 ### Asosiy yo'l: `std::ofstream`
 
-ulash <fstream>;
+```cpp
+ulash "uzpp_runtime.hpp"
+ulash <fstream>
 
 butun asosiy() {
     std::ofstream fayl("salom.txt");
@@ -59,8 +61,10 @@ fayl << "Yangi qator" << qator_oxiri;
 
 ### `std::ifstream`
 
-ulash <fstream>;
-ulash <string>;
+```cpp
+ulash "uzpp_runtime.hpp"
+ulash <fstream>
+ulash <string>
 
 butun asosiy() {
     std::ifstream fayl("salom.txt");

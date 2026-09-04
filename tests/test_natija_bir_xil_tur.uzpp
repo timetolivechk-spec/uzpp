@@ -1,0 +1,40 @@
+// `Natija<T, E>` — T va E BIR XIL bo'lganda ham ishlashi kerak.
+// `Natija<matn, matn>` (qiymat ham, xato ham matn) juda tabiiy holat va
+// darslikning 10-bobi aynan shuni o'rgatadi. Ilgari ikkala yashirin
+// konstruktor `(T, mantiqiy)` va `(E, mantiqiy)` edi — T == E bo'lganda
+// ular bir xil imzoga ega bo'lib, kompilyatsiya buzilardi.
+ulash "uzpp_runtime.hpp"
+
+uzpp::Natija<matn, matn> tekshir(matn kirish) {
+    agar (kirish.empty()) {
+        qaytarish uzpp::Natija<matn, matn>::xato("bo'sh matn");
+    }
+    qaytarish uzpp::Natija<matn, matn>::muvaffaqiyat("OK: " + kirish);
+}
+
+uzpp::Natija<butun, matn> songa(matn s) {
+    agar (s == "42") {
+        qaytarish uzpp::Natija<butun, matn>::muvaffaqiyat(42);
+    }
+    qaytarish uzpp::Natija<butun, matn>::xato("son emas: " + s);
+}
+
+butun asosiy() {
+    o'zgaruvchan a = tekshir("salom");
+    o'zgaruvchan b = tekshir("");
+    o'zgaruvchan c = songa("42");
+    o'zgaruvchan d = songa("abc");
+
+    yozish << a.qiymat() << qator_oxiri;
+    yozish << b.xatoMazmun() << qator_oxiri;
+    yozish << c.qiymat() << qator_oxiri;
+    yozish << d.xatoMazmun() << qator_oxiri;
+
+    agar (a.yaroqliMi() && b.xatoliMi() && c.qiymat() == 42 && d.xatoliMi()) {
+        yozish << "=== MUVAFFAQIYATLI ===" << qator_oxiri;
+        qaytarish 0;
+    }
+
+    yozish << "=== XATO ===" << qator_oxiri;
+    qaytarish 1;
+}
