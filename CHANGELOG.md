@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.3.3] — 2026-09-07
+
+### Tuzatildi
+- **LSP Windows da UMUMAN ishlamasdi.** `stdout` matn rejimida bo'lgani uchun
+  har bir `
+` `
+` ga aylanardi va LSP sarlavha ajratuvchisi
+  `
+
+` o'rniga `
+
+` bo'lib chiqardi. Bunday oqimda
+  `
+
+` ketma-ketligi umuman uchramaydi, shuning uchun hech bir mijoz
+  sarlavha oxirini topa olmasdi: VS Code da **diagnostika, hover,
+  avtoto'ldirish, ta'rifga o'tish — hech biri ishlamasdi**, kengaytma esa
+  jim turardi. Endi `stdin`/`stdout` ikkilik rejimga o'tkaziladi.
+  Sarlavhalarni o'qish kodi allaqachon oxiridagi `` ni hisobga olgan —
+  ya'ni server ikkilik rejim uchun yozilgan, faqat rejim qo'yilmagan edi.
+  DAP serverida ham xuddi shu tuzatish.
+
 ## [2.3.2] — 2026-09-07
 
 Real dastur yozish paytida topilgan beshta xato tuzatildi. Sinov usuli:

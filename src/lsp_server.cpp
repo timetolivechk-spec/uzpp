@@ -8,6 +8,11 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 #include <array>
 #include <cctype>
 #include <cstddef>
@@ -161,6 +166,16 @@ std::string escapeJsonString(const std::string& in) {
 } // namespace
 
 void LspServer::run() {
+#ifdef _WIN32
+    // Windows da stdio matn rejimida bo'lsa, `std::cout` har bir `\n` ni
+    // `\r\n` ga aylantiradi va LSP sarlavha ajratuvchisi `\r\n\r\n`
+    // `\r\r\n\r\r\n` ga buziladi — hech bir mijoz uni ajrata olmaydi,
+    // ya'ni muharrirda diagnostika, hover, avtoto'ldirish umuman ishlamaydi.
+    // Ikkala oqimni ham ikkilik rejimga o'tkazamiz; sarlavhalarni o'qish
+    // allaqachon oxiridagi `\r` ni hisobga oladi.
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     while (std::cin) {
         std::string line;
         int contentLength = 0;

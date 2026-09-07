@@ -5,6 +5,11 @@
 #include <cctype>
 
 #ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
@@ -35,6 +40,11 @@ DapServer::~DapServer() {
 }
 
 void DapServer::run() {
+#ifdef _WIN32
+    // LSP dagi kabi: matn rejimi DAP sarlavha ajratuvchisini buzadi.
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     while (std::cin) {
         std::string line;
         int contentLength = 0;
