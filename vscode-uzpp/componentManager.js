@@ -48,8 +48,60 @@ function checkComponents(context) {
     const compilerOk = fs.existsSync(p.compilerExe);
     const stdlibOk   = fs.existsSync(path.join(p.stdlibDir, 'uzpp_runtime.hpp'));
     const allOk = compilerOk && stdlibOk;
+    const hostCpp = detectHostCpp(context);
 
-    return { compilerOk, stdlibOk, allOk, systemCpp: null, paths: p };
+    return {
+        compilerOk,
+        stdlibOk,
+        allOk,
+        // Transpilyatordan keyingi bosqich uchun kerak bo'ladigan C++
+        // kompilyatori. Ilgari bu maydon qattiq `null` edi va
+        // `mingwOk` umuman qaytarilmasdi, shuning uchun "Komponentlar
+        // holati" HAR DOIM "C++ kompilyatori topilmadi" deb ko'rsatardi —
+        // hammasi ishlayotgan tizimda ham.
+        systemCpp: hostCpp,
+        mingwOk:   hostCpp !== null,
+        paths:     { ...p, mingwBin: hostCpp },
+    };
+}
+
+/**
+ * Finds the C++ compiler uzpp needs for its second stage. Order:
+ *   1. MinGW bundled by the official Windows installer
+ *   2. MinGW placed next to the extension-managed compiler
+ *   3. g++ / clang++ on PATH
+ * Returns an absolute path, or null when nothing usable is present.
+ */
+function detectHostCpp(context) {
+    const candidates = [];
+
+    if (process.platform === 'win32') {
+        const localAppData = process.env.LOCALAPPDATA || '';
+        if (localAppData) {
+            candidates.push(path.join(localAppData, 'Programs', 'uzpp', 'compiler', 'bin', 'g++.exe'));
+        }
+        try {
+            const p = getPaths(context);
+            candidates.push(path.join(p.compilerDir, 'compiler', 'bin', 'g++.exe'));
+            candidates.push(path.join(p.compilerDir, 'mingw64', 'bin', 'g++.exe'));
+        } catch { /* globalStorage may be unavailable — PATH lookup still applies */ }
+    }
+
+    for (const candidate of candidates) {
+        if (candidate && fs.existsSync(candidate)) return candidate;
+    }
+
+    for (const exe of ['g++', 'clang++']) {
+        try {
+            const lookup = process.platform === 'win32' ? `where ${exe}` : `which ${exe}`;
+            const out = execSync(lookup, { timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] })
+                .toString().trim();
+            const first = out.split(/\r?\n/)[0].trim();
+            if (first && fs.existsSync(first)) return first;
+        } catch { /* not on PATH — try the next one */ }
+    }
+
+    return null;
 }
 
 // ─── Download ────────────────────────────────────────────────────────────────
@@ -253,4 +305,5 @@ module.exports = {
     installFromArchive,
     ensureWrapperScript,
     RELEASE_BASE,
+    detectHostCpp,
 };

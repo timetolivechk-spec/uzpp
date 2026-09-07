@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.4] — 2026-09-07
+
+### Tuzatildi
+- **"Komponentlar holati" C++ kompilyatorini har doim "topilmadi" deb
+  ko'rsatardi** — hammasi ishlayotgan tizimda ham.
+  `componentManager.checkComponents()` `systemCpp` ni qattiq `null` qilib
+  qaytarardi va `mingwOk` ni umuman qaytarmasdi, extension.js esa aynan shu
+  ikki maydonni o'qirdi. Endi haqiqiy qidiruv bor
+  (`detectHostCpp`): rasmiy o'rnatuvchi qo'ygan MinGW, kengaytma papkasidagi
+  MinGW, so'ng PATH dagi `g++` / `clang++`.
+- uz++ o'zi bor, lekin C++ kompilyatori yo'q holat endi alohida aytiladi:
+  `tekshirish` ishlaydi, `qurish` uchun C++ kompilyatori kerak.
+
+### Talab qilinadigan kompilyator
+- Kengaytma endi uz++ **v2.3.2** bilan ishlaydi (beshta til xatosi tuzatildi).
+  `uz++: Kompilyatorni yangilash` buyrug'i so'nggi relizni yuklab oladi.
+
 ## [2.3.3] — 2026-09-07
 
 Marketplace sahifasining o'zi tuzatildi.

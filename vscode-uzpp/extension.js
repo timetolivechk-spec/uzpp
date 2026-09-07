@@ -190,7 +190,7 @@ async function requireComponents(context) {
     const missing = [];
     if (!status.compilerOk) missing.push('uz++ kompilyatori');
     if (!status.stdlibOk)   missing.push('standart kutubxona');
-    if (process.platform === 'win32' && !status.mingwOk) missing.push('C++ kompilyatori (MinGW)');
+    if (status.systemCpp === null) missing.push('C++ kompilyatori (g++ / clang++)');
 
     const answer = await vscode.window.showWarningMessage(
         `Zarur komponentlar topilmadi: ${missing.join(', ')}`,
@@ -457,17 +457,22 @@ async function cmdCheckComponents(context) {
         `uz++ kompilyatori: ${ok(status.compilerOk)} ${status.compilerOk ? p.compilerExe : '(topilmadi)'}`,
         `Standart kutubxona: ${ok(status.stdlibOk)} ${status.stdlibOk ? p.stdlibDir : '(topilmadi)'}`,
     ];
-    if (process.platform === 'win32') {
-        lines.push(`MinGW (C++ kompilyatori): ${ok(status.mingwOk)} ${status.mingwOk ? p.mingwBin : '(topilmadi)'}`);
-    } else {
-        lines.push(`Tizim C++ kompilyatori: ${ok(status.systemCpp !== null)} ${status.systemCpp || '(topilmadi)'}`);
+    // Ikkala platformada ham bitta manba: componentManager.detectHostCpp().
+    const cppLabel = process.platform === 'win32' ? 'MinGW (C++ kompilyatori)' : 'Tizim C++ kompilyatori';
+    lines.push(`${cppLabel}: ${ok(status.systemCpp !== null)} ${status.systemCpp || '(topilmadi)'}`);
+
+    // uz++ ning o'zi bor, lekin C++ kompilyatori yo'q bo'lsa — `tekshirish`
+    // ishlaydi, `qurish` esa ishlamaydi. Buni aytib qo'yamiz.
+    const tayyor = status.allOk && status.systemCpp !== null;
+    lines.push(`Umumiy holat: ${tayyor ? '✓ Tayyor' : '✗ Komponentlar yetishmayapti'}`);
+    if (status.allOk && status.systemCpp === null) {
+        lines.push("Eslatma: `tekshirish` ishlaydi, lekin `qurish` uchun C++ kompilyatori kerak.");
     }
-    lines.push(`Umumiy holat: ${status.allOk ? '✓ Tayyor' : '✗ Komponentlar yetishmayapti'}`);
 
     const msg = lines.join('\n');
     const action = await vscode.window.showInformationMessage(
         msg,
-        ...(status.allOk ? [] : ["O'rnatish"])
+        ...(tayyor ? [] : ["O'rnatish"])
     );
     if (action === "O'rnatish") await cmdInstallComponents(context);
 }
