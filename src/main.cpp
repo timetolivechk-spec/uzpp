@@ -1025,6 +1025,42 @@ private:
         // Regex yordamida faqat butun so'zlarni almashtiramiz,
         // fayl nomlari yoki identifikator ichidagi qismlarga tegmaymiz.
 
+        // Tizim sarlavhalaridan keltirilgan C++ nomlarini himoyalaymiz.
+        // Ularni tarjima qilish `basic_string<belgi>` yoki `sinf function`
+        // kabi mavjud bo'lmagan turlarni hosil qilardi — foydalanuvchi bunday
+        // nomni na hujjatdan, na internetdan topa olmaydi. Qo'shtirnoq ichida
+        // `std::` yoki `__` bo'lsa — bu kutubxona nomi, tegmaymiz.
+        std::vector<std::string> protectedSpans;
+        {
+            std::string masked;
+            masked.reserve(compilerOutput.size());
+            std::size_t i = 0;
+            while (i < compilerOutput.size()) {
+                if (compilerOutput[i] == '\'') {
+                    const std::size_t close = compilerOutput.find('\'', i + 1);
+                    if (close != std::string::npos) {
+                        const std::string span =
+                            compilerOutput.substr(i, close - i + 1);
+                        // Faqat ikki tagchiziqli nomlar — bu C++ standarti
+                        // implementatsiyaga ajratgan ichki nomlar
+                        // (`std::__cxx11::basic_string<char>`). Ularni tarjima
+                        // qilish mavjud bo'lmagan tur hosil qiladi. Oddiy
+                        // `std::string` esa `matn` ga tarjima qilinaveradi —
+                        // bu foydalanuvchiga tushunarli.
+                        if (span.find("__") != std::string::npos) {
+                            masked += "\x01" + std::to_string(protectedSpans.size()) + "\x02";
+                            protectedSpans.push_back(span);
+                            i = close + 1;
+                            continue;
+                        }
+                    }
+                }
+                masked += compilerOutput[i];
+                ++i;
+            }
+            compilerOutput = std::move(masked);
+        }
+
         // 1. Aniq satr almashtirishlar (xato formatlari, qo'shtirnoqli tiplar)
         const std::vector<std::pair<std::string, std::string>> exactReplacements = {
             {"error:", "XATO:"},
@@ -1120,6 +1156,15 @@ private:
             while ((pos = compilerOutput.find(from, pos)) != std::string::npos) {
                 compilerOutput.replace(pos, from.size(), to);
                 pos += to.size();
+            }
+        }
+
+        // Himoyalangan C++ nomlarini asl holida qaytaramiz.
+        for (std::size_t idx = 0; idx < protectedSpans.size(); ++idx) {
+            const std::string key = "\x01" + std::to_string(idx) + "\x02";
+            const std::size_t at = compilerOutput.find(key);
+            if (at != std::string::npos) {
+                compilerOutput.replace(at, key.size(), protectedSpans[idx]);
             }
         }
 

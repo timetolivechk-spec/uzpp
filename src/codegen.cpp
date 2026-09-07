@@ -14,6 +14,8 @@ CodeGen::CodeGen()
       lineStart_(true) {}
 
 std::string CodeGen::generate(const Program* program, const std::string& sourceName, bool testMode, bool benchMode) {
+    lineSourceName_ = sourceName;
+    lastEmittedLine_ = 0;
     if (program == nullptr) {
         throw std::runtime_error("Bo'sh AST dan kod generatsiya qilib bo'lmaydi.");
     }
@@ -234,6 +236,17 @@ void CodeGen::writePreamble(const std::string& sourceName) {
     output_ << "#line 1 \"" << escapeForLineDirective(sourceName) << "\"\n";
     lineStart_ = true;
     lastToken_.clear();
+}
+
+// Joriy manba qatorini `#line` orqali belgilaydi. Faqat qator haqiqatan
+// o'zgarganda chiqariladi — aks holda hosil bo'lgan C++ direktivalar bilan
+// to'lib ketardi.
+void CodeGen::emitLineDirective(int line) {
+    if (line <= 0 || line == lastEmittedLine_ || lineSourceName_.empty()) return;
+    if (!lineStart_) output_ << "\n";
+    output_ << "#line " << line << " \"" << escapeForLineDirective(lineSourceName_) << "\"\n";
+    lineStart_ = true;
+    lastEmittedLine_ = line;
 }
 
 std::string CodeGen::escapeForLineDirective(const std::string& sourceName) const {
@@ -749,8 +762,12 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
             std::string currentArg;
             int innerDepth = 0;
             for (char c : inner) {
-                if (c == '<') innerDepth++;
-                else if (c == '>') innerDepth--;
+                // Qavslar ham hisobga olinadi: `funksiya<butun(butun, butun)>`
+                // ichidagi vergul argument ajratuvchisi EMAS — u imzoning bir
+                // qismi. Faqat `<`/`>` sanalganda bunday tur ikkiga bo'linib
+                // ketardi va tarjima qilinmasdi.
+                if (c == '<' || c == '(') innerDepth++;
+                else if (c == '>' || c == ')') innerDepth--;
                 else if (c == ',' && innerDepth == 0) {
                     result += getCppType(trim(currentArg), depth + 1) + ", ";
                     currentArg.clear();
@@ -765,6 +782,52 @@ std::string CodeGen::getCppType(const std::string& uzppType, int depth) const {
             result += ">";
             result += uzppType.substr(templateEnd + 1);
             return result;
+        }
+    }
+
+    // Funksiya imzosi: `Qaytish(Arg1, Arg2)` — masalan `funksiya<mantiqiy(butun)>`
+    // ichidagi `mantiqiy(butun)`. Bunday argument typeMap da yo'q, shuning uchun
+    // ilgari o'zgarishsiz o'tib ketardi va hosil bo'lgan C++ kompilyatsiya
+    // bo'lmasdi. Har bir qismini alohida tarjima qilamiz.
+    if (depth < 8) {
+        const size_t parenOpen = uzppType.find('(');
+        if (parenOpen != std::string::npos && !uzppType.empty() &&
+            uzppType.back() == ')' && uzppType.find('<') == std::string::npos) {
+            const std::string retPart = uzppType.substr(0, parenOpen);
+            const std::string argPart =
+                uzppType.substr(parenOpen + 1, uzppType.size() - parenOpen - 2);
+
+            auto trimStr = [](const std::string& in) -> std::string {
+                const size_t b = in.find_first_not_of(" \t\r\n");
+                if (b == std::string::npos) return std::string("");
+                const size_t e = in.find_last_not_of(" \t\r\n");
+                return in.substr(b, e - b + 1);
+            };
+
+            const std::string trimmedRet = trimStr(retPart);
+            // Bo'sh qaytish turi — bu chaqiruv, imzo emas: tegmaymiz.
+            if (!trimmedRet.empty()) {
+                std::string out = getCppType(trimmedRet, depth + 1) + "(";
+                std::string arg;
+                int nested = 0;
+                bool firstArg = true;
+                auto flush = [&]() {
+                    const std::string t = trimStr(arg);
+                    if (t.empty()) return;
+                    if (!firstArg) out += ", ";
+                    out += getCppType(t, depth + 1);
+                    firstArg = false;
+                };
+                for (const char c : argPart) {
+                    if (c == '<' || c == '(') ++nested;
+                    else if (c == '>' || c == ')') --nested;
+                    else if (c == ',' && nested == 0) { flush(); arg.clear(); continue; }
+                    arg += c;
+                }
+                flush();
+                out += ")";
+                return out;
+            }
         }
     }
 
@@ -1285,7 +1348,14 @@ void CodeGen::visitAssignmentExpression(const AssignmentExpression* expr) {
 // Statement visitors
 void CodeGen::visitStatement(const Statement* stmt) {
     if (stmt == nullptr) return;
-    
+
+    // g++ bosqichidagi xatolar to'g'ri .uzpp qatoriga tushishi uchun har bir
+    // operator oldidan `#line` chiqaramiz. Ilgari butun funksiya uchun bitta
+    // `#line 1` bor edi, shuning uchun hosil bo'lgan C++ da qatorlar soni
+    // o'zgarishi bilan (masalan bo'sh qatorlar tushib qolganda) g++ ning
+    // hisobi asl fayldan uzoqlashib ketardi.
+    emitLineDirective(stmt->sourceLine());
+
     switch (stmt->getType()) {
         case ASTNodeType::IfStatement:
             visitIfStatement(static_cast<const IfStatement*>(stmt));

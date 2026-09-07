@@ -1,0 +1,51 @@
+// Regressiya: `shartnoma` metodlarini amalga oshirganda `ustidan_yozish`
+// ishlatish mumkin.
+//
+// Ilgari tur tekshiruvchi `InterfaceDeclaration` tugunini umuman ko'rmasdi,
+// shuning uchun interfeys `classes_` da yo'q edi va `ustidan_yozish`
+// "bazaviy sinfda mos metod topilmadi" deb xato berardi.
+
+ulash "uzpp_runtime.hpp"
+
+shartnoma Hisobotli {
+    matn sarlavha();
+    matn hisobot();
+}
+
+sinf Kitob : Hisobotli {
+yopiq:
+    matn nomi_;
+
+ochiq:
+    Kitob(matn nomi) : nomi_(nomi) {}
+
+    matn sarlavha() ustidan_yozish { qaytarish nomi_; }
+    matn hisobot()  ustidan_yozish { qaytarish "Kitob: " + nomi_; }
+};
+
+sinf Oquvchi : Hisobotli {
+yopiq:
+    matn ism_;
+
+ochiq:
+    Oquvchi(matn ism) : ism_(ism) {}
+
+    matn sarlavha() ustidan_yozish { qaytarish ism_; }
+    matn hisobot()  ustidan_yozish { qaytarish "O'quvchi: " + ism_; }
+};
+
+// Interfeys havolasi orqali polimorfik chaqiruv
+bosh chiqar(Hisobotli& h) {
+    yozish << h.hisobot() << qator_oxiri;
+}
+
+butun asosiy() {
+    Kitob   k("Alpomish");
+    Oquvchi o("Dilnoza");
+
+    chiqar(k);
+    chiqar(o);
+
+    yozish << k.sarlavha() << " / " << o.sarlavha() << qator_oxiri;
+    qaytarish 0;
+}

@@ -1,5 +1,49 @@
 # Changelog
 
+## [2.3.2] — 2026-09-07
+
+Real dastur yozish paytida topilgan beshta xato tuzatildi. Sinov usuli:
+`kutubxona` loyihasi noldan, hujjatga qarab yozildi — xatolarning aksariyati
+birinchi sinfdayoq uchradi.
+
+### Tuzatildi
+
+- **Konstruktor/metod parametri sinf a'zosi nomi bilan to'qnashardi.**
+  `Kitob(matn nomi) : nomi_(nomi) {}` — agar sinfda `nomi()` metodi bo'lsa,
+  "O'zgaruvchi 'nomi' ushbu qamrovda allaqachon e'lon qilingan" xatosi
+  chiqardi. Sabab: metod qamroviga sinf maydonlari va metod nomlari oldindan
+  joylanadi (`joriy->` siz murojaat uchun), parametrlar esa shu qamrovga
+  e'lon qilinardi. C++ da parametr a'zoni soyalaydi — bu qonuniy va
+  `getter` + bir xil nomli parametr eng keng tarqalgan uslub.
+  Regressiya: `tests/test_azo_soyalash.uzpp`.
+
+- **`shartnoma` metodlarida `ustidan_yozish` ishlamasdi.** Tur tekshiruvchi
+  `InterfaceDeclaration` tugunini umuman ko'rmasdi, shuning uchun interfeys
+  `classes_` da yo'q edi va "bazaviy sinfda mos metod topilmadi" xatosi
+  chiqardi. Oddiy `sinf` bilan ishlardi — faqat interfeyslar bilan emas.
+  Regressiya: `tests/test_shartnoma_ustidan_yozish.uzpp`.
+
+- **`funksiya<...>` ichidagi turlar C++ ga tarjima qilinmasdi.**
+  `funksiya<mantiqiy(butun)>` dan `std::function<mantiqiy(butun)>` hosil
+  bo'lardi — hosil bo'lgan C++ umuman kompilyatsiya bo'lmasdi. Ikki sabab
+  bor edi: imzo shakli (`Qaytish(Arg)`) typeMap da yo'q edi, va shablon
+  argumentlarini ajratuvchi qavslarni sanamagani uchun
+  `funksiya<butun(butun, butun)>` verguldan ikkiga bo'linib ketardi.
+  Regressiya: `tests/test_funksiya_imzosi.uzpp`.
+
+- **g++ bosqichidagi xatolar noto'g'ri qatorni ko'rsatardi.** Hosil bo'lgan
+  C++ da butun funksiya uchun bitta `#line 1` direktivasi bor edi, bo'sh
+  qatorlar esa ko'chirilmasdi — shuning uchun g++ ning qator hisobi asl
+  fayldan uzoqlashardi. Bitta faylda semantik analiz 13-qatorni,
+  g++ esa 4-qatorni ko'rsatardi. Endi har bir operator oldidan `#line`
+  chiqariladi (`ASTNode::sourceLine()`).
+
+- **C++ kutubxona xabarlari tarjimadan buzilardi.** Xato matnlari uz++ ga
+  o'girilganda `std::__cxx11::basic_string<char>` → `basic_string<belgi>`,
+  `class function` → `sinf function` bo'lardi — mavjud bo'lmagan turlar.
+  Endi ikki tagchiziqli (implementatsiyaga ajratilgan) nomlar tegilmaydi,
+  oddiy `std::string` esa avvalgidek `matn` ga tarjima qilinaveradi.
+
 Barcha muhim o'zgarishlar shu yerda hujjatlashtiriladi.
 
 ## [v2.3.1] — 2026-09-04

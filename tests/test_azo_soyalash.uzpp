@@ -1,0 +1,37 @@
+// Regressiya: konstruktor/metod parametri sinf a'zosi nomi bilan bir xil
+// bo'lishi mumkin — C++ da parametr a'zoni soyalaydi.
+//
+// Ilgari tur tekshiruvchi metod qamroviga sinf maydonlari va metod nomlarini
+// oldindan joylagani uchun bir xil nomli parametrni "qayta e'lon" deb rad
+// etardi. `getter` + bir xil nomli parametr — eng keng tarqalgan uslub.
+
+ulash "uzpp_runtime.hpp"
+
+sinf Kitob {
+yopiq:
+    matn  nomi_;
+    matn  muallif_;
+    butun yil_;
+
+ochiq:
+    // Parametrlar `nomi`, `muallif`, `yil` — quyidagi metodlar bilan bir xil.
+    Kitob(matn nomi, matn muallif, butun yil)
+        : nomi_(nomi), muallif_(muallif), yil_(yil) {}
+
+    matn  nomi()    { qaytarish nomi_; }
+    matn  muallif() { qaytarish muallif_; }
+    butun yil()     { qaytarish yil_; }
+
+    // Oddiy metodda ham xuddi shunday: parametr maydonni soyalaydi.
+    bosh nomini_ozgartir(matn nomi) { nomi_ = nomi; }
+};
+
+butun asosiy() {
+    Kitob k("Alpomish", "Xalq dostoni", 1928);
+    yozish << k.nomi() << " — " << k.muallif() << " (" << k.yil() << ")" << qator_oxiri;
+
+    k.nomini_ozgartir("O'tkan kunlar");
+    yozish << k.nomi() << qator_oxiri;
+
+    qaytarish 0;
+}

@@ -207,6 +207,9 @@ private:
         std::string type;
         Token declToken;
         bool used;
+        // Sinf a'zosi sifatida qamrovga oldindan joylangan yozuv (haqiqiy
+        // e'lon emas). Parametr yoki lokal o'zgaruvchi uni soyalashi mumkin.
+        bool fromMember = false;
     };
 
     // Phase 3: Overload resolution — har bir funksiya nomi uchun bir nechta
@@ -800,10 +803,12 @@ private:
     void declareVar(const std::string& name, const std::string& type, const Token& token) {
         if (scopes_.empty()) enterScope();
         // Allow function overloading: skip duplicate check for "funktsiya" type
-        if (scopes_.back().contains(name) && type != "funktsiya") {
+        // A'zo sifatida oldindan joylangan yozuvni soyalash — xato emas.
+        if (scopes_.back().contains(name) && type != "funktsiya" &&
+            !scopes_.back().at(name).fromMember) {
             reportError("O'zgaruvchi '" + name + "' ushbu qamrovda allaqachon e'lon qilingan.", token);
         }
-        scopes_.back()[name] = VarInfo{type, token, false};
+        scopes_.back()[name] = VarInfo{type, token, false, false};
     }
 
     bool isDeclared(const std::string& name) {
@@ -1122,6 +1127,25 @@ private:
                 currentFunctionIsAsync_ = oldAsync;
                 break;
             }
+            case ASTNodeType::InterfaceDeclaration: {
+                // Interfeys ham `classes_` ga yoziladi: shundagina uni amalga
+                // oshirgan sinfdagi `ustidan_yozish` bazaviy metodni topadi va
+                // interfeys havolasi orqali a'zo turlari aniqlanadi.
+                auto iface = static_cast<const InterfaceDeclaration*>(node);
+                ClassInfo info;
+                for (const auto& sig : iface->getMethods()) {
+                    std::vector<std::string> pTypes;
+                    for (const auto& p : sig->params) {
+                        if (p.isExplicitObject) continue;
+                        pTypes.push_back(p.type);
+                    }
+                    info.methodParams[sig->name] = pTypes;
+                    info.methodReturns[sig->name] =
+                        sig->returnType.empty() ? std::string("bosh") : sig->returnType;
+                }
+                classes_[iface->getName()] = info;
+                break;
+            }
             case ASTNodeType::ClassDeclaration: {
                 auto cls = static_cast<const ClassDeclaration*>(node);
                 ClassInfo info;
@@ -1189,10 +1213,10 @@ private:
                     scopes_.back()["joriy"].used = true;
                     // Expose own class fields+methods in scope (direct access without `joriy->`)
                     for (const auto& [fieldName, fieldType] : classes_[cls->getName()].fields) {
-                        scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true};
+                        scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true, true};
                     }
                     for (const auto& [mName, mRet] : classes_[cls->getName()].methodReturns) {
-                        scopes_.back()[mName] = VarInfo{mRet, method->token, true};
+                        scopes_.back()[mName] = VarInfo{mRet, method->token, true, true};
                     }
                     // Walk full inheritance chain: expose all ancestor fields+methods
                     {
@@ -1201,11 +1225,11 @@ private:
                         while (!base.empty() && classes_.contains(base) && depth < 16) {
                             for (const auto& [fieldName, fieldType] : classes_[base].fields) {
                                 if (!scopes_.back().contains(fieldName))
-                                    scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true};
+                                    scopes_.back()[fieldName] = VarInfo{fieldType, method->token, true, true};
                             }
                             for (const auto& [mName, mRet] : classes_[base].methodReturns) {
                                 if (!scopes_.back().contains(mName))
-                                    scopes_.back()[mName] = VarInfo{mRet, method->token, true};
+                                    scopes_.back()[mName] = VarInfo{mRet, method->token, true, true};
                             }
                             base = classes_[base].baseClass;
                             ++depth;
@@ -1242,9 +1266,15 @@ private:
                     bool isDtor = !method->name.empty() && method->name[0] == '~';
                     std::string lookupName = isDtor ? "~" : method->name;
 
-                    std::string base = cls->getBaseClass();
+                    // Bazaviy sinflar zanjiri + amalga oshirilgan interfeyslar.
+                    std::vector<std::string> searchRoots;
+                    if (!cls->getBaseClass().empty()) searchRoots.push_back(cls->getBaseClass());
+                    for (const auto& iface : cls->getInterfaces()) searchRoots.push_back(iface);
+
                     bool found = false;
-                    while (!base.empty() && classes_.contains(base)) {
+                    for (const auto& root : searchRoots) {
+                    std::string base = root;
+                    while (!found && !base.empty() && classes_.contains(base)) {
                         const auto& baseInfo = classes_.at(base);
                         // Destruktor uchun bazada ~BaseName formatida qidiramiz
                         std::string baseMethodName = isDtor ? ("~" + base) : method->name;
@@ -1268,6 +1298,8 @@ private:
                             }
                         }
                         base = baseInfo.baseClass;
+                    }
+                    if (found) break;
                     }
                     if (!found) {
                         reportError("'" + method->name + "' 'ustidan_yozish' deb belgilangan, lekin bazaviy sinfda mos metod topilmadi.", method->token);

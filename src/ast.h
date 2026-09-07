@@ -64,6 +64,11 @@ class ASTNode {
 public:
     virtual ~ASTNode() = default;
     virtual ASTNodeType getType() const = 0;
+
+    // Manba faylidagi qator raqami (1 dan), noma'lum bo'lsa 0. CodeGen shundan
+    // `#line` direktivalarini chiqaradi — usiz g++ xatolari .uzpp faylining
+    // noto'g'ri qatoriga tushadi.
+    virtual int sourceLine() const { return 0; }
 };
 
 // ===== LEGACY NODES (MAINTAINED FOR BACKWARD COMPATIBILITY) =====
@@ -371,6 +376,8 @@ public:
     
     const std::vector<std::unique_ptr<Statement>>& getStatements() const { return statements_; }
     
+    int sourceLine() const override { return openBrace_.line; }
+
 private:
     std::vector<std::unique_ptr<Statement>> statements_;
     Token openBrace_;
@@ -407,17 +414,19 @@ private:
 
 class ExpressionStatement final : public Statement {
 public:
-    explicit ExpressionStatement(std::unique_ptr<Expression> expr)
-        : expr_(std::move(expr)) {}
-    
+    explicit ExpressionStatement(std::unique_ptr<Expression> expr, Token stmtToken = Token())
+        : expr_(std::move(expr)), stmtToken_(std::move(stmtToken)) {}
+
     ASTNodeType getType() const override {
         return ASTNodeType::ExpressionStatement;
     }
-    
+
     Expression* getExpression() const { return expr_.get(); }
-    
+    int sourceLine() const override { return stmtToken_.line; }
+
 private:
     std::unique_ptr<Expression> expr_;
+    Token stmtToken_;
 };
 
 class VariableDeclaration final : public Statement {
@@ -455,6 +464,8 @@ public:
     bool isInline() const { return isInline_; }
     void setInline(bool value) { isInline_ = value; }
 
+    int sourceLine() const override { return declToken_.line; }
+
 private:
     std::string name_;
     std::string typeName_;
@@ -483,6 +494,8 @@ public:
     Expression* getValue() const { return value_.get(); }
     const Token& getReturnToken() const { return returnToken_; }
     
+    int sourceLine() const override { return returnToken_.line; }
+
 private:
     std::unique_ptr<Expression> value_;
     Token returnToken_;
@@ -499,6 +512,8 @@ public:
     
     const Token& getBreakToken() const { return breakToken_; }
     
+    int sourceLine() const override { return breakToken_.line; }
+
 private:
     Token breakToken_;
 };
@@ -514,6 +529,8 @@ public:
     
     const Token& getContinueToken() const { return continueToken_; }
     
+    int sourceLine() const override { return continueToken_.line; }
+
 private:
     Token continueToken_;
 };
@@ -605,6 +622,8 @@ public:
     void setElseLikely(bool v) { isElseLikely_ = v; }
     void setElseUnlikely(bool v) { isElseUnlikely_ = v; }
 
+    int sourceLine() const override { return ifToken_.line; }
+
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> thenBranch_;
@@ -636,6 +655,8 @@ public:
     bool isDoWhile() const { return isDoWhile_; }
     void setDoWhile(bool value) { isDoWhile_ = value; }
 
+    int sourceLine() const override { return whileToken_.line; }
+
 private:
     std::unique_ptr<Expression> condition_;
     std::unique_ptr<Statement> body_;
@@ -662,6 +683,8 @@ public:
     Statement* getBody() const { return body_.get(); }
     const Token& getForToken() const { return forToken_; }
     bool isRangeBased() const { return isRangeBased_; }
+
+    int sourceLine() const override { return forToken_.line; }
 
 private:
     std::unique_ptr<Statement> init_;

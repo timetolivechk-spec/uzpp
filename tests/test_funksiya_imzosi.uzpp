@@ -1,0 +1,49 @@
+// Regressiya: `funksiya<Qaytish(Arg)>` ichidagi turlar C++ ga tarjima
+// qilinishi kerak.
+//
+// Ilgari shablon argumenti ichidagi imzo (`mantiqiy(butun)`) typeMap da
+// topilmagani uchun o'zgarishsiz o'tib ketardi va hosil bo'lgan C++
+// `std::function<mantiqiy(butun)>` — kompilyatsiya bo'lmasdi.
+
+ulash "uzpp_runtime.hpp"
+
+// Bitta argumentli imzo
+butun qollash(funksiya<mantiqiy(butun)> shart, butun x) {
+    agar (shart(x)) { qaytarish 1; }
+    qaytarish 0;
+}
+
+// Ko'p argumentli imzo
+butun juftlash(funksiya<butun(butun, butun)> amal, butun a, butun b) {
+    qaytarish amal(a, b);
+}
+
+// Argumentsiz imzo + bosh qaytish
+bosh chaqir(funksiya<bosh()> ish) {
+    ish();
+}
+
+// Shablon ichida imzo
+shablon<tur T>
+butun sanash(vektor<T>& royxat, funksiya<mantiqiy(T&)> shart) {
+    butun adad = 0;
+    uchun (o'zgaruvchan& element : royxat) {
+        agar (shart(element)) { adad = adad + 1; }
+    }
+    qaytarish adad;
+}
+
+butun asosiy() {
+    yozish << qollash([](butun n) { qaytarish n > 5; }, 10) << qator_oxiri;
+    yozish << juftlash([](butun a, butun b) { qaytarish a + b; }, 3, 4) << qator_oxiri;
+
+    chaqir([]() { yozish << "chaqirildi" << qator_oxiri; });
+
+    vektor<butun> sonlar;
+    sonlar.push_back(1);
+    sonlar.push_back(7);
+    sonlar.push_back(9);
+    yozish << sanash<butun>(sonlar, [](butun& n) { qaytarish n > 5; }) << qator_oxiri;
+
+    qaytarish 0;
+}

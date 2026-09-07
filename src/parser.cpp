@@ -1393,9 +1393,10 @@ std::unique_ptr<Statement> Parser::parseStatement() {
         // Parse as a regular function call expression — Uzbek identifier names
         // inside (e.g. `butun`, `haqiqiy`) will be translated by codegen normally.
         // Codegen recognises "statik_tasdiqlash" and emits "static_assert".
+        const Token stmtStart = peek();
         auto e = parseExpression();
         if (!isAtEnd() && peek().value == ";") advance();
-        return std::make_unique<ExpressionStatement>(std::move(e));
+        return std::make_unique<ExpressionStatement>(std::move(e), stmtStart);
     }
 
     if (checkKeyword("moslash")) {
@@ -1951,8 +1952,9 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         "kutish", "irgitish", "yangi", "o'chirish", "chiqar_qadam"
     };
     if (peek().type == TokenType::Identifier && exprOnlyKeywords.contains(peek().value)) {
+        const Token stmtStart = peek();
         auto expr = parseExpression();
-        return std::make_unique<ExpressionStatement>(std::move(expr));
+        return std::make_unique<ExpressionStatement>(std::move(expr), stmtStart);
     }
 
     if (looksLikeDeclHelper(tokens_, current_)) {
@@ -2014,11 +2016,12 @@ std::unique_ptr<Statement> Parser::parseDeclarationOrExpressionStatement() {
         return varDecl;
     }
 
+    const Token stmtStart = peek();
     auto expr = parseExpression();
     
     // NOTE: Do NOT consume semicolon here - let each caller decide
     
-    return std::make_unique<ExpressionStatement>(std::move(expr));
+    return std::make_unique<ExpressionStatement>(std::move(expr), stmtStart);
 }
 
 // ===== SEMANTIC DECLARATION PARSING =====
@@ -2107,9 +2110,10 @@ std::unique_ptr<ASTNode> Parser::parseGlobalDeclaration() {
         // Parse as a regular function call expression — Uzbek identifier names
         // inside (e.g. `butun`, `haqiqiy`) will be translated by codegen normally.
         // Codegen recognises "statik_tasdiqlash" and emits "static_assert".
+        const Token stmtStart = peek();
         auto e = parseExpression();
         if (!isAtEnd() && peek().value == ";") advance();
-        return std::make_unique<ExpressionStatement>(std::move(e));
+        return std::make_unique<ExpressionStatement>(std::move(e), stmtStart);
     }
 
     if (checkKeyword("makro")) {

@@ -100,6 +100,9 @@ private:
     void reset();
     void writePreamble(const std::string& sourceName);
     std::string escapeForLineDirective(const std::string& sourceName) const;
+    void emitLineDirective(int line);
+    std::string lineSourceName_;
+    int lastEmittedLine_ = 0;
 
     // Legacy token-based code generation
     void emitNodes(const std::vector<std::unique_ptr<ASTNode>>& nodes);

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 # Versiya — YAGONA manba. Bu yerdan main.cpp ga (UZPP_VERSION) uzatiladi.
 # CHANGELOG.md, vscode-uzpp/package.json va installer/windows/installer.iss
 # shu raqam bilan mos bo'lishi kerak.
-project(uz_plus_plus VERSION 2.3.1 LANGUAGES CXX)
+project(uz_plus_plus VERSION 2.3.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
