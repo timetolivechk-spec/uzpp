@@ -2,8 +2,8 @@
 
 **uz++** — o'zbek tilidagi dasturlash tili. C++ ning barcha kuchi, o'z tilida.
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/uzpp.uzpp)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/uzpp.uzpp)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
+[![Version](https://vsmarketplacebadges.dev/version-short/uzpp.uzpp.svg)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/uzpp.uzpp.svg)](https://marketplace.visualstudio.com/items?itemName=uzpp.uzpp)
 
 ---
 

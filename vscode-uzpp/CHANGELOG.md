@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.3.3] — 2026-09-07
+
+Marketplace sahifasining o'zi tuzatildi.
+
+### Tuzatildi
+- **Kengaytmaning ikonkasi yo'q edi** — marketplace va Extensions ro'yxatida
+  standart bo'sh kvadrat ko'rinardi. `package.json` da `icon` maydoni umuman
+  belgilanmagandi, holbuki `docs/logo/uzpp-icon.svg` allaqachon bor edi.
+  Endi 256x256 PNG (`icon.png`) o'sha SVG dan olingan, `galleryBanner` esa
+  ikonka foniga (`#1f2c38`) moslashtirildi.
+- **README dagi ikkala nishon (badge) o'lik edi** — shields.io
+  `visual-studio-marketplace` yo'nalishini bekor qilgan va marketplace
+  sahifasida ular "retired badge" deb ko'rinardi. `vsmarketplacebadges.dev`
+  ga almashtirildi (tekshirildi: versiya va o'rnatishlar soni to'g'ri
+  qaytadi).
+
 ## [2.3.2] — 2026-09-07
 
 Kengaytma kompilyatorning hozirgi holatiga moslashtirildi — v2.3.1 dan beri
