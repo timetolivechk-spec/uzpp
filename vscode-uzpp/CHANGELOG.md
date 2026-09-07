@@ -13,9 +13,15 @@
 - uz++ o'zi bor, lekin C++ kompilyatori yo'q holat endi alohida aytiladi:
   `tekshirish` ishlaydi, `qurish` uchun C++ kompilyatori kerak.
 
-### Talab qilinadigan kompilyator
-- Kengaytma endi uz++ **v2.3.2** bilan ishlaydi (beshta til xatosi tuzatildi).
-  `uz++: Kompilyatorni yangilash` buyrug'i so'nggi relizni yuklab oladi.
+### Talab qilinadigan kompilyator: v2.3.3 yoki undan yangi
+**Muhim:** v2.3.3 dan oldin Windows da LSP UMUMAN ishlamagan — diagnostika,
+hover, avtoto'ldirish, ta'rifga o'tish hech biri ishlamagan (kompilyator
+`stdout` ni matn rejimida ochgani uchun LSP sarlavhasi buzilardi). Kengaytma
+bunda aybdor emas edi va xato ham bermasdi — shunchaki jim turardi.
+
+Muharrirdagi imkoniyatlar ishlashi uchun kompilyatorni yangilang:
+`uz++: Kompilyatorni yangilash`. v2.3.3 da bundan tashqari real dastur
+yozishda topilgan beshta til xatosi ham tuzatilgan.
 
 ## [2.3.3] — 2026-09-07
 
