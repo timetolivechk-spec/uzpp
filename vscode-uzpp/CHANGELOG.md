@@ -1,5 +1,48 @@
 # Changelog
 
+## [2.3.2] — 2026-09-07
+
+Kengaytma kompilyatorning hozirgi holatiga moslashtirildi — v2.3.1 dan beri
+qo'shilgan buyruqlar va sintaksis kengaytmada aks etmagan edi.
+
+### Tuzatildi
+- **"Yangi loyiha" ishlamaydigan loyiha yaratardi.** Manifest `nom = ` deb
+  yozilardi, kompilyator esa `nomi` ni o'qiydi (`package_manager.h`,
+  `TomlParser::parseProjectSection`) — nom jim yo'qolardi. `asosiy_fayl`
+  umuman yozilmasdi va kod loyiha ildizida (`asosiy.uzpp`) yaratilardi,
+  kompilyator esa `src/asosiy.uzpp` ni kutadi. Natijada yangi loyihada
+  `uzpp ishga-tushirish` darhol "Asosiy uz++ fayli topilmadi" deb to'xtardi.
+  Endi skelet `uzpp init` orqali yaratiladi — sxema bo'yicha ikkinchi manba
+  qolmadi; kompilyator topilmasa, `uzpp init` bilan bir xil zaxira shablon
+  ishlatiladi.
+- **Xush kelibsiz ekrani `uz++ 2.1` deb yozardi** — raqam qo'lda yozilgan edi
+  va uch reliz orqada qolgandi. Endi `package.json` dan olinadi.
+- **Xush kelibsiz ekrani mavjud bo'lmagan kalit so'zlarni reklama qilardi:**
+  `ozgaruvchan` / `ozgarmas` (Phase 2.5 da olib tashlangan — parser ularni
+  xatolik bilan rad etadi), `aks holda` (probel bilan; to'g'risi `aks_holda`),
+  va `holda` — tilda umuman yo'q so'z.
+- **README kalit so'zlar jadvali:** `aks` — rad etiladigan eskirgan sinonim,
+  `aks_holda` ga almashtirildi; `o'qish` esa kalit so'z emas — `std::cin`
+  uchun kanonik so'z `kiritish`.
+
+### Qo'shildi
+- **`@` atributlari endi bo'yaladi:** `@sinov`, `@bench`,
+  `@tashlab_yuborilmas`, `@eskirgan`, `@tekislash(N)`, `@taxmin(...)`,
+  `@noyob_manzil`, `@bashqarib`, `@kamdan_kam`. Grammatikada atributlar uchun
+  qoida umuman yo'q edi. Noma'lum atribut `invalid` sifatida belgilanadi —
+  parser ham uni "Noma'lum annotatsiya" deb rad etadi.
+- **Kompilyatorda bor, lekin kengaytmada yo'q bo'lgan buyruqlar:**
+  - `uz++: Tekshirish (lint)` — `uzpp tekshirish`, qurmasdan tip tekshirish.
+  - `uz++: Testlarni yugurtirish (@sinov)` — `uzpp sinov`.
+  - `uz++: Benchmark (@bench)` — `uzpp bench`.
+  - `uz++: Hujjat yaratish (API qo'llanma)` — `uzpp hujjat`, natijani ochadi.
+
+### Eslatma
+- `uzpp dap` (DAP serveri) kompilyatorda bor, lekin kengaytmada debugger
+  hali ulanmagan: server gdb ustida ishlaydi va uzilish nuqtalarini
+  generatsiya qilingan C++ ga qo'yadi, `.uzpp` qatorlariga emas. Tekshirilgan
+  manba-xarita bo'lgunicha ulash to'g'ri emas.
+
 ## [2.3.1] — 2026-09-04
 
 ### Tuzatildi

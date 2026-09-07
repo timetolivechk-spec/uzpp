@@ -205,28 +205,65 @@ async function requireComponents(context) {
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
-async function cmdRunFile(context) {
+/**
+ * Saves the active editor and runs `uzpp <verb> <file>` in the shared terminal.
+ * Every file-scoped verb of the CLI goes through here so the guard, the save
+ * and the terminal handling stay in one place.
+ */
+async function runVerbOnActiveFile(context, verb) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
     await editor.document.save();
     if (!await requireComponents(context)) return;
 
-    const file = editor.document.uri.fsPath;
     const term = getTerminal();
     term.show(true);
-    term.sendText(buildRunCommand(context, 'ishga-tushirish', file));
+    term.sendText(buildRunCommand(context, verb, editor.document.uri.fsPath));
 }
 
-async function cmdBuildFile(context) {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) { vscode.window.showWarningMessage('Fayl ochilmagan.'); return; }
-    await editor.document.save();
+const cmdRunFile   = (context) => runVerbOnActiveFile(context, 'ishga-tushirish');
+const cmdBuildFile = (context) => runVerbOnActiveFile(context, 'qurish');
+// `tekshirish` type-checks without building; `sinov` / `bench` run the
+// @sinov / @bench functions and skip `asosiy` entirely.
+const cmdCheckFile = (context) => runVerbOnActiveFile(context, 'tekshirish');
+const cmdTestFile  = (context) => runVerbOnActiveFile(context, 'sinov');
+const cmdBenchFile = (context) => runVerbOnActiveFile(context, 'bench');
+
+/**
+ * `uzpp hujjat <papka>` is project-scoped, not file-scoped: it walks the
+ * workspace and writes a single API_Qollanma.md. Run it from the workspace
+ * root and open the result.
+ */
+async function cmdGenerateDocs(context) {
+    const folder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+    if (!folder) {
+        vscode.window.showWarningMessage('Hujjat yaratish uchun papka (workspace) ochilgan bo\'lishi kerak.');
+        return;
+    }
     if (!await requireComponents(context)) return;
 
-    const file = editor.document.uri.fsPath;
-    const term = getTerminal();
-    term.show(true);
-    term.sendText(buildRunCommand(context, 'qurish', file));
+    const root    = folder.uri.fsPath;
+    const outDir  = 'hujjatlar';
+    const compiler = findCompilerPath(context);
+    try {
+        let cmd = `"${compiler}" hujjat "${outDir}"`;
+        if (process.platform === 'win32' && compiler.endsWith('.bat')) {
+            cmd = `cmd /c ${cmd}`;
+        }
+        execSync(cmd, { cwd: root, timeout: 60000, stdio: 'pipe' });
+    } catch (e) {
+        const detail = (e.stderr && e.stderr.toString().trim()) || e.message;
+        vscode.window.showErrorMessage(`Hujjat yaratilmadi: ${detail.split("\n")[0].trim()}`);
+        return;
+    }
+
+    const generated = path.join(root, outDir, 'API_Qollanma.md');
+    if (fs.existsSync(generated)) {
+        const doc = await vscode.workspace.openTextDocument(generated);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+    } else {
+        vscode.window.showInformationMessage(`Hujjat yaratildi -> ${outDir}/`);
+    }
 }
 
 async function cmdFormatFile(context) {
@@ -296,6 +333,60 @@ async function cmdShowGeneratedCpp(context) {
     vscode.window.showWarningMessage('Generatsiya qilingan C++ fayl topilmadi. Birinchi qurish buyrug\'ini bajaring.');
 }
 
+/**
+ * Runs `uzpp init <name>` in `parentDir`. Returns true when the compiler
+ * created the skeleton, false when it is unavailable or failed — the caller
+ * then falls back to the local template.
+ */
+function createProjectViaCompiler(context, parentDir, name) {
+    const compiler = findCompilerPath(context);
+    try {
+        let cmd = `"${compiler}" init "${name}"`;
+        if (process.platform === 'win32' && compiler.endsWith('.bat')) {
+            cmd = `cmd /c ${cmd}`;
+        }
+        execSync(cmd, { cwd: parentDir, timeout: 15000, stdio: 'pipe' });
+        // `uzpp init` reports success on stdout, but verify the manifest really
+        // landed — a wrapper script can swallow a non-zero exit code.
+        return fs.existsSync(path.join(parentDir, name, 'uzpp.toml'));
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Offline skeleton, layout-compatible with `uzpp init`.
+ *
+ * The manifest keys MUST match TomlParser::parseProjectSection in
+ * src/package_manager.h — it reads `nomi` / `versiya` / `asosiy_fayl` and
+ * silently ignores every other key. Putting the entry file anywhere other than
+ * `asosiy_fayl` makes project mode (`uzpp ishga-tushirish` with no argument)
+ * fail with "Asosiy uz++ fayli topilmadi".
+ */
+function createProjectFallback(projectDir, name) {
+    const entryRel = 'src/asosiy.uzpp';
+    const entryAbs = path.join(projectDir, 'src', 'asosiy.uzpp');
+    fs.mkdirSync(path.dirname(entryAbs), { recursive: true });
+
+    fs.writeFileSync(entryAbs, [
+        `// uz++ loyihasi: ${name}`,
+        '',
+        'butun asosiy() {',
+        `    yozish << "Salom, ${name}!" << qator_oxiri;`,
+        '    qaytarish 0;',
+        '}',
+        ''
+    ].join('\n'));
+
+    fs.writeFileSync(path.join(projectDir, 'uzpp.toml'), [
+        '[loyiha]',
+        `nomi = "${name}"`,
+        'versiya = "0.1.0"',
+        `asosiy_fayl = "${entryRel}"`,
+        ''
+    ].join('\n'));
+}
+
 async function cmdNewProject(context) {
     const name = await vscode.window.showInputBox({
         prompt: 'Loyiha nomi',
@@ -310,30 +401,15 @@ async function cmdNewProject(context) {
     });
     if (!folderResult || folderResult.length === 0) return;
 
-    const projectDir = path.join(folderResult[0].fsPath, name);
-    fs.mkdirSync(projectDir, { recursive: true });
+    const parentDir  = folderResult[0].fsPath;
+    const projectDir = path.join(parentDir, name);
 
-    fs.writeFileSync(path.join(projectDir, 'asosiy.uzpp'), [
-        `// uz++ loyihasi: ${name}`,
-        '',
-        'ulash "uzpp_runtime.hpp"',
-        '',
-        'butun asosiy() {',
-        `    yozish << "Salom, ${name}!" << qator_oxiri;`,
-        '    qaytarish 0;',
-        '}',
-        ''
-    ].join('\n'));
-
-    fs.writeFileSync(path.join(projectDir, 'uzpp.toml'), [
-        `[loyiha]`,
-        `nom = "${name}"`,
-        `versiya = "0.1.0"`,
-        '',
-        `[kompilyator]`,
-        `standart = "c++23"`,
-        ''
-    ].join('\n'));
+    // The compiler owns the project layout (`uzpp init` -> package_manager.h).
+    // Delegate to it so the manifest schema can never drift out of sync; only
+    // fall back to a local template when uzpp isn't reachable yet.
+    if (!createProjectViaCompiler(context, parentDir, name)) {
+        createProjectFallback(projectDir, name);
+    }
 
     await vscode.commands.executeCommand(
         'vscode.openFolder',
@@ -642,6 +718,18 @@ async function showWelcomeIfFirstRun(context) {
     showWelcome(context);
 }
 
+/**
+ * The extension version, read from our own package.json. The welcome heading
+ * used to carry a hand-written number and drifted three releases behind.
+ */
+function extensionVersion() {
+    try {
+        return require('./package.json').version;
+    } catch {
+        return '';
+    }
+}
+
 function buildWelcomeHtml(compilerInfo) {
     const isWin = process.platform === 'win32';
     const ready = compilerInfo && compilerInfo.ready;
@@ -780,15 +868,13 @@ function buildWelcomeHtml(compilerInfo) {
 </head>
 <body>
 
-<h1>uz++ 2.1</h1>
+<h1>uz++ ${extensionVersion()}</h1>
 <p class="subtitle">O'zbek tilidagi dasturlash tili — C++ ning barcha kuchi, o'z tilida.</p>
 
 ${installSection}
 
 <h2>Birinchi dastur</h2>
-<pre>ulash "uzpp_runtime.hpp"
-
-butun asosiy() {
+<pre>butun asosiy() {
     yozish &lt;&lt; "Salom, Dunyo!" &lt;&lt; qator_oxiri;
     qaytarish 0;
 }</pre>
@@ -801,17 +887,22 @@ butun asosiy() {
   <tr><td>Ctrl+Shift+P → <code>uz++ yangi loyiha</code></td><td>Yangi loyiha yaratish</td></tr>
   <tr><td>Ctrl+Shift+P → <code>uz++ C++ kodi</code></td><td>Generatsiya qilingan C++ ni ko'rish</td></tr>
   <tr><td>Ctrl+Shift+P → <code>uz++ komponentlar holati</code></td><td>O'rnatilgan komponentlarni tekshirish</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ tekshirish</code></td><td>Faqat tip tekshirish, hech narsa qurmaydi (lint)</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ testlar</code></td><td><code>@sinov</code> funksiyalarini yugurtirish</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ benchmark</code></td><td><code>@bench</code> funksiyalari tezligini o'lchash</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ formatlash</code></td><td>Kodni formatlash</td></tr>
+  <tr><td>Ctrl+Shift+P → <code>uz++ hujjat</code></td><td>Loyihadan API qo'llanmasi yaratish</td></tr>
 </table>
 
 <h2>Kalit so'zlar</h2>
 <p>
   <span class="badge">butun</span> <span class="badge">haqiqiy</span>
   <span class="badge">matn</span> <span class="badge">mantiqiy</span>
-  <span class="badge">ozgaruvchan</span> <span class="badge">ozgarmas</span>
-  <span class="badge">agar</span> <span class="badge">aks holda</span>
-  <span class="badge">uchun</span> <span class="badge">holda</span>
+  <span class="badge">o'zgaruvchan</span> <span class="badge">o'zgarmas</span>
+  <span class="badge">agar</span> <span class="badge">aks_holda</span>
+  <span class="badge">uchun</span> <span class="badge">toki</span>
   <span class="badge">qaytarish</span> <span class="badge">sinf</span>
-  <span class="badge">yozish</span> <span class="badge">o'qish</span>
+  <span class="badge">yozish</span> <span class="badge">kiritish</span>
   <span class="badge">urinish</span> <span class="badge">ushlash</span>
 </p>
 
@@ -920,6 +1011,10 @@ function activate(context) {
     [
         vscode.commands.registerCommand('uzpp.runFile',              () => cmdRunFile(context)),
         vscode.commands.registerCommand('uzpp.buildFile',            () => cmdBuildFile(context)),
+        vscode.commands.registerCommand('uzpp.checkFile',            () => cmdCheckFile(context)),
+        vscode.commands.registerCommand('uzpp.testFile',             () => cmdTestFile(context)),
+        vscode.commands.registerCommand('uzpp.benchFile',            () => cmdBenchFile(context)),
+        vscode.commands.registerCommand('uzpp.generateDocs',         () => cmdGenerateDocs(context)),
         vscode.commands.registerCommand('uzpp.formatFile',           () => cmdFormatFile(context)),
         vscode.commands.registerCommand('uzpp.showGeneratedCpp',     () => cmdShowGeneratedCpp(context)),
         vscode.commands.registerCommand('uzpp.newProject',           () => cmdNewProject(context)),

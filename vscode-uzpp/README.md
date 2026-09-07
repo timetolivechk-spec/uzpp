@@ -62,6 +62,11 @@ Extension o'rnatilgandan keyin status bar pastida **`⬇ uz++ install`** tugmasi
 - **Avtoto'ldirish** — 100+ kalit so'zlar va stdlib funksiyalari.
 - **Hover** — kursor ostidagi belgilar haqida ma'lumot (uz++ → C++ tarjima, signature).
 - **Definition / References / Rename** — barcha asosiy LSP navigatsiya buyruqlari.
+- **Signature help** — `(` yozilganda parametrlar ro'yxati chiqadi.
+- **Outline / Go to Symbol** — fayldagi sinf va funksiyalar ro'yxati.
+- **Atributlar rangli** — `@sinov`, `@bench`, `@tashlab_yuborilmas`, `@eskirgan`,
+  `@tekislash(N)`, `@taxmin(...)`, `@noyob_manzil`, `@bashqarib`, `@kamdan_kam`.
+  Noma'lum atribut qizil ko'rsatiladi — parser ham uni rad etadi.
 - **F5 → ishga tushirish** — bir tugma bilan.
 - **C++ kodini ko'rish** — transpile qilingan C++ ni yonida ochish.
 - **Status bar** — kompilyator holati va versiyasi.
@@ -74,6 +79,11 @@ Extension o'rnatilgandan keyin status bar pastida **`⬇ uz++ install`** tugmasi
 |----------------|------|
 | `F5` | Faylni ishga tushirish |
 | `Ctrl+F5` | Faylni qurish (binary) |
+| `Ctrl+Shift+P` → `uz++ tekshirish` | Faqat tip tekshirish, hech narsa qurmaydi (lint) |
+| `Ctrl+Shift+P` → `uz++ testlar` | `@sinov` funksiyalarini yugurtirish |
+| `Ctrl+Shift+P` → `uz++ benchmark` | `@bench` funksiyalari tezligini o'lchash |
+| `Ctrl+Shift+P` → `uz++ formatlash` | Kodni formatlash |
+| `Ctrl+Shift+P` → `uz++ hujjat` | Loyihadan API qo'llanmasi yaratish |
 | `Ctrl+Shift+P` → `uz++ yangi loyiha` | Yangi loyiha yaratish |
 | `Ctrl+Shift+P` → `uz++ C++ kodi` | Generatsiya qilingan C++ ni ko'rish |
 | `Ctrl+Shift+P` → `uz++ komponentlar holati` | O'rnatilgan komponentlarni ko'rish |
@@ -87,8 +97,6 @@ Extension o'rnatilgandan keyin status bar pastida **`⬇ uz++ install`** tugmasi
 
 ```uz++
 // salom.uzpp
-ulash "uzpp_runtime.hpp"
-
 butun asosiy() {
     matn o'lcham = "kichik";        // apostrof haqiqiy o'zbek so'zida
     yozish << "Salom, " << o'lcham << " dunyo!" << qator_oxiri;
@@ -105,10 +113,10 @@ Saqlang → `F5` → Natija terminalda chiqadi.
 | uz++ | C++ | uz++ | C++ |
 |------|-----|------|-----|
 | `butun` | `int` | `yozish` | `std::cout` |
-| `haqiqiy` | `double` | `o'qish` | `std::cin` |
+| `haqiqiy` | `double` | `kiritish` | `std::cin` |
 | `matn` | `std::string` | `qaytarish` | `return` |
 | `mantiqiy` | `bool` | `agar` | `if` |
-| `o'zgaruvchan` | `auto` | `aks` / `yoki` | `else` |
+| `o'zgaruvchan` | `auto` | `aks_holda` | `else` |
 | `o'zgarmas` | `const` | `uchun` | `for` |
 | `sinf` | `class` | `toki` | `while` |
 | `vektor` | `std::vector` | `urinish` | `try` |
@@ -116,6 +124,10 @@ Saqlang → `F5` → Natija terminalda chiqadi.
 | `manba_joyi` | `std::source_location` | `funksiya` | `auto fn(...) -> T` |
 
 Apostrof identifikatorlar (`o'lcham`, `G'oya`, `to'lov`) C++23 ga U+02BC MODIFIER LETTER APOSTROPHE sifatida ko'chiriladi — `_` ga mangle qilinmaydi.
+
+Phase 2.5 dan beri har bir C++ tushunchasi uchun **bitta** uz++ so'z bor. Eski
+sinonimlar (`aks`, `qaytish`, `ozgaruvchan`, `ozgarmas`, `chiqarish`, `olish`,
+`straktura`) endi xatolik beradi va kompilyator kanonik shaklni aytadi.
 
 ---
 

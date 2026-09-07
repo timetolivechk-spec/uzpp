@@ -10,6 +10,9 @@
       "include": "#preprocessor"
     },
     {
+      "include": "#annotations"
+    },
+    {
       "include": "#strings"
     },
     {
@@ -80,6 +83,47 @@
           "captures": {
             "1": {
               "name": "keyword.control.import.uzpp"
+            }
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "comment": "Funksiya/maydon atributlari — parser.cpp dagi ro'yxat bilan bir xil",
+      "patterns": [
+        {
+          "comment": "Argument oladigan atributlar: @tekislash(16), @taxmin(x > 0)",
+          "match": "(@)(tekislash|taxmin)\\b",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.annotation.uzpp"
+            },
+            "2": {
+              "name": "storage.modifier.annotation.uzpp"
+            }
+          }
+        },
+        {
+          "comment": "Argumentsiz atributlar",
+          "match": "(@)(sinov|bench|tashlab_yuborilmas|eskirgan|noyob_manzil|bashqarib|kamdan_kam)\\b",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.annotation.uzpp"
+            },
+            "2": {
+              "name": "storage.modifier.annotation.uzpp"
+            }
+          }
+        },
+        {
+          "comment": "Noma'lum atribut — parser 'Noma'lum annotatsiya' xatosini beradi",
+          "match": "(@)([a-zA-Z_][a-zA-Z0-9_']*)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.annotation.uzpp"
+            },
+            "2": {
+              "name": "invalid.illegal.annotation.uzpp"
             }
           }
         }
