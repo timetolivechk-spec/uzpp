@@ -130,6 +130,9 @@ jobs:
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp.exe
 
+      - name: LSP ramkasi va diagnostikasi
+        run: python tests/lsp_ramka_tekshir.py build/uzpp.exe
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
@@ -251,6 +254,9 @@ jobs:
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
+
+      - name: LSP ramkasi va diagnostikasi
+        run: python3 tests/lsp_ramka_tekshir.py build/uzpp
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -397,6 +403,9 @@ jobs:
 
       - name: Negative tests
         run: bash tests/negative/run.sh build/uzpp
+
+      - name: LSP ramkasi va diagnostikasi
+        run: python3 tests/lsp_ramka_tekshir.py build/uzpp
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

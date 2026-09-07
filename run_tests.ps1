@@ -93,6 +93,14 @@ Bosqich "uzpp sinov / uzpp bench" {
     return (($s -match "Quladi:0") -and ($b -match "ns/amal"))
 }
 
+# ─── 5b. LSP ramkasi (muharrir tajribasi) ──────────────────────────────────
+# Windows da stdio matn rejimida bo'lsa LSP sarlavhasi buziladi va muharrirda
+# diagnostika/hover/avtoto'ldirish JIM o'ladi — xato hech qayerda ko'rinmaydi.
+Bosqich "LSP ramkasi va diagnostikasi" {
+    & python tests/lsp_ramka_tekshir.py $Uzpp
+    return ($LASTEXITCODE -eq 0)
+}
+
 # ─── 6. Formatlagich xavfsizligi ───────────────────────────────────────────
 Bosqich "Formatlagich hech narsani buzmasligi" {
     $out = (& bash tests/formatlash_xavfsizlik.sh $Uzpp 2>&1) -join "`n"
